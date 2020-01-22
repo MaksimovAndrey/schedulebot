@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.Net;
 using System.IO;
 using System.Threading;
-using VkNet;
 using VkNet.Model.Keyboard;
+using VkNet.Enums.SafetyEnums;
 
 namespace schedulebot
 {
@@ -94,7 +94,7 @@ namespace schedulebot
             LoadFullName();
         }
         
-        public class ConstructKeyboardsProperties
+        public static class ConstructKeyboardsProperties
         {
             public const int buttonsInLine = 2; // 1..4
             public const int linesInKeyboard = 4; // 1..9 
@@ -102,28 +102,17 @@ namespace schedulebot
 
         public void СonstructKeyboards()
         {
-            for (int i = 0; i < coursesAmount; ++i)
+            for (int currentCourse = 0; currentCourse < coursesAmount; ++currentCourse)
             {
-                // courses[i].groups.GetLength(0);
-
-
-                int count = 0; // количество групп
-                int k = 0;
-                int j = 0;
-
-
-
-                // while (tempSchedule[i, j] != null)
-                // {
-                //     ++count;
-                //     j += 2;
-                // }
-                j = 0;
-                int pages = (int)Math.Ceiling((double)count / (double)(Const.lines_in_keyboard * Const.buttons_in_line));
+                int groupsAmount = courses[currentCourse].groups.GetLength(0);
+                int pagesAmount = (int)Math.Ceiling((double)groupsAmount
+                    / (double)(ConstructKeyboardsProperties.linesInKeyboard * ConstructKeyboardsProperties.buttonsInLine));
+                int currentPage = 0;
+                courses[currentCourse].keyboards = new List<MessageKeyboard>();
                 List<MessageKeyboardButton> line = new List<MessageKeyboardButton>();
                 List<List<MessageKeyboardButton>> buttons = new List<List<MessageKeyboardButton>>();
                 List<MessageKeyboardButton> serviceLine = new List<MessageKeyboardButton>();
-                while (tempSchedule[i, j] != null)
+                for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.GetLength(0); currentGroup++)
                 {
                     line.Add(new MessageKeyboardButton()
                     {
@@ -131,18 +120,20 @@ namespace schedulebot
                         Action = new MessageKeyboardButtonAction
                         {
                             Type = KeyboardButtonActionType.Text,
-                            Label = tempSchedule[i, j],
-                            Payload = "{\"menu\": \"30\", \"index\": \"" + j + "\", \"course\": \"" + i + "\"}"
+                            Label = courses[currentCourse].groups[currentGroup].name,
+                            Payload = "{\"menu\": \"30\", \"index\": \"" + currentGroup + "\", \"course\": \"" + currentCourse + "\"}"
                         }
                     });
-                    if (line.Count == Const.buttons_in_line || (tempSchedule[i, j + 2] == null && line.Count != 0))
+                    if (line.Count == ConstructKeyboardsProperties.buttonsInLine
+                        || (currentGroup + 1 == groupsAmount && line.Count != 0))
                     {
                         buttons.Add(new List<MessageKeyboardButton>(line));
                         line.Clear();
                     }
-                    if (buttons.Count == Const.lines_in_keyboard || (tempSchedule[i, j + 2] == null && buttons.Count != 0))
+                    if (buttons.Count == ConstructKeyboardsProperties.linesInKeyboard
+                        || (currentGroup + 1 == groupsAmount && buttons.Count != 0))
                     {
-                        string payloadService = "{\"menu\": \"30\", \"page\": \"" + k + "\", \"course\": \"" + i + "\"}";
+                        string payloadService = "{\"menu\": \"30\", \"page\": \"" + currentPage + "\", \"course\": \"" + currentCourse + "\"}";
                         serviceLine.Add(new MessageKeyboardButton()
                         {
                             Color = KeyboardButtonColor.Default,
@@ -159,7 +150,7 @@ namespace schedulebot
                             Action = new MessageKeyboardButtonAction
                             {
                                 Type = KeyboardButtonActionType.Text,
-                                Label = (k + 1) + " из " + pages,
+                                Label = (currentPage + 1) + " из " + pagesAmount,
                                 Payload = payloadService
                             }
                         });
@@ -175,22 +166,14 @@ namespace schedulebot
                         });
                         buttons.Add(new List<MessageKeyboardButton>(serviceLine));
                         serviceLine.Clear();
-                        lock (Glob.lockerKeyboards)
+                        courses[currentCourse].keyboards.Add(new MessageKeyboard
                         {
-                            Glob.keyboardsNewSub[i, k] = new MessageKeyboard
-                            {
-                                Buttons = new List<List<MessageKeyboardButton>>(buttons),
-                                OneTime = false
-                            };
-                        }
+                            Buttons = new List<List<MessageKeyboardButton>>(buttons),
+                            OneTime = false
+                        });
                         buttons.Clear();
-                        ++k;
+                        ++currentPage;
                     }
-                    j += 2;
-                }
-                lock (Glob.lockerKeyboards)
-                {
-                    Glob.keyboardsNewSubCount[i] = k;
                 }
             }
         }
@@ -268,7 +251,7 @@ namespace schedulebot
         public static string pathToFile;
         //? возможно стоит сделать List<Group>
         public Group[] groups; //??
-        public MessageKeyboard[] keyboards;
+        public List<MessageKeyboard> keyboards;
         public Course(string _pathToFile)
         {
             pathToFile = _pathToFile;
