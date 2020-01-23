@@ -110,14 +110,9 @@ namespace schedulebot
         public string lecturer = null;
         public bool isLecture = false; // true - лекция, false - практика
         public string errorType = null;
-        public bool isEmpty = true; // было ли тут что-то или только создана
+
         public ScheduleLecture() { }
-        public ScheduleLecture(string parse, bool _isLecture = false)
-        {
-            isLecture = _isLecture;
-            isEmpty = false;
-            Parse(parse);
-        }
+        
         public ScheduleLecture(string parse)
         {
             for (int i = 0; i < 3; ++i)
@@ -133,21 +128,22 @@ namespace schedulebot
                 isLecture = true;
                 parse = parse.Replace(Parsing.lectureConst, "");
             }
-            isEmpty = false;
             Parse(parse);
         }
+        
         public ScheduleLecture(string _status, string _subject)
         {
             status = _status;
             subject = _subject;
-            isEmpty = false;
         }
+        
         public bool IsEmpty()
         {
             if (status == null)
                 return true;
             return false;
         }
+        
         public string ConstructLecture() // собираем лекцию полностью
         {
             string lecture = "";
@@ -172,6 +168,7 @@ namespace schedulebot
             lecture += errorType;
             return lecture;
         }
+        
         public string ConstructLectureWithoutSubject() // собираем лекцию без предмета
         {
             string lectureWithoutSubject = "";
@@ -191,13 +188,14 @@ namespace schedulebot
             lectureHall += errorType;
             return lectureWithoutSubject;
         }
+        
         public ScheduleLecture GetLectureWithOnlySubject()
         {
             return new ScheduleLecture("F1", subject);
         }
+        
         public void Parse(string parsing) // Разбор на фио, аудиоторию и предмет
         {
-            isEmpty = false; //? избавиться
             if (parsing.Trim() == "")
                 return;
             Regex regexLectureHall = new Regex("[0-9]+([/]{1,2}[0-9]+)?( ?[(]{1}[0-9]+[)]{1})?( {1}[(]{1}[0-9]+ {1}корпус[)]{1})?");
@@ -219,7 +217,7 @@ namespace schedulebot
             else if (matches.Count == 0)
             {
                 int indexTemp;
-                for (int i = 0; i < Glob.fullName.GetLength(0); ++i)
+                for (int i = 0; i < Glob.fullName.Count; ++i)
                 {
                     indexTemp = parsing.IndexOf(Glob.fullName[i]);
                     if (indexTemp != -1)
@@ -382,6 +380,7 @@ namespace schedulebot
                 return false;
             return true;
         }
+        
         public static bool operator !=(ScheduleLecture lecture1, ScheduleLecture lecture2)
         {
             if (lecture1.isLecture != lecture2.isLecture

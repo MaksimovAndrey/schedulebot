@@ -13,33 +13,80 @@ namespace schedulebot
         public static Group[] Mapper(string pathToFile)
         {
             string format = pathToFile.Substring(pathToFile.LastIndexOf('.') + 1);
-            string[,] temp = null;
+            string[,] schedule = null;
             switch (format)
             {
                 case "xls":
                 {
-                    ExcelFile scheduleSource = ExcelFile.Load(pathToFile);   // Открытие Excel file
-                    ExcelWorksheet worksheet = scheduleSource.Worksheets.ActiveWorksheet; // Выбор листа (worksheet)
-                    temp = ParseXls(worksheet);
+                    try 
+                    {
+                        ExcelFile scheduleSource = ExcelFile.Load(pathToFile);   // Открытие Excel file
+                        ExcelWorksheet worksheet = scheduleSource.Worksheets.ActiveWorksheet; // Выбор листа (worksheet)
+                        schedule = ParseXls(worksheet);
+                    }
+                    catch
+                    {
+                        return null;
+                    }
                     break;
                 }
             }
-            int countOfGroups = temp.GetLength(0) / 2;
-            Group[] groups = new Group[countOfGroups];
-            // Засунул старый метод и забираю расписание, я клоун
-            for (int i = 0; i < countOfGroups; ++i)
+            int groupsAmount = schedule.GetLength(0);
+            // Проверяем группы на наличие одинаковых
+            List<string> groupsNames = new List<string>();
+            List<int> uniqueGroups = new List<int>();
+            for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup += 2)
+            {
+                if (!groupsNames.Contains(schedule[currentGroup, 0]))
+                {
+                    groupsNames.Add(schedule[currentGroup, 0]);
+                    uniqueGroups.Add(currentGroup / 2);
+                }
+                else
+                {
+                    int index = groupsNames.IndexOf(schedule[currentGroup, 0]);
+                    int count = 0;
+                    for (int i = 0; i < 2; i++)
+                    {
+                        for (int j = 2; j < 98; j++)
+                        {
+                            if (schedule[index + i, j] != "")
+                                ++count;
+                        }
+                    }
+                    int count2 = 0;
+                    for (int i = 0; i < 2; i++)
+                    {
+                        for (int j = 2; j < 98; j++)
+                        {
+                            if (schedule[currentGroup + i, j] != "")
+                                ++count;
+                        }
+                    }
+                    if (count < count2)
+                    {
+                        uniqueGroups[index] = currentGroup / 2;
+                    }
+                }
+            }
+            // Собираем группы
+            Group[] groups = new Group[uniqueGroups.Count];
+            for (int i = 0; i < uniqueGroups.Count; ++i)
             {
                 groups[i] = new Group();
-                groups[i].name = temp[i * 2, 0];
-                for (int j = 0; j < 2; ++j)
+                groups[i].name = schedule[uniqueGroups[i] * 2, 0];
+                for (int currentSubgroup = 0; currentSubgroup < 2; ++currentSubgroup)
                 {
-                    for (int k = 0; k < 2; ++k)
+                    for (int currentWeek = 0; currentWeek < 2; ++currentWeek)
                     {
-                        for (int l = 0; l < 6; ++l)
+                        for (int currentDay = 0; currentDay < 6; ++currentDay)
                         {
-                            for (int n = 0; n < 8; ++n)
+                            for (int currentLecture = 0; currentLecture < 8; ++currentLecture)
                             {
-                                groups[i].schedule[j].weeks[k].days[l].lectures[n].Parse(temp[i * 2 + j, 2 + l * 16 + n * 2 + k]);
+                                if (schedule[uniqueGroups[i] * 2 + currentSubgroup, 2 + currentDay * 16 + currentLecture * 2 + currentWeek] == null)
+                                    Console.WriteLine("Ой дурак");
+                                groups[i].schedule[currentSubgroup].weeks[currentWeek].days[currentDay].lectures[currentLecture]
+                                    = new ScheduleLecture(schedule[uniqueGroups[i] * 2 + currentSubgroup, 2 + currentDay * 16 + currentLecture * 2 + currentWeek]);
                             }
                         }
                     }
@@ -78,14 +125,24 @@ namespace schedulebot
             CurrentInfo current = new CurrentInfo(indent, 0);
             // Определяем где группа и начало пар
             int groupNameY = 10; // линия, в которой содержатся имена групп
-            int indentGroupToSchedule = 3;
             for (int i = 0; i < 10; ++i)
             {
-                if ((string)worksheet.Cells[groupNameY, current.x].Value != null)
-                    if (((string)worksheet.Cells[groupNameY, current.x].Value).Trim() != "")
-                        if (((string)worksheet.Cells[groupNameY, current.x].Value).Trim().IndexOf("38") == 0)
+                if (worksheet.Cells[groupNameY, current.x].Value != null && worksheet.Cells[groupNameY, current.x].ValueType == CellValueType.String)
+                    if (worksheet.Cells[groupNameY, current.x].StringValue.Trim() != "")
+                        if (worksheet.Cells[groupNameY, current.x].StringValue.Trim().IndexOf("38") == 0)
                             break;
                 ++groupNameY;
+            }
+            // Определяем где начало расписания
+            int scheduleStartY = 1;
+            while (true)
+            {
+                if (worksheet.Cells[scheduleStartY, 1].Value != null)
+                    if (worksheet.Cells[scheduleStartY, 1].ValueType == CellValueType.DateTime)
+                        if (((DateTime)worksheet.Cells[scheduleStartY, 1].Value).Hour == 7
+                            && ((DateTime)worksheet.Cells[scheduleStartY, 1].Value).Minute == 30)
+                            break;
+                scheduleStartY++;
             }
             // Считаем сколько групп
             int countOfGroups = 0;
@@ -95,17 +152,10 @@ namespace schedulebot
                 current.x += 2;
             }
             string[,] schedule = new string[countOfGroups * 2, 98];
-            // Проход по всем группам
+            current.x = indent;
             while (worksheet.Cells[groupNameY, current.x].Value != null)
             {
-                // записываем имя группы
-                schedule[current.schedule.x, 0] = worksheet.Cells[groupNameY, current.x].StringValue.Trim();
-                schedule[current.schedule.x + 1, 0] = schedule[current.schedule.x, 0];
-                // записываем подгруппу
-                schedule[current.schedule.x, 1] = "1";
-                schedule[current.schedule.x + 1, 1] = "2";
-                // Проход по ячейкам
-                for (current.y = groupNameY + indentGroupToSchedule; current.y < groupNameY + indentGroupToSchedule + 96; current.y += 2)
+                for (current.y = scheduleStartY; current.y < scheduleStartY + 96; current.y += 2)
                 {
                     // Отмена объединения ячеек
                     for (int j = 0; j < 2; ++j)
@@ -114,8 +164,17 @@ namespace schedulebot
                         {
                             if (worksheet.Cells[current.y, current.x].Value != null)
                             {
-                                if (!worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА")
-                                    && !worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ФИЗИЧЕСКАЯ КУЛЬТУРА"))
+                                if (worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ФИЗИЧЕСКАЯ КУЛЬТУРА"))
+                                {
+                                    CellRange mergedRange = worksheet.Cells[current.y + j, current.x + k].MergedRange;
+                                    if (mergedRange != null)
+                                        worksheet.Cells.GetSubrangeAbsolute(
+                                            mergedRange.FirstRowIndex,
+                                            mergedRange.FirstColumnIndex,
+                                            mergedRange.LastRowIndex,
+                                            mergedRange.LastColumnIndex).Merged = false;
+                                }
+                                else if (!worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА"))
                                 {
                                     CellRange mergedRange = worksheet.Cells[current.y + j, current.x + k].MergedRange;
                                     if (mergedRange != null)
@@ -138,6 +197,23 @@ namespace schedulebot
                             }
                         }
                     }
+                }
+                current.x += 2;
+            }
+            current.x = indent;
+            // Проход по всем группам
+            while (worksheet.Cells[groupNameY, current.x].Value != null)
+            {
+                current.schedule.y = 2;
+                // записываем имя группы
+                schedule[current.schedule.x, 0] = worksheet.Cells[groupNameY, current.x].StringValue.Trim();
+                schedule[current.schedule.x + 1, 0] = schedule[current.schedule.x, 0];
+                // записываем подгруппу
+                schedule[current.schedule.x, 1] = "1";
+                schedule[current.schedule.x + 1, 1] = "2";
+                // Проход по ячейкам
+                for (current.y = scheduleStartY; current.y < scheduleStartY + 96; current.y += 2)
+                {
                     // Пустая ячейка
                     if (worksheet.Cells[current.y, current.x].Value == null
                         && worksheet.Cells[current.y, current.x + 1].Value == null
@@ -155,6 +231,7 @@ namespace schedulebot
                                 schedule[current.schedule.x + i, current.schedule.y + j] = "";
                             }
                         }
+                        current.schedule.y += 2;
                         continue; // переход к следующей группе ячеек
                     }
                     // Уже заполнена
@@ -318,10 +395,10 @@ namespace schedulebot
                             if (schedule[current.schedule.x, current.schedule.y] != null)
                             {
                                 // 1-0-0
-                                if (schedule[current.schedule.x + 1, current.schedule.y] != null)
+                                if (schedule[current.schedule.x, current.schedule.y + 1] != null)
                                 {
                                     // 1-0-0-0
-                                    if (schedule[current.schedule.x, current.schedule.y + 1] != null)
+                                    if (schedule[current.schedule.x + 1, current.schedule.y] != null)
                                     {
                                         Cell1x1andMoreRight(ref worksheet, ref schedule, current, 1);
                                     }
@@ -350,7 +427,7 @@ namespace schedulebot
                                 else
                                 {
                                     // 1-0-1-0
-                                    if (schedule[current.schedule.x, current.schedule.y + 1] != null)
+                                    if (schedule[current.schedule.x + 1, current.schedule.y] != null)
                                     {
                                         // 1-0-1-0-0
                                         if (worksheet.Cells[current.y + 1, current.x + 1].Style.Borders[IndividualBorder.Left].LineStyle != LineStyle.None)
@@ -399,7 +476,7 @@ namespace schedulebot
                                 }
                             }
                             // 1-1
-                            else if (schedule[current.schedule.x + 1, current.schedule.y] != null)
+                            else if (schedule[current.schedule.x, current.schedule.y + 1] != null)
                             {
                                 // 1-1-0
                                 if (schedule[current.schedule.x + 1, current.schedule.y + 1] != null)
@@ -515,8 +592,16 @@ namespace schedulebot
                                             // 1-2-0-1-0-1
                                             else
                                             {
-                                                for (int i = 0; i < 2; i++)
-                                                    Cell2x1andMore(ref worksheet, ref schedule, current, i);
+                                                if (current.schedule.x == 14 && current.schedule.y == 86)
+                                                {
+                                                    for (int i = 0; i < 2; i++)
+                                                        Cell2x1andMore(ref worksheet, ref schedule, current, i);
+                                                }
+                                                else
+                                                {
+                                                    for (int i = 0; i < 2; i++)
+                                                        Cell2x1andMore(ref worksheet, ref schedule, current, i);
+                                                }
                                             }
                                         }
                                         // 1-2-0-1-1
@@ -696,17 +781,19 @@ namespace schedulebot
             {
                 if (worksheet.Cells[current.y + i, current.x + x].Value != null)
                 {
-                    string yaDebil = worksheet.Cells[current.y + i, current.x + x].StringValue.Trim();
-                    if (!temp.Contains(yaDebil))
-                        temp.Add(yaDebil);
+                    string currentStr = worksheet.Cells[current.y + i, current.x + x].StringValue.Trim();
+                    if (!temp.Contains(currentStr))
+                        temp.Add(currentStr);
                 }
             }
-            for (int i = 0; i < temp.Count; ++i)
-                temp[0] += ' ' + temp[i];
+            for (int i = 1; i < temp.Count; ++i)
+                temp[0] += temp[i] + ' ';
+            temp[0] = temp[0].TrimEnd();
             for (int i = 0; i < 2; ++i)
             {
                 schedule[current.schedule.x + x, current.schedule.y + i] = temp[0];
-                if (temp[0] != "" && worksheet.Cells[current.y + i, current.x + x].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+                if (temp[0] != "" && worksheet.Cells[current.y + i, current.x + x].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                    && temp[0] != "")
                    schedule[current.schedule.x + x, current.schedule.y + i] += errors[1];
             }
         }
@@ -742,8 +829,23 @@ namespace schedulebot
                     }
                 } while (worksheet.Cells[current.y + i, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
             }
-            for (int i = 1; i < temp.Count; i++)
-                temp[0] += ' ' + temp[i];
+            if (temp.Count == 2)
+                if (temp[1].ToUpper().Contains("ФИЗИЧЕСКАЯ КУЛЬТУРА"))
+                {
+                    temp[0] = "Физическая культура";
+                }
+                else
+                {
+                    for (int i = 1; i < temp.Count; i++)
+                        temp[0] += temp[i] + ' ';
+                    temp[0] = temp[0].TrimEnd();
+                }
+            else
+            {
+                for (int i = 1; i < temp.Count; i++)
+                    temp[0] += temp[i] + ' ';
+                temp[0] = temp[0].TrimEnd();
+            }
             if (temp[0] != "")
             {
                 if (worksheet.Cells[current.y, current.x + 1].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None
@@ -758,9 +860,10 @@ namespace schedulebot
                 do
                 {
                     ++x;
-                    schedule[current.schedule.x + x - startX, current.schedule.y + 1] = temp[0];
-                    if (worksheet.Cells[current.y + i, x].Style.FillPattern.PatternStyle == FillPatternStyle.None)
-                        schedule[current.schedule.x + x - startX, current.schedule.y + 1] += errors[1];
+                    schedule[current.schedule.x + x - startX, current.schedule.y + i] = temp[0];
+                    if (worksheet.Cells[current.y + i, x].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                        && temp[0] != "")
+                        schedule[current.schedule.x + x - startX, current.schedule.y + i] += errors[1];
                 } while (worksheet.Cells[current.y + i, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
             }
         }
@@ -788,8 +891,9 @@ namespace schedulebot
                         temp.Add(tempStr);
                 }
             } while (worksheet.Cells[current.y + y, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
-            for (int i = 0; i < temp.Count; ++i)
-                temp[0] += ' ' + temp[i];
+            for (int i = 1; i < temp.Count; ++i)
+                temp[0] += temp[i] + ' ';
+            temp[0] = temp[0].TrimEnd();
             if (temp[0] != "")
             {
                 if (worksheet.Cells[current.y + y, current.x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None)
@@ -801,7 +905,8 @@ namespace schedulebot
             {
                 ++x;
                 schedule[current.schedule.x + x - startX, current.schedule.y + y] = temp[0];
-                if (worksheet.Cells[current.y + y, x].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+                if (worksheet.Cells[current.y + y, x].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                    && temp[0] != "")
                     schedule[current.schedule.x + x - startX, current.schedule.y + y] += errors[1];
             } while (worksheet.Cells[current.y + y, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
         }
@@ -821,15 +926,17 @@ namespace schedulebot
                         temp.Add(tempStr);
                 }
             } while (worksheet.Cells[current.y + y, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
-            for (int i = 0; i < temp.Count; ++i)
-                temp[0] += ' ' + temp[i];
+            for (int i = 1; i < temp.Count; ++i)
+                temp[0] += temp[i] + ' ';
+            temp[0] = temp[0].TrimEnd();
             x = current.x; // + 1 переносим внутрь цикла
             int startX = x + 1;
             do
             {
                 ++x;
                 schedule[current.schedule.x + x - startX, current.schedule.y + y] = temp[0];
-                if (worksheet.Cells[current.y + y, x].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+                if (worksheet.Cells[current.y + y, x].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                    && temp[0] != "")
                     schedule[current.schedule.x + x - startX, current.schedule.y + y] += errors[1];
             } while (worksheet.Cells[current.y + y, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
         }
@@ -853,7 +960,8 @@ namespace schedulebot
                 } while (worksheet.Cells[current.y + i, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
             }
             for (int i = 1; i < temp.Count; i++)
-                temp[0] += ' ' + temp[i];
+                temp[0] += temp[i] + ' ';
+            temp[0] = temp[0].TrimEnd();
             if (temp[0] != "")
             {
                 if (worksheet.Cells[current.y, current.x + 1].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None
@@ -868,7 +976,8 @@ namespace schedulebot
                 {
                     ++x;
                     schedule[current.schedule.x + x - startX, current.schedule.y + 1] = temp[0];
-                    if (worksheet.Cells[current.y + i, x].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+                    if (worksheet.Cells[current.y + i, x].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                        && temp[0] != "")
                         schedule[current.schedule.x + x - startX, current.schedule.y + 1] += errors[1];
                 } while (worksheet.Cells[current.y + i, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
             }
@@ -897,8 +1006,9 @@ namespace schedulebot
                         temp.Add(tempStr);
                 }
             } while (worksheet.Cells[current.y + y, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
-            for (int i = 0; i < temp.Count; ++i)
-                temp[0] += ' ' + temp[i];
+            for (int i = 1; i < temp.Count; ++i)
+                temp[0] += temp[i] + ' ';
+            temp[0] = temp[0].TrimEnd();
             if (temp[0] != "")
             {
                 if (worksheet.Cells[current.y + y, current.x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None)
@@ -911,11 +1021,13 @@ namespace schedulebot
             {
                 ++x;
                 schedule[current.schedule.x + x - startX, current.schedule.y + y] = temp[0];
-                if (worksheet.Cells[current.y + y, x].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+                if (worksheet.Cells[current.y + y, x].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                    && temp[0] != "")
                     schedule[current.schedule.x + x - startX, current.schedule.y + y] += errors[1];
             } while (worksheet.Cells[current.y + y, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
             schedule[current.schedule.x + _x, current.schedule.y + (y + 1) % 2] = temp[0];
-            if (worksheet.Cells[current.y + (y + 1) % 2, current.x + _x].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+            if (worksheet.Cells[current.y + (y + 1) % 2, current.x + _x].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                && temp[0] != "")
                 schedule[current.schedule.x + _x, current.schedule.y + (y + 1) % 2] += errors[1];
         }
     }
@@ -943,14 +1055,16 @@ namespace schedulebot
                         temp.Add(yaDebil);
                 }
             }
-            for (int i = 0; i < temp.Count; ++i)
-                temp[0] += ' ' + temp[i];
+            for (int i = 1; i < temp.Count; ++i)
+                temp[0] += temp[i] + ' ';
+            temp[0] = temp[0].TrimEnd();
             ScheduleLecture tempLecture = new ScheduleLecture();
             tempLecture.Parse(temp[0]);
             for (int i = 0; i < 2; ++i)
             {
                 groups[current.group].schedule[i].weeks[y].days[current.day].lectures[current.lecture] = tempLecture;
-                if (worksheet.Cells[current.y + y, current.x + i].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+                if (worksheet.Cells[current.y + y, current.x + i].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                    && temp[0] != "")
                     groups[current.group].schedule[i].weeks[y].days[current.day].lectures[current.lecture].errorType += errors[1];
             }
         }
@@ -986,8 +1100,9 @@ namespace schedulebot
                     }
                 }
             }
-            for (int i = 0; i < temp.Count; ++i)
-                temp[0] += ' ' + temp[i];
+            for (int i = 1; i < temp.Count; ++i)
+                temp[0] += temp[i] + ' ';
+            temp[0] = temp[0].TrimEnd();
             ScheduleLecture tempLecture = new ScheduleLecture();
             tempLecture.Parse(temp[0]);
             for (int i = 0; i < 2; ++i)
@@ -995,7 +1110,8 @@ namespace schedulebot
                 for (int j = 0; j < 2; j++)
                 {
                     groups[current.group].schedule[i].weeks[j].days[current.day].lectures[current.lecture] = tempLecture;
-                    if (worksheet.Cells[current.y + j, current.x + i].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+                    if (worksheet.Cells[current.y + j, current.x + i].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                        && temp[0] != "")
                         groups[current.group].schedule[i].weeks[j].days[current.day].lectures[current.lecture].errorType += errors[1];
                 }
             }

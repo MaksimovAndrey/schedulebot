@@ -61,200 +61,24 @@ namespace schedulebot
             }
         }
     }
-    public abstract class Department
-    {
-        public string path;
-        private CheckRelevanceStuff checkRelevanceStuff;
-        private int coursesCount;
-        private Course[] courses;
-        public abstract List<int> CheckRelevance();
-        public abstract void UpdateSchedule(List<int> coursesToUpdate);
-        public abstract List<int> AreScheduleRelevant(DatesAndUrls newDatesAndUrls);
-    }
-    public class DepartmentITMM : Department
-    {
-        public string path;
-        private VkStuff vkStuff = new VkStuff();
-        private CheckRelevanceStuff checkRelevanceStuffITMM = new CheckRelevanceStuffITMM();
-        public static Dictionary<string, string> acronymToPhrase;
-        public Dictionary<string, string> doubleOptionallySubject;
-        public string[] fullName;
-        private int coursesAmount;
-        private Course[] courses = new Course[5]; // не знаем сколько курсов, определять во время работы
-        bool[] isCourseBroken = { false, false, false, false, false };
-        public DepartmentITMM(string _path)
-        {
-            path = _path + "itmm/";
-            for (int i = 0; i < 5; ++i)
-            {
-                courses[i] = new Course(path + i + "_course.xls");
-            }
-            LoadAcronymToPhrase();
-            LoadDoubleOptionallySubject();
-            LoadFullName();
-        }
-        
-        public static class ConstructKeyboardsProperties
-        {
-            public const int buttonsInLine = 2; // 1..4
-            public const int linesInKeyboard = 4; // 1..9 
-        }
-
-        public void СonstructKeyboards()
-        {
-            for (int currentCourse = 0; currentCourse < coursesAmount; ++currentCourse)
-            {
-                int groupsAmount = courses[currentCourse].groups.GetLength(0);
-                int pagesAmount = (int)Math.Ceiling((double)groupsAmount
-                    / (double)(ConstructKeyboardsProperties.linesInKeyboard * ConstructKeyboardsProperties.buttonsInLine));
-                int currentPage = 0;
-                courses[currentCourse].keyboards = new List<MessageKeyboard>();
-                List<MessageKeyboardButton> line = new List<MessageKeyboardButton>();
-                List<List<MessageKeyboardButton>> buttons = new List<List<MessageKeyboardButton>>();
-                List<MessageKeyboardButton> serviceLine = new List<MessageKeyboardButton>();
-                for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.GetLength(0); currentGroup++)
-                {
-                    line.Add(new MessageKeyboardButton()
-                    {
-                        Color = KeyboardButtonColor.Primary,
-                        Action = new MessageKeyboardButtonAction
-                        {
-                            Type = KeyboardButtonActionType.Text,
-                            Label = courses[currentCourse].groups[currentGroup].name,
-                            Payload = "{\"menu\": \"30\", \"index\": \"" + currentGroup + "\", \"course\": \"" + currentCourse + "\"}"
-                        }
-                    });
-                    if (line.Count == ConstructKeyboardsProperties.buttonsInLine
-                        || (currentGroup + 1 == groupsAmount && line.Count != 0))
-                    {
-                        buttons.Add(new List<MessageKeyboardButton>(line));
-                        line.Clear();
-                    }
-                    if (buttons.Count == ConstructKeyboardsProperties.linesInKeyboard
-                        || (currentGroup + 1 == groupsAmount && buttons.Count != 0))
-                    {
-                        string payloadService = "{\"menu\": \"30\", \"page\": \"" + currentPage + "\", \"course\": \"" + currentCourse + "\"}";
-                        serviceLine.Add(new MessageKeyboardButton()
-                        {
-                            Color = KeyboardButtonColor.Default,
-                            Action = new MessageKeyboardButtonAction
-                            {
-                                Type = KeyboardButtonActionType.Text,
-                                Label = "Назад",
-                                Payload = payloadService
-                            }
-                        });
-                        serviceLine.Add(new MessageKeyboardButton()
-                        {
-                            Color = KeyboardButtonColor.Default,
-                            Action = new MessageKeyboardButtonAction
-                            {
-                                Type = KeyboardButtonActionType.Text,
-                                Label = (currentPage + 1) + " из " + pagesAmount,
-                                Payload = payloadService
-                            }
-                        });
-                        serviceLine.Add(new MessageKeyboardButton()
-                        {
-                            Color = KeyboardButtonColor.Default,
-                            Action = new MessageKeyboardButtonAction
-                            {
-                                Type = KeyboardButtonActionType.Text,
-                                Label = "Вперед",
-                                Payload = payloadService
-                            }
-                        });
-                        buttons.Add(new List<MessageKeyboardButton>(serviceLine));
-                        serviceLine.Clear();
-                        courses[currentCourse].keyboards.Add(new MessageKeyboard
-                        {
-                            Buttons = new List<List<MessageKeyboardButton>>(buttons),
-                            OneTime = false
-                        });
-                        buttons.Clear();
-                        ++currentPage;
-                    }
-                }
-            }
-        }
-
-
-        public void LoadAcronymToPhrase()
-        {
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка ManualAcronymToPhrase");
-            Glob.acronymToPhrase = new Dictionary<string,string>();
-            using StreamReader file = new StreamReader(
-                path + @"/manualProcessing/acronymToPhrase.txt",
-                System.Text.Encoding.Default);
-            while (!file.EndOfStream)
-                Glob.acronymToPhrase.Add(file.ReadLine(), file.ReadLine());
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка ManualAcronymToPhrase");
-        }
-        public void LoadDoubleOptionallySubject()
-        {
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка DoubleOptionallySubject");
-            Glob.doubleOptionallySubject = new Dictionary<string,string>();
-            using StreamReader file = new StreamReader(
-                path + @"/manualProcessing/doubleOptionallySubject.txt",
-                System.Text.Encoding.Default);
-            while (!file.EndOfStream)
-                Glob.doubleOptionallySubject.Add(file.ReadLine(), file.ReadLine());
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка DoubleOptionallySubject");
-        }
-        public void LoadFullName()
-        {
-            List<string> fullNames = new List<string>();
-            using StreamReader file = new StreamReader(
-                path + @"/manualProcessing/fullName.txt",
-                System.Text.Encoding.Default);
-            while (!file.EndOfStream)
-                fullNames.Add(file.ReadLine());
-            Glob.fullName = fullNames.ToArray();
-        }
-        public override List<int> CheckRelevance()
-        {
-            DatesAndUrls newDatesAndUrls = checkRelevanceStuffITMM.CheckRelevance();
-            if (newDatesAndUrls != null)
-            {
-                coursesCount = newDatesAndUrls.count;
-                List<int> coursesToUpdate = AreScheduleRelevant(newDatesAndUrls);
-                UpdateSchedule(coursesToUpdate);
-            }
-            return null;
-        }
-        public override void UpdateSchedule(List<int> coursesToUpdate)
-        {
-            for (int i = 0; i < coursesToUpdate.Count; ++i)
-            {
-                // async
-                isCourseBroken[i] = !courses[i].Update();
-            }
-        }
-        public override List<int> AreScheduleRelevant(DatesAndUrls newDatesAndUrls)
-        {
-            List<int> notRelevantCourses = new List<int>();
-            coursesCount = newDatesAndUrls.count;
-            for (int i = 0; i < newDatesAndUrls.count; ++i)
-            {
-                if (newDatesAndUrls.dates[i] != null && courses[i].date != newDatesAndUrls.dates[i])
-                {
-                    notRelevantCourses.Add(i);
-                }
-            }
-            return notRelevantCourses;
-        }
-    }
+    
     public class Course
     {
         public static string urlToFile;
         public string date;
         public static string pathToFile;
-        //? возможно стоит сделать List<Group>
-        public Group[] groups; //??
+        public Group[] groups;
+        public bool isBroken;
+        public bool isUpdating;
         public List<MessageKeyboard> keyboards;
         public Course(string _pathToFile)
         {
             pathToFile = _pathToFile;
+            Group[] groups = Parsing.Mapper(pathToFile);
+            if (groups == null)
+                isBroken = true;
+            else
+                isBroken = false;
         }
         // Обновляем расписание, true - успешно, false - не смогли
         public bool Update()
@@ -281,7 +105,7 @@ namespace schedulebot
             List<GroupWithSubgroups> notEqualGroupsWithSubgroups = new List<GroupWithSubgroups>();
             for (int i = 0; i < _groups.GetLength(0); ++i)
             {
-                for (int j = 0; j < groupsCount; ++j)
+                for (int j = 0; j < 11111111; ++j) //! error
                 {
                     if (groups[i].name == _groups[j].name)
                     {
@@ -317,6 +141,7 @@ namespace schedulebot
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E]  -> Скачивание расписания");
         }
     }
+    
     public class GroupWithSubgroups
     {
         public string name;
@@ -327,6 +152,7 @@ namespace schedulebot
             subgroups = _subgroups;
         }
     }
+    
     public class Group
     {
         public string name = "";
@@ -358,10 +184,6 @@ namespace schedulebot
         public string[] dates = new string[5];
     }
 
-    public interface IDepartment
-    {
-        public string[] Parse(string str);
-    }
     public abstract class CheckRelevanceStuff
     {
         private string url;

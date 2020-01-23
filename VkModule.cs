@@ -36,6 +36,7 @@ namespace schedulebot
     {
         public MessageKeyboard[] keyboards;
     }
+    /*
     public static class Vk
     {
         public static void GetMessages(VkStuff vkStuff)
@@ -1359,4 +1360,5 @@ namespace schedulebot
             }
         }
     }
+    */
 }
