@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GemBox.Spreadsheet;
 
-namespace schedulebot
+namespace Schedulebot
 {
     public static class Const
     {

@@ -8,7 +8,9 @@ using VkNet.Model.Keyboard;
 using VkNet.Enums.SafetyEnums;
 using System.Threading.Tasks;
 
-namespace schedulebot
+using Schedulebot.Vk;
+
+namespace Schedulebot
 {
     public class ItmmDepartment : IDepartment
     {

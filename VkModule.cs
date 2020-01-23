@@ -24,7 +24,7 @@ using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using VkNet.Exception;
 
-namespace schedulebot
+namespace Schedulebot.Vk
 {
     public class VkStuff
     {

@@ -3,12 +3,13 @@ using System.Drawing;
 using System.Linq;
 using System.IO;
 
+using Schedulebot.Schedule;
 
-namespace schedulebot
+namespace Schedulebot.Drawing
 {
     public struct DrawingStandartScheduleInfo
     {
-        public Schedule schedule;
+        public ScheduleSubgroup schedule;
         public string group;
         public string subgroup;
         public string date;

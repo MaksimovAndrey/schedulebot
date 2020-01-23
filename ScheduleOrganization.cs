@@ -7,7 +7,10 @@ using System.Threading;
 using VkNet.Model.Keyboard;
 using VkNet.Enums.SafetyEnums;
 
-namespace schedulebot
+using Schedulebot.Parse;
+using Schedulebot.Schedule;
+
+namespace Schedulebot
 {
     public class CheckRelevanceStuffITMM : CheckRelevanceStuff
     {
@@ -156,11 +159,11 @@ namespace schedulebot
     public class Group
     {
         public string name = "";
-        public Schedule[] schedule = new Schedule[2]; // 2 подгруппы
+        public ScheduleSubgroup[] schedule = new ScheduleSubgroup[2]; // 2 подгруппы
         public Group()
         {
             for (int i = 0; i < 2; ++i)
-                schedule[i] = new Schedule();
+                schedule[i] = new ScheduleSubgroup();
         }
         // Сравнивает расписание, возвращает список несовпадающих подгрупп
         public List<int> ScheduleCompare(Group group)

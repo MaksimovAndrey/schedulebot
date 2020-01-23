@@ -1,10 +1,12 @@
 using System;
 using GemBox.Spreadsheet;
 using System.IO;
-using System.Text.RegularExpressions;
+// using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
-namespace schedulebot
+using Schedulebot.Schedule;
+
+namespace Schedulebot.Parse
 {
     public static class Parsing
     {
