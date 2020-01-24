@@ -16,6 +16,20 @@ namespace Schedulebot
             }
             return null;
         }
+
+        public void AddUser(long id, string group, int subgroup)
+        {
+            for (int i = 0; i < userGroups.Count; i++)
+            {
+                if (userGroups[i].group == group && userGroups[i].subgroup == subgroup)
+                {
+                    userGroups[i].userIds.Add(id);
+                    return;
+                }
+            }
+            userGroups.Add(new UserGroup(group, subgroup));
+            userGroups[userGroups.Count - 1].userIds.Add(id);
+        }
     }
 
     public class UserGroup
