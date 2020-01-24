@@ -1,11 +1,12 @@
 using System;
 using HtmlAgilityPack;
 using System.Collections.Generic;
-using System.Net;
+using System.Net.Http;
 using System.IO;
 using System.Threading;
 using VkNet.Model.Keyboard;
 using VkNet.Enums.SafetyEnums;
+using System.Threading.Tasks;
 
 using Schedulebot.Parse;
 using Schedulebot.Schedule;
@@ -14,13 +15,13 @@ namespace Schedulebot
 {
     public class CheckRelevanceStuffITMM : CheckRelevanceStuff
     {
-        private const string url = @"http://www.itmm.unn.ru/studentam/raspisanie/raspisanie-bakalavriata-i-spetsialiteta-ochnoj-formy-obucheniya/";
+        private readonly Uri uri = new Uri(@"http://www.itmm.unn.ru/studentam/raspisanie/raspisanie-bakalavriata-i-spetsialiteta-ochnoj-formy-obucheniya/");
         public override DatesAndUrls CheckRelevance()
         {
             HtmlDocument page;
             try
             {
-                page = new HtmlWeb().Load(url);
+                page = new HtmlWeb().Load(uri);
             }
             catch 
             {
@@ -67,9 +68,9 @@ namespace Schedulebot
     
     public class Course
     {
-        public static string urlToFile;
+        public string urlToFile;
         public string date;
-        public static string pathToFile;
+        public string pathToFile;
         public Group[] groups;
         public bool isBroken;
         public bool isUpdating;
@@ -84,20 +85,35 @@ namespace Schedulebot
                 isBroken = false;
         }
         // Обновляем расписание, true - успешно, false - не смогли
-        public bool Update()
+        public async Task Update()
         {
-            int count = 0;
-            while (!Download())
+            isUpdating = true;
+            int triesAmount = 0;
+            while (true)
             {
-                ++count;
-                if (count == 5)
-                    return false;
-                Thread.Sleep(60000);
+                HttpResponseMessage response = await ScheduleBot.client.GetAsync(urlToFile);
+                if (response.IsSuccessStatusCode)
+                {
+                    using (var fs = new FileStream(pathToFile, FileMode.CreateNew))
+                        await response.Content.CopyToAsync(fs);
+                    break;
+                }
+                ++triesAmount;
+                if (triesAmount == 5)
+                {
+                    isBroken = true;
+                    isUpdating = false;
+                    return;
+                }
+                await Task.Delay(60000);
             }
             Group[] newGroups = Parsing.Mapper(pathToFile);
-            List<GroupWithSubgroups> notEqualGroupsWithSubgroups = CompareGroups(newGroups);
+
+
+            // List<GroupWithSubgroups> notEqualGroupsWithSubgroups = CompareGroups(newGroups);
             
-            return true;
+            isBroken = false;
+            isUpdating = false;
         }
         public void ProcessSchedule(List<GroupWithSubgroups> notEqualGroupsWithSubgroups)
         {
@@ -128,21 +144,6 @@ namespace Schedulebot
             return null;
         }
         // Скачиваем новое расписание, true - успешно, false - не удалось скачать
-        public static bool Download()
-        {
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S]  -> Скачивание расписания");
-            WebClient webClient = new WebClient();
-            try
-            {
-                webClient.DownloadFile(urlToFile, pathToFile);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E]  -> Скачивание расписания");
-        }
     }
     
     public class GroupWithSubgroups

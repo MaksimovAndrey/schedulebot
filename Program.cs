@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using GemBox.Spreadsheet;
+using System.Net.Http;
 
 namespace Schedulebot
 {
@@ -17,6 +18,7 @@ namespace Schedulebot
     }
     public static class Glob
     {
+
         //! ТОЛЬКО ДЛЯ ITMM
         // todo: подумать как пофиксить можно BibleThump
         public static Dictionary<string, string> acronymToPhrase = new Dictionary<string, string>();
@@ -25,6 +27,7 @@ namespace Schedulebot
     }
     public class ScheduleBot
     {
+        public static readonly HttpClient client = new HttpClient();
         private const string path = @"C:\Custom\Projects\Shared\sbtest\";
         private int departmentsAmount = 1;
         IDepartment[] departments;
@@ -43,7 +46,7 @@ namespace Schedulebot
                 {
                     // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Проверка актуальности");
                     for (int i = 0; i < departmentsAmount; ++i)
-                        new Task(departments[i].Action).Start();
+                        // new Task(departments[i].Action).Start();
                     // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Проверка актуальности");
                     Thread.Sleep(600000);
                 }
