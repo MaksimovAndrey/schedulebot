@@ -28,73 +28,20 @@ namespace Schedulebot.Vk
 {
     public class VkStuff
     {
+        public ConcurrentQueue<string> commandsQueue = new ConcurrentQueue<string>();
         public VkApi api = new VkApi();
         public VkApi apiPhotos = new VkApi();
         public ulong groupId;
         public long mainAlbumId;
         public long tomorrowAlbumId;
+        public MessageKeyboard[] mainMenuKeyboards;
     }
-    public class VkKeyboards
-    {
-        public MessageKeyboard[] keyboards;
-    }
+
+    
     /*
     public static class Vk
     {
-        public static void GetMessages(VkStuff vkStuff)
-        {
-            LongPollServerResponse serverResponse = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
-            BotsLongPollHistoryResponse historyResponse = null;
-            BotsLongPollHistoryParams botsLongPollHistoryParams = new BotsLongPollHistoryParams()
-            {
-                Server = serverResponse.Server,
-                Ts = serverResponse.Ts,
-                Key = serverResponse.Key,
-                Wait = 25
-            };
-            while (true)
-            {
-                // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " Получаю сообщения");
-                try
-                {
-                    historyResponse = vkStuff.api.Groups.GetBotsLongPollHistory(botsLongPollHistoryParams);
-                    if (historyResponse == null)
-                        continue;
-                    botsLongPollHistoryParams.Ts = historyResponse.Ts;
-                    if (!historyResponse.Updates.Any())
-                        continue;
-                    foreach (var update in historyResponse.Updates)
-                    {
-                        if (update.Type == GroupUpdateType.MessageNew)
-                        {
-                            MessageResponseAsync(update.Message);
-                        }
-                    }
-                    historyResponse = null;
-                }
-                catch (LongPollException exception)
-                {
-                    if (exception is LongPollOutdateException outdateException)
-                        botsLongPollHistoryParams.Ts = outdateException.Ts;
-                    else
-                    {
-                        LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
-                        botsLongPollHistoryParams.Ts = server.Ts;
-                        botsLongPollHistoryParams.Key = server.Key;
-                        botsLongPollHistoryParams.Server = server.Server;
-                    }
-                }
-                catch (Exception e)
-                {
-                    // todo: long poll error
-                    LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
-                    botsLongPollHistoryParams.Ts = server.Ts;
-                    botsLongPollHistoryParams.Key = server.Key;
-                    botsLongPollHistoryParams.Server = server.Server;
-                    // Console.WriteLine("Long poll error = " + e);
-                }
-            }
-        }
+        
         public static void SendMessage(long? userId, bool oneTime = false, string message = "Отправляю клавиатуру", List<MediaAttachment> attachments = null, int keyboardId = 0, bool onlyKeyboard = false, string keyboardSpecial = "", MessageKeyboard customKeyboard = null)
         {
             Random random = new Random();
