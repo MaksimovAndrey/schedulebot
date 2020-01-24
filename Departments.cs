@@ -537,13 +537,23 @@ namespace Schedulebot
             }
         }
 
+        public class PayloadStuff
+        {
+            public string Command { get; set; }
+            public int? Menu { get; set; }
+            public int? Course { get; set; }
+            public int? Index { get; set; }
+        }
+
         public async void MessageResponseAsync(Message message)
         {
             await Task.Run(() =>
             {
-                if (message.Payload == null)
+                PayloadStuff payloadStuff = Newtonsoft.Json.JsonConvert.DeserializeObject<PayloadStuff>(message.Payload);
+                if (payloadStuff.Menu == null)
                 {
-                    if (message.PeerId == 133040900)
+                    // todo: Переписать админку
+                    if (message.PeerId == vkStuff.adminId)
                     {
                         if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
                         {
@@ -712,17 +722,112 @@ namespace Schedulebot
                     {
                         if (message.Attachments.Single().ToString() == "Sticker")
                         {
-                            SendMessage(userId: message.PeerId, message: "🤡");
+                            SendMessage(userId: message.PeerId,
+                                        message: "🤡");
                             return;
                         }
                     }
                     else
                     {
-                        SendMessage(userId: message.PeerId, message: "Нажмите на кнопку");
+                        SendMessage(userId: message.PeerId,
+                                    message: "Нажмите на кнопку");
                         return;
                     }
                     return;
                 }
+                else if (payloadStuff.Command == "start")
+                {
+                    SendMessage(userId: message.PeerId,
+                                message: "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.\nКнопка \"Информация\" для получения подробностей",
+                                keyboardId: 0);
+                    return;
+                }
+                else
+                {
+                    // По idшникам меню сортируем сообщения
+                    switch (payloadStuff.Menu)
+                    {
+                        case null:
+                        {
+                            SendMessage(userId: message.PeerId,
+                                        message: "Что-то пошло не так",
+                                        keyboardId: 0);
+                            return;
+                        }
+                        case 0:
+                        {
+                            switch (message.Text)
+                            {
+                                case "Расписание":
+                                {
+                                    SendMessage(userId: message.PeerId,
+                                                keyboardId: 1);
+                                    return;
+                                }
+                                case "Неделя":
+                                {
+                                    SendMessage(userId: message.PeerId,
+                                                message: CurrentWeek());
+                                    return;
+                                }
+                                case "Настройки":
+                                {
+                                    MessageKeyboard keyboardCustom;
+                                    keyboardCustom = vkStuff.mainMenuKeyboards[2];
+                                    //!
+                                    if (!Glob.users.Keys.Contains(message.PeerId))
+                                    {
+                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
+                                    }
+                                    else
+                                    {
+                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
+                                    }
+                                    SendMessage(
+                                        userId: message.PeerId,
+                                        message: "Отправляю клавиатуру",
+                                        keyboardId: -1,
+                                        customKeyboard: keyboardCustom);
+                                    return;
+                                }
+                                case "Информация":
+                                {
+                                    SendMessage(userId: message.PeerId,
+                                                message: "Текущая версия - v2.2\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie");
+                                    return;
+                                }
+                                default:
+                                {
+                                    SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 0, что-то с message.Text", keyboardId: 0);
+                                    return;
+                                }
+                            }
+                        }
+                        case 1:
+                        {
+
+                        }
+                        case 2:
+                        {
+
+                        }
+                        case 3:
+                        {
+
+                        }
+                        case 4:
+                        {
+
+                        }
+                        case 30:
+                        {
+
+                        }
+                    }
+                }
+
+
+                /*
                 Regex regex = new Regex("[0-9]+");
                 int[] args = new int[4] { -1, -1, -1, -1 };
                 MatchCollection matches = regex.Matches(message.Payload);
@@ -738,11 +843,15 @@ namespace Schedulebot
                     SendMessage(userId: message.PeerId, message: "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.\nКнопка \"Информация\" для получения подробностей", keyboardId: 0);
                     return;
                 }
+                */
+
+
+
                 switch (args[0])
                 {
                     case -1: // в случае ошибки
                     {
-                        SendMessage(userId: message.PeerId, message: "Что-то пошло не так", onlyKeyboard: false, keyboardId: 0);
+                        SendMessage(userId: message.PeerId, message: "Что-то пошло не так", keyboardId: 0);
                         return;
                     }
                     case 0: // сделать информацию
@@ -756,16 +865,13 @@ namespace Schedulebot
                             }
                             case "Неделя":
                             {
-                                SendMessage(userId: message.PeerId, message: Utils.CurrentWeek(), keyboardId: 0);
+                                SendMessage(userId: message.PeerId, message: CurrentWeek(), keyboardId: 0);
                                 return;
                             }
                             case "Настройки":
                             {
                                 MessageKeyboard keyboardCustom;
-                                lock (Glob.lockerKeyboards)
-                                {
-                                    keyboardCustom = Const.mainMenuKeyboards[2];
-                                }
+                                keyboardCustom = vkStuff.mainMenuKeyboards[2];
                                 lock (Glob.locker)
                                 {
                                     if (!Glob.users.Keys.Contains(message.PeerId))
@@ -781,8 +887,7 @@ namespace Schedulebot
                                     userId: message.PeerId,
                                     message: "Отправляю клавиатуру",
                                     keyboardId: -1,
-                                    customKeyboard: keyboardCustom,
-                                    onlyKeyboard: true);
+                                    customKeyboard: keyboardCustom);
                                 return;
                             }
                             case "Информация":
@@ -815,7 +920,7 @@ namespace Schedulebot
                             bool contains;
                             lock (Glob.lockerKeyboards)
                             {
-                                keyboardCustom = Const.mainMenuKeyboards[2];
+                                keyboardCustom = vkStuff.mainMenuKeyboards[2];
                             }
                             lock (Glob.locker)
                             {
@@ -887,7 +992,7 @@ namespace Schedulebot
                                     bool contains;
                                     lock (Glob.lockerKeyboards)
                                     {
-                                        keyboardCustom = Const.mainMenuKeyboards[2];
+                                        keyboardCustom = vkStuff.mainMenuKeyboards[2];
                                     }
                                     lock (Glob.locker)
                                     {
@@ -966,7 +1071,7 @@ namespace Schedulebot
                                     bool contains;
                                     lock (Glob.lockerKeyboards)
                                     {
-                                        keyboardCustom = Const.mainMenuKeyboards[2];
+                                        keyboardCustom = vkStuff.mainMenuKeyboards[2];
                                     }
                                     lock (Glob.locker)
                                     {
@@ -1087,7 +1192,7 @@ namespace Schedulebot
                                     bool contains;
                                     lock (Glob.lockerKeyboards)
                                     {
-                                        keyboardCustom = Const.mainMenuKeyboards[2];
+                                        keyboardCustom = vkStuff.mainMenuKeyboards[2];
                                     }
                                     lock (Glob.locker)
                                     {
@@ -1257,7 +1362,7 @@ namespace Schedulebot
                             MessageKeyboard keyboardCustom;
                             lock (Glob.lockerKeyboards)
                             {
-                                keyboardCustom = Const.mainMenuKeyboards[2];
+                                keyboardCustom = vkStuff.mainMenuKeyboards[2];
                             }
                             lock (Glob.locker)
                             {
@@ -1284,7 +1389,7 @@ namespace Schedulebot
                                 MessageKeyboard keyboardCustom;
                                 lock (Glob.lockerKeyboards)
                                 {
-                                    keyboardCustom = Const.mainMenuKeyboards[2];
+                                    keyboardCustom = vkStuff.mainMenuKeyboards[2];
                                 }
                                 keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
                                 string messageTemp;
@@ -1321,7 +1426,7 @@ namespace Schedulebot
                                 MessageKeyboard keyboardCustom;
                                 lock (Glob.lockerKeyboards)
                                 {
-                                    keyboardCustom = Const.mainMenuKeyboards[2];
+                                    keyboardCustom = vkStuff.mainMenuKeyboards[2];
                                 }
                                 lock (Glob.locker)
                                 {
@@ -1458,7 +1563,7 @@ namespace Schedulebot
                                 MessageKeyboard keyboardCustom;
                                 lock (Glob.lockerKeyboards)
                                 {
-                                    keyboardCustom = Const.mainMenuKeyboards[2];
+                                    keyboardCustom = vkStuff.mainMenuKeyboards[2];
                                 }
                                 lock (Glob.locker)
                                 {
@@ -1640,7 +1745,7 @@ namespace Schedulebot
                             MessageKeyboard customKeyboard;
                             lock (Glob.lockerKeyboards)
                             {
-                                customKeyboard = Const.mainMenuKeyboards[4];
+                                customKeyboard = vkStuff.mainMenuKeyboards[4];
                             }
                             string payload = "{\"menu\": \"4\", \"index\": \"" + args[1] + "\", \"course\": \"" + args[2] + "\"}";
                             customKeyboard.Buttons.First().First().Action.Payload = payload;
@@ -1668,7 +1773,7 @@ namespace Schedulebot
                                 // bool oneTime = false,
                                 string message = "Отправляю клавиатуру",
                                 List<MediaAttachment> attachments = null,
-                                int keyboardId = 0,
+                                int? keyboardId = null,
                                 string keyboardSpecial = "",
                                 MessageKeyboard customKeyboard = null)
         {
@@ -1683,6 +1788,10 @@ namespace Schedulebot
             };
             switch (keyboardId)
             {
+                case null:
+                {
+                    break;
+                }
                 case -1:
                 {
                     messagesSendParams.Keyboard = customKeyboard;
