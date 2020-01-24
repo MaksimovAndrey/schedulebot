@@ -5,48 +5,29 @@ namespace Schedulebot
 {
     public class Users
     {
-        List<User> users = new List<User>();
+        List<UserGroup> userGroups = new List<UserGroup>();
 
-        public List<long> GetUserIds(ScheduleSettings scheduleSettings)
+        public List<long> GetUserIds(string group, int subgroup)
         {
-            for (int i = 0; i < users.Count; i++)
+            for (int i = 0; i < userGroups.Count; i++)
             {
-                if (users[i].scheduleSettings == scheduleSettings)
-                    return users[i].userIds;
+                if (userGroups[i].group == group && userGroups[i].subgroup == subgroup)
+                    return userGroups[i].userIds;
             }
             return null;
         }
     }
-    public class User
-    {
-        public List<long> userIds;
-        public ScheduleSettings scheduleSettings;
-    }
 
-    public class ScheduleSettings : IEquatable<ScheduleSettings>
+    public class UserGroup
     {
+        public List<long> userIds = new List<long>();
         public string group = null;
         public int subgroup = 0;
 
-        public ScheduleSettings() { }
-        public ScheduleSettings(string _group, int _subgroup) { group = _group; subgroup = _subgroup; }
-        
-        public override bool Equals(object obj)
+        public UserGroup(string _group, int _subgroup)
         {
-            return Equals(obj as ScheduleSettings);
-        }
-
-        public bool Equals(ScheduleSettings other)
-        {
-            return other != null && group == other.group && subgroup == other.subgroup;
-        }
-
-        public override int GetHashCode()
-        {
-            var hashCode = 390074312;
-            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(group);
-            hashCode = hashCode * -1521134295 + EqualityComparer<int>.Default.GetHashCode(subgroup);
-            return hashCode;
+            group = _group;
+            subgroup = _subgroup;
         }
     }
 }
