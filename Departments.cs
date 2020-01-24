@@ -29,7 +29,7 @@ namespace Schedulebot
         public int CoursesAmount { get; set; }
         private Course[] courses = new Course[4]; // 4 курса всегда ЫЫЫЫ
 
-        private List<schedulebot.User> users = new List<schedulebot.User>();
+        private UserRepository userRepository = new UserRepository();
         private int startDay;
         private int startWeek;
         public ItmmDepartment(string _path)
@@ -292,6 +292,8 @@ namespace Schedulebot
                     OneTime = false
                 }
             };
+            LoadSettings();
+            LoadUsers();
             LoadAcronymToPhrase();
             LoadDoubleOptionallySubject();
             LoadFullName();
@@ -491,21 +493,19 @@ namespace Schedulebot
                 path + "users.txt",
                 System.Text.Encoding.Default))
             {
-                string line;
-                while ((line = file.ReadLine()) != null)
+                while (!file.EndOfStream)
                 {
-                    users.Add(new schedulebot.User(
-                        Convert.ToInt64(line.Substring(0, line.IndexOf(' '))),
-                        line.Substring(
-                            line.IndexOf(' ') + 1,
-                            line.LastIndexOf(' ') - line.IndexOf(' ') - 1),
-                        line.Substring(
-                            line.LastIndexOf(' ') + 1,
-                            1)
-                    ));
+                    if (User.TryParseUser(file.ReadLine(), out var user))
+                        userRepository.AddUser(user);
                 }
             }
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка подписанных");
+        }
+
+        public async void SaveUsers()
+        {
+            using (StreamWriter file = new StreamWriter(path + "users.txt"))
+            await file.WriteLineAsync(userRepository.ToString());
         }
         
         public void GetMessages(VkStuff vkStuff)
@@ -575,8 +575,7 @@ namespace Schedulebot
         {
             await Task.Run(() =>
             {
-                PayloadStuff payloadStuff = Newtonsoft.Json.JsonConvert.DeserializeObject<PayloadStuff>(message.Payload);
-                if (payloadStuff.Menu == null)
+                if (message.Payload == null)
                 {
                     // todo: Переписать админку
                     if (message.PeerId == vkStuff.adminId)
@@ -746,8 +745,10 @@ namespace Schedulebot
                     }
                     else if (message.Attachments.Count != 0)
                     {
+                        // todo: fix
                         if (message.Attachments.Single().ToString() == "Sticker")
                         {
+                            
                             SendMessage(userId: message.PeerId,
                                         message: "🤡");
                             return;
@@ -761,96 +762,95 @@ namespace Schedulebot
                     }
                     return;
                 }
-                else if (payloadStuff.Command == "start")
+                PayloadStuff payloadStuff = Newtonsoft.Json.JsonConvert.DeserializeObject<PayloadStuff>(message.Payload);
+                if (payloadStuff.Command == "start")
                 {
                     SendMessage(userId: message.PeerId,
                                 message: "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.\nКнопка \"Информация\" для получения подробностей",
                                 keyboardId: 0);
                     return;
                 }
-                else
+                // По idшникам меню сортируем сообщения
+                switch (payloadStuff.Menu)
                 {
-                    // По idшникам меню сортируем сообщения
-                    switch (payloadStuff.Menu)
+                    case null:
                     {
-                        case null:
+                        SendMessage(userId: message.PeerId,
+                                    message: "Что-то пошло не так",
+                                    keyboardId: 0);
+                        return;
+                    }
+                    case 0:
+                    {
+                        switch (message.Text)
                         {
-                            SendMessage(userId: message.PeerId,
-                                        message: "Что-то пошло не так",
-                                        keyboardId: 0);
-                            return;
-                        }
-                        case 0:
-                        {
-                            switch (message.Text)
+                            case "Расписание":
                             {
-                                case "Расписание":
+                                SendMessage(userId: message.PeerId,
+                                            keyboardId: 1);
+                                return;
+                            }
+                            case "Неделя":
+                            {
+                                SendMessage(userId: message.PeerId,
+                                            message: CurrentWeek());
+                                return;
+                            }
+                            case "Настройки":
+                            {
+                                MessageKeyboard keyboardCustom;
+                                keyboardCustom = vkStuff.mainMenuKeyboards[2];
+                                //!
+                                if (!Glob.users.Keys.Contains(message.PeerId))
                                 {
-                                    SendMessage(userId: message.PeerId,
-                                                keyboardId: 1);
-                                    return;
+                                    keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
                                 }
-                                case "Неделя":
+                                else
                                 {
-                                    SendMessage(userId: message.PeerId,
-                                                message: CurrentWeek());
-                                    return;
+                                    keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
                                 }
-                                case "Настройки":
-                                {
-                                    MessageKeyboard keyboardCustom;
-                                    keyboardCustom = vkStuff.mainMenuKeyboards[2];
-                                    //!
-                                    if (!Glob.users.Keys.Contains(message.PeerId))
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                    }
-                                    else
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                    }
-                                    SendMessage(
-                                        userId: message.PeerId,
-                                        message: "Отправляю клавиатуру",
-                                        keyboardId: -1,
-                                        customKeyboard: keyboardCustom);
-                                    return;
-                                }
-                                case "Информация":
-                                {
-                                    SendMessage(userId: message.PeerId,
-                                                message: "Текущая версия - v2.2\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie");
-                                    return;
-                                }
-                                default:
-                                {
-                                    SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 0, что-то с message.Text", keyboardId: 0);
-                                    return;
-                                }
+                                SendMessage(
+                                    userId: message.PeerId,
+                                    message: "Отправляю клавиатуру",
+                                    keyboardId: -1,
+                                    customKeyboard: keyboardCustom);
+                                return;
+                            }
+                            case "Информация":
+                            {
+                                SendMessage(userId: message.PeerId,
+                                            message: "Текущая версия - v2.2\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie");
+                                return;
+                            }
+                            default:
+                            {
+                                SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 0, что-то с message.Text", keyboardId: 0);
+                                return;
                             }
                         }
-                        case 1:
-                        {
+                    }
+                    case 1:
+                    {
 
-                        }
-                        case 2:
-                        {
+                    }
+                    case 2:
+                    {
 
-                        }
-                        case 3:
-                        {
+                    }
+                    case 3:
+                    {
 
-                        }
-                        case 4:
-                        {
+                    }
+                    case 4:
+                    {
 
-                        }
-                        case 30:
-                        {
+                    }
+                    case 30:
+                    {
 
-                        }
                     }
                 }
+
 
 
                 /*
@@ -1849,6 +1849,7 @@ namespace Schedulebot
         //! Все что ниже не работает
         public void CheckRelevance()
         {
+            // SaveUsers();
             DatesAndUrls newDatesAndUrls = checkRelevanceStuffITMM.CheckRelevance();
             if (newDatesAndUrls != null)
             {
@@ -1859,14 +1860,14 @@ namespace Schedulebot
             return;
         }
         
-        private void UpdateSchedule(List<int> coursesToUpdate)
-        {
-            for (int i = 0; i < coursesToUpdate.Count; ++i)
-            {
-                // async
-                courses[i].Update();
-            }
-        }
+        // private void UpdateSchedule(List<int> coursesToUpdate)
+        // {
+        //     for (int i = 0; i < coursesToUpdate.Count; ++i)
+        //     {
+        //         // async
+        //         // courses[i].Update();
+        //     }
+        // }
         
         private List<int> AreScheduleRelevant(DatesAndUrls newDatesAndUrls)
         {
@@ -1895,9 +1896,5 @@ namespace Schedulebot
         void CheckRelevance();
 
         void GetMessages(VkStuff vkStuff);
-
-        void LoadSettings();
-
-        void LoadUsers();
     }
 }
