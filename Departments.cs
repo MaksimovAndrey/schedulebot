@@ -28,6 +28,8 @@ namespace Schedulebot
         // private List<string> fullName;
         public int CoursesAmount { get; set; }
         private Course[] courses = new Course[4]; // 4 курса всегда ЫЫЫЫ
+
+        private List<schedulebot.User> users = new List<schedulebot.User>();
         private int startDay;
         private int startWeek;
         public ItmmDepartment(string _path)
@@ -482,6 +484,30 @@ namespace Schedulebot
                 Glob.fullName.Add(file.ReadLine());
         }
 
+        public void LoadUsers()
+        {
+            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка подписанных");
+            using (StreamReader file = new StreamReader(
+                path + "users.txt",
+                System.Text.Encoding.Default))
+            {
+                string line;
+                while ((line = file.ReadLine()) != null)
+                {
+                    users.Add(new schedulebot.User(
+                        Convert.ToInt64(line.Substring(0, line.IndexOf(' '))),
+                        line.Substring(
+                            line.IndexOf(' ') + 1,
+                            line.LastIndexOf(' ') - line.IndexOf(' ') - 1),
+                        line.Substring(
+                            line.LastIndexOf(' ') + 1,
+                            1)
+                    ));
+                }
+            }
+            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка подписанных");
+        }
+        
         public void GetMessages(VkStuff vkStuff)
         {
             LongPollServerResponse serverResponse = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
@@ -1870,5 +1896,8 @@ namespace Schedulebot
 
         void GetMessages(VkStuff vkStuff);
 
+        void LoadSettings();
+
+        void LoadUsers();
     }
 }
