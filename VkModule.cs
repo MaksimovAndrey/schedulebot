@@ -34,6 +34,7 @@ namespace Schedulebot.Vk
         public ulong groupId;
         public long mainAlbumId;
         public long tomorrowAlbumId;
+        public long adminId = 133040900;
         public MessageKeyboard[] mainMenuKeyboards;
     }
 
