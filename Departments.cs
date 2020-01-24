@@ -1,12 +1,11 @@
 using System;
-using HtmlAgilityPack;
 using System.Collections.Generic;
-using System.Net;
 using System.IO;
+using System.Threading.Tasks;
 using System.Threading;
 using VkNet.Model.Keyboard;
 using VkNet.Enums.SafetyEnums;
-using System.Threading.Tasks;
+using VkNet.Model;
 
 using Schedulebot.Vk;
 
@@ -15,17 +14,6 @@ namespace Schedulebot
     public class ItmmDepartment : IDepartment
     {
         private readonly string path;
-        public Action Action
-        {
-            set
-            {
-                Action = new Action(CheckRelevance);
-            }
-            get 
-            {
-                return Action;
-            }
-        }
         private VkStuff vkStuff = new VkStuff();
         private CheckRelevanceStuff checkRelevanceStuffITMM = new CheckRelevanceStuffITMM();
         // private Dictionary<string, string> acronymToPhrase;
@@ -33,6 +21,8 @@ namespace Schedulebot
         // private List<string> fullName;
         public int CoursesAmount { get; set; }
         private Course[] courses = new Course[4]; // 4 курса всегда ЫЫЫЫ
+        private int startDay;
+        private int startWeek;
         public ItmmDepartment(string _path)
         {
             path = _path + @"itmm\";
@@ -127,6 +117,73 @@ namespace Schedulebot
             }
         }
 
+        public string CurrentWeek() // Определение недели (верхняя или нижняя)
+        {
+            if ((DateTime.Now.DayOfYear - startDay) / 7 % 2 != startWeek)
+            {
+                return "Нижняя";
+            }
+            return "Верхняя";
+        }
+        
+        public void LoadSettings()
+        {
+            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка настроек");
+            using (StreamReader file = new StreamReader(
+                path + "settings.txt",
+                System.Text.Encoding.Default))
+            {
+                string str, value;
+                while ((str = file.ReadLine()) != null)
+                {
+                    if (str.Contains(':'))
+                    {
+                        value = str.Substring(str.IndexOf(':') + 1);
+                        str = str.Substring(0, str.IndexOf(':'));
+                        switch (str)
+                        {
+                            case "key":
+                            {
+                                vkStuff.api.Authorize(new ApiAuthParams() { AccessToken = value });
+                                break;
+                            }
+                            case "keyPhotos":
+                            {
+                                vkStuff.apiPhotos.Authorize(new ApiAuthParams() { AccessToken = value });
+                                break;
+                            }
+                            case "groupId":
+                            {
+                                vkStuff.groupId = ulong.Parse(value);
+                                break;
+                            }
+                            case "mainAlbumId":
+                            {
+                                vkStuff.mainAlbumId = Int64.Parse(value);
+                                break;
+                            }
+                            case "tomorrowAlbumId":
+                            {
+                                vkStuff.tomorrowAlbumId = Int64.Parse(value);
+                                break;
+                            }
+                            case "startDay":
+                            {
+                                startDay = Int32.Parse(value);
+                                break;
+                            }
+                            case "startWeek":
+                            {
+                                startWeek = Int32.Parse(value);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка настроек");
+        }
+
         private void LoadAcronymToPhrase()
         {
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка ManualAcronymToPhrase");
@@ -205,8 +262,6 @@ namespace Schedulebot
     public interface IDepartment
     {
         int CoursesAmount { get; set; }
-
-        Action Action { get; }
 
         void CheckRelevance();
 
