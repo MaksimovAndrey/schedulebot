@@ -31,6 +31,8 @@ namespace Schedulebot.Vk
         public VkApi api = new VkApi();
         public VkApi apiPhotos = new VkApi();
         public ulong groupId;
+        public long mainAlbumId;
+        public long tomorrowAlbumId;
     }
     public class VkKeyboards
     {
