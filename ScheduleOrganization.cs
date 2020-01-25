@@ -7,6 +7,7 @@ using System.Threading;
 using VkNet.Model.Keyboard;
 using VkNet.Enums.SafetyEnums;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 using Schedulebot.Parse;
 using Schedulebot.Schedule;
@@ -18,36 +19,34 @@ namespace Schedulebot
         private const string url = @"http://www.itmm.unn.ru/studentam/raspisanie/raspisanie-bakalavriata-i-spetsialiteta-ochnoj-formy-obucheniya/";
         public async Task<DatesAndUrls> CheckRelevance()
         {
-            HtmlDocument page;
+            HtmlDocument htmlDocument;
             HtmlWeb htmlWeb = new HtmlWeb();
-            Console.WriteLine("started downloading"); // test
             try
             {
-                page = await htmlWeb.LoadFromWebAsync(url);
+                htmlDocument = await htmlWeb.LoadFromWebAsync(url);
             }
             catch 
             {
                 //! ошибка загрузки страницы
                 return null;
             }
-            if (page != null)
-                return await Parse(page);
+            if (htmlDocument != null)
+                return await Parse(htmlDocument);
             return null;
         }
         private async Task<DatesAndUrls> Parse(HtmlDocument htmlDocument)
         {
             await Task.Run(() =>
             {
-                Console.WriteLine("started parsing html"); // test
-                // todo: изменить выражение (убрать символы &shy;)
-                HtmlNodeCollection nodesWithDates = htmlDocument.DocumentNode.SelectNodes("//p[contains(text(), 'Рас­пи­са­ние ба­ка­лав­ров')]");
-                HtmlNodeCollection nodesWithUrls = htmlDocument.DocumentNode.SelectNodes("//a[contains(text(), 'ска­чать')]");
+                htmlDocument.DocumentNode.InnerHtml = Regex.Replace(htmlDocument.DocumentNode.InnerHtml, @"\u00ad|", "");
+                HtmlNodeCollection nodesWithDates = htmlDocument.DocumentNode.SelectNodes("//p[contains(text(), 'Расписание бакалавров')]");
+                HtmlNodeCollection nodesWithUrls = htmlDocument.DocumentNode.SelectNodes("//a[contains(text(), 'скачать')]");
                 if (nodesWithDates == null || nodesWithUrls == null)
                 {
                     // todo: throw error
                     return null;
                 }
-                if (nodesWithDates.Count > 0 && nodesWithUrls.Count > 0 && nodesWithUrls.Count == nodesWithUrls.Count)
+                else if (nodesWithDates.Count > 0 && nodesWithUrls.Count > 0 && nodesWithUrls.Count == nodesWithUrls.Count)
                 {
                     DatesAndUrls parseResult = new DatesAndUrls() { count = nodesWithDates.Count };
                     for (int i = 0; i < nodesWithDates.Count; ++i)
@@ -66,15 +65,9 @@ namespace Schedulebot
                             parseResult.dates[i] = "";
                         }
                     }
-                    Console.WriteLine("parsing complete"); // test
                     return parseResult;
                 }
-                else
-                {
-                    Console.WriteLine("parsing ERROr"); // test
-                    //! уведомление об ошибке
-                    return null;
-                }
+                return null;
             });
             return null;
         }
