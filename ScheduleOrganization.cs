@@ -13,15 +13,17 @@ using Schedulebot.Schedule;
 
 namespace Schedulebot
 {
-    public class CheckRelevanceStuffITMM : CheckRelevanceStuff
+    public class CheckRelevanceStuffITMM : ICheckRelevanceStuff
     {
-        private readonly Uri uri = new Uri(@"http://www.itmm.unn.ru/studentam/raspisanie/raspisanie-bakalavriata-i-spetsialiteta-ochnoj-formy-obucheniya/");
-        public override DatesAndUrls CheckRelevance()
+        private const string url = @"http://www.itmm.unn.ru/studentam/raspisanie/raspisanie-bakalavriata-i-spetsialiteta-ochnoj-formy-obucheniya/";
+        public async Task<DatesAndUrls> CheckRelevance()
         {
             HtmlDocument page;
+            HtmlWeb htmlWeb = new HtmlWeb();
+            Console.WriteLine("started downloading"); // test
             try
             {
-                page = new HtmlWeb().Load(uri);
+                page = await htmlWeb.LoadFromWebAsync(url);
             }
             catch 
             {
@@ -29,40 +31,52 @@ namespace Schedulebot
                 return null;
             }
             if (page != null)
-                return Parse(page);
+                return await Parse(page);
             return null;
         }
-        private DatesAndUrls Parse(HtmlDocument htmlDocument)
+        private async Task<DatesAndUrls> Parse(HtmlDocument htmlDocument)
         {
-            // todo: изменить выражение (убрать символы &shy;)
-            HtmlNodeCollection nodesWithDates = htmlDocument.DocumentNode.SelectNodes("//p[contains(text(), 'Рас­пи­са­ние ба­ка­лав­ров')]");
-            HtmlNodeCollection nodesWithUrls = htmlDocument.DocumentNode.SelectNodes("//a[contains(text(), 'скачать')]");
-            if (nodesWithDates.Count > 0 && nodesWithUrls.Count > 0 && nodesWithUrls.Count == nodesWithUrls.Count)
+            await Task.Run(() =>
             {
-                DatesAndUrls parseResult = new DatesAndUrls() { count = nodesWithDates.Count };
-                for (int i = 0; i < nodesWithDates.Count; ++i)
+                Console.WriteLine("started parsing html"); // test
+                // todo: изменить выражение (убрать символы &shy;)
+                HtmlNodeCollection nodesWithDates = htmlDocument.DocumentNode.SelectNodes("//p[contains(text(), 'Рас­пи­са­ние ба­ка­лав­ров')]");
+                HtmlNodeCollection nodesWithUrls = htmlDocument.DocumentNode.SelectNodes("//a[contains(text(), 'ска­чать')]");
+                if (nodesWithDates == null || nodesWithUrls == null)
                 {
-                    string nodeText = nodesWithDates[i].InnerText;
-                    if (nodeText.Contains("(от "))
-                    {
-                        parseResult.dates[i] = nodeText.Substring(nodeText.LastIndexOf("(от") + 1, nodeText.LastIndexOf(')') - (nodeText.LastIndexOf("(от") + 1));
-                    }
+                    // todo: throw error
+                    return null;
                 }
-                for (int i = 0; i < nodesWithUrls.Count; ++i)
+                if (nodesWithDates.Count > 0 && nodesWithUrls.Count > 0 && nodesWithUrls.Count == nodesWithUrls.Count)
                 {
-                    parseResult.urls[i] = nodesWithUrls[i].Attributes["href"].Value.Trim();
-                    if (parseResult.urls[i] == "")
+                    DatesAndUrls parseResult = new DatesAndUrls() { count = nodesWithDates.Count };
+                    for (int i = 0; i < nodesWithDates.Count; ++i)
                     {
-                        parseResult.dates[i] = "";
+                        string nodeText = nodesWithDates[i].InnerText;
+                        if (nodeText.Contains("(от "))
+                        {
+                            parseResult.dates[i] = nodeText.Substring(nodeText.LastIndexOf("(от") + 1, nodeText.LastIndexOf(')') - (nodeText.LastIndexOf("(от") + 1));
+                        }
                     }
+                    for (int i = 0; i < nodesWithUrls.Count; ++i)
+                    {
+                        parseResult.urls[i] = nodesWithUrls[i].Attributes["href"].Value.Trim();
+                        if (parseResult.urls[i] == "")
+                        {
+                            parseResult.dates[i] = "";
+                        }
+                    }
+                    Console.WriteLine("parsing complete"); // test
+                    return parseResult;
                 }
-                return parseResult;
-            }
-            else
-            {
-                //! уведомление об ошибке
-                return null;
-            }
+                else
+                {
+                    Console.WriteLine("parsing ERROr"); // test
+                    //! уведомление об ошибке
+                    return null;
+                }
+            });
+            return null;
         }
     }
     
@@ -188,9 +202,8 @@ namespace Schedulebot
         public string[] dates = new string[5];
     }
 
-    public abstract class CheckRelevanceStuff
+    public interface ICheckRelevanceStuff
     {
-        private string url;
-        public abstract DatesAndUrls CheckRelevance();
+        Task<DatesAndUrls> CheckRelevance();
     }
 }

@@ -30,7 +30,7 @@ namespace Schedulebot
         public static readonly HttpClient client = new HttpClient();
         private const string path = @"C:\Custom\Projects\Shared\sbtest\";
         private int departmentsAmount = 1;
-        IDepartment[] departments;
+        public IDepartment[] departments;
 
         public ScheduleBot()
         {
@@ -38,21 +38,17 @@ namespace Schedulebot
         }
 
         // провреряем актуальность расписания для всех факультетов
-        public void CheckRelevance()
+        public Task CheckRelevance()
         {
-            Action action = () =>
+            return Task.Run(async () =>
             {
                 while (true)
                 {
-                    // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Проверка актуальности");
                     for (int i = 0; i < departmentsAmount; ++i)
-                        // new Task(departments[i].Action).Start();
-                    // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Проверка актуальности");
-                    Thread.Sleep(600000);
+                        // todo
+                    await Task.Delay(60000);
                 }
-            };
-            Task task = new Task(action);
-            task.Start();
+            });
         }
         
         private void UpdateSchedule(int departmentIndex, List<int> coursesToUpdate)
@@ -66,10 +62,19 @@ namespace Schedulebot
         {
             SpreadsheetInfo.SetLicense("FREE-LIMITED-KEY");
             ScheduleBot scheduleBot = new ScheduleBot();
+            Console.WriteLine("1");
+            scheduleBot.departments[0].GetMessagesAsync();
+            Console.WriteLine("2");
+            scheduleBot.departments[0].CheckRelevanceAsync();
+            Console.WriteLine("3");
 
 
 
-            Console.WriteLine("Hello World!");
+            while (true)
+            {
+                Console.Read();
+                Console.WriteLine("000000000000000000000000000");
+            }
             
             
             

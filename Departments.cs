@@ -12,6 +12,7 @@ using VkNet.Model.RequestParams;
 using VkNet.Exception;
 using VkNet.Enums.SafetyEnums;
 using Newtonsoft.Json;
+using System.Text;
 
 
 using Schedulebot.Vk;
@@ -22,7 +23,7 @@ namespace Schedulebot
     {
         private readonly string path;
         private VkStuff vkStuff = new VkStuff();
-        private CheckRelevanceStuff checkRelevanceStuffITMM = new CheckRelevanceStuffITMM();
+        private ICheckRelevanceStuff checkRelevanceStuffITMM = new CheckRelevanceStuffITMM();
         // private Dictionary<string, string> acronymToPhrase;
         // private Dictionary<string, string> doubleOptionallySubject;
         // private List<string> fullName;
@@ -508,59 +509,62 @@ namespace Schedulebot
             await file.WriteLineAsync(userRepository.ToString());
         }
         
-        public void GetMessages(VkStuff vkStuff)
+        public async Task GetMessagesAsync()
         {
-            LongPollServerResponse serverResponse = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
-            BotsLongPollHistoryResponse historyResponse = null;
-            BotsLongPollHistoryParams botsLongPollHistoryParams = new BotsLongPollHistoryParams()
+            await Task.Run(() =>
             {
-                Server = serverResponse.Server,
-                Ts = serverResponse.Ts,
-                Key = serverResponse.Key,
-                Wait = 25
-            };
-            while (true)
-            {
-                // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " Получаю сообщения");
-                try
+                LongPollServerResponse serverResponse = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
+                BotsLongPollHistoryResponse historyResponse = null;
+                BotsLongPollHistoryParams botsLongPollHistoryParams = new BotsLongPollHistoryParams()
                 {
-                    historyResponse = vkStuff.api.Groups.GetBotsLongPollHistory(botsLongPollHistoryParams);
-                    if (historyResponse == null)
-                        continue;
-                    botsLongPollHistoryParams.Ts = historyResponse.Ts;
-                    if (!historyResponse.Updates.Any())
-                        continue;
-                    foreach (var update in historyResponse.Updates)
+                    Server = serverResponse.Server,
+                    Ts = serverResponse.Ts,
+                    Key = serverResponse.Key,
+                    Wait = 25
+                };
+                while (true)
+                {
+                    // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " Получаю сообщения");
+                    try
                     {
-                        if (update.Type == GroupUpdateType.MessageNew)
+                        historyResponse = vkStuff.api.Groups.GetBotsLongPollHistory(botsLongPollHistoryParams);
+                        if (historyResponse == null)
+                            continue;
+                        botsLongPollHistoryParams.Ts = historyResponse.Ts;
+                        if (!historyResponse.Updates.Any())
+                            continue;
+                        foreach (var update in historyResponse.Updates)
                         {
-                            MessageResponseAsync(update.Message);
+                            if (update.Type == GroupUpdateType.MessageNew)
+                            {
+                                MessageResponseAsync(update.Message);
+                            }
+                        }
+                        historyResponse = null;
+                    }
+                    catch (LongPollException exception)
+                    {
+                        if (exception is LongPollOutdateException outdateException)
+                            botsLongPollHistoryParams.Ts = outdateException.Ts;
+                        else
+                        {
+                            LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
+                            botsLongPollHistoryParams.Ts = server.Ts;
+                            botsLongPollHistoryParams.Key = server.Key;
+                            botsLongPollHistoryParams.Server = server.Server;
                         }
                     }
-                    historyResponse = null;
-                }
-                catch (LongPollException exception)
-                {
-                    if (exception is LongPollOutdateException outdateException)
-                        botsLongPollHistoryParams.Ts = outdateException.Ts;
-                    else
+                    catch (Exception exception)
                     {
+                        // todo: long poll error
                         LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
                         botsLongPollHistoryParams.Ts = server.Ts;
                         botsLongPollHistoryParams.Key = server.Key;
                         botsLongPollHistoryParams.Server = server.Server;
+                        // Console.WriteLine("Long poll error = " + e);
                     }
                 }
-                catch (Exception exception)
-                {
-                    // todo: long poll error
-                    LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
-                    botsLongPollHistoryParams.Ts = server.Ts;
-                    botsLongPollHistoryParams.Key = server.Key;
-                    botsLongPollHistoryParams.Server = server.Server;
-                    // Console.WriteLine("Long poll error = " + e);
-                }
-            }
+            });
         }
 
         public class PayloadStuff
@@ -580,6 +584,7 @@ namespace Schedulebot
                     // todo: Переписать админку
                     if (message.PeerId == vkStuff.adminId)
                     {
+                        /*
                         if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
                         {
                             string help = "Команды:\n\nРассылка <всем,*КУРС*,*ГРУППА*>\n--отправляет расписание на неделю выбранным юзерам\nОбновить <все,*КУРС*> [нет]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nПерезагрузка\n--перезагружает бота(для применения обновления версии бота)\n\nCommands:\n\nDistribution <all,*COURSE*,*GROUP*>\n--отправляет расписание на неделю выбранным юзерам\nUpdate <all,*COURSE*> [false]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nReboot\n--перезагружает бота(для применения обновления версии бота)\n";
@@ -742,6 +747,7 @@ namespace Schedulebot
                             }                               
                             Environment.Exit(0);
                         }
+                        */
                     }
                     else if (message.Attachments.Count != 0)
                     {
@@ -801,13 +807,13 @@ namespace Schedulebot
                                 MessageKeyboard keyboardCustom;
                                 keyboardCustom = vkStuff.mainMenuKeyboards[2];
                                 //!
-                                if (!Glob.users.Keys.Contains(message.PeerId))
+                                if (!userRepository.ContainsUser(message.PeerId))
                                 {
                                     keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
                                 }
                                 else
                                 {
-                                    keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
+                                    // keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
                                 }
                                 SendMessage(
                                     userId: message.PeerId,
@@ -832,25 +838,31 @@ namespace Schedulebot
                     case 1:
                     {
 
+                        return;
                     }
                     case 2:
                     {
 
+                        return;
                     }
                     case 3:
                     {
 
+                        return;
                     }
                     case 4:
                     {
 
+                        return;
                     }
                     case 30:
                     {
 
+
+                        return;
                     }
                 }
-
+                
 
 
                 /*
@@ -872,7 +884,7 @@ namespace Schedulebot
                 */
 
 
-
+                /*
                 switch (args[0])
                 {
                     case -1: // в случае ошибки
@@ -1792,7 +1804,9 @@ namespace Schedulebot
                         return;
                     }
                 }
+                */
             });
+            return;
         }
         
         public void SendMessage(long? userId,
@@ -1843,21 +1857,75 @@ namespace Schedulebot
             // if (oneTime)
             //     messagesSendParams.Keyboard.OneTime = true;
             vkStuff.commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+            Console.WriteLine(messagesSendParams.Message); // test
         }
 
         
-        //! Все что ниже не работает
-        public void CheckRelevance()
+        public async void ExecuteMethods()
         {
-            // SaveUsers();
-            DatesAndUrls newDatesAndUrls = checkRelevanceStuffITMM.CheckRelevance();
-            if (newDatesAndUrls != null)
+            await Task.Run(async () => 
             {
-                CoursesAmount = newDatesAndUrls.count;
-                List<int> coursesToUpdate = AreScheduleRelevant(newDatesAndUrls);
-                UpdateSchedule(coursesToUpdate);
-            }
-            return;
+                int queueCommandsAmount;
+                int commandsInRequestAmount = 0;
+                int timer = 0;
+                StringBuilder stringBuilder = new StringBuilder();
+                while (true)
+                {
+                    queueCommandsAmount = vkStuff.commandsQueue.Count();
+                    if (queueCommandsAmount > 25 - commandsInRequestAmount)
+                    {
+                        queueCommandsAmount = 25 - commandsInRequestAmount;
+                    }
+                    for (int i = 0; i < queueCommandsAmount; ++i)
+                    {
+                        if (vkStuff.commandsQueue.TryDequeue(out string command))
+                        {
+                            stringBuilder.Append(command);
+                            ++commandsInRequestAmount;
+                        }
+                        else
+                        {
+                            --i;
+                            timer += 1;
+                            await Task.Delay(1);
+                        }
+                    }
+                    if ((commandsInRequestAmount == 25 && timer >= 56) || timer >= 200)
+                    {
+                        if (commandsInRequestAmount == 0)
+                        {
+                            timer = 0;
+                        }
+                        else
+                        {
+                            vkStuff.api.Execute.Execute(stringBuilder.ToString());
+                            timer = 0;
+                            commandsInRequestAmount = 0;
+                            stringBuilder = stringBuilder.Clear();
+                        }
+                    }
+                    timer += 8;
+                    await Task.Delay(8);
+                }
+            });
+        }
+
+        //! Все что ниже не работает
+        public async Task CheckRelevanceAsync()
+        {
+            await Task.Run(async () => 
+            {
+                // SaveUsers();
+                Console.WriteLine("CheckRelevance started"); // test
+                DatesAndUrls newDatesAndUrls = await checkRelevanceStuffITMM.CheckRelevance();
+                Console.WriteLine("CheckRelevance ended"); // test
+                if (newDatesAndUrls != null)
+                {
+                    // CoursesAmount = newDatesAndUrls.count;
+                    // List<int> coursesToUpdate = AreScheduleRelevant(newDatesAndUrls);
+                    // await UpdateSchedule(coursesToUpdate);
+                }
+            });
         }
         
         // private void UpdateSchedule(List<int> coursesToUpdate)
@@ -1893,8 +1961,8 @@ namespace Schedulebot
     {
         int CoursesAmount { get; set; }
 
-        void CheckRelevance();
+        Task CheckRelevanceAsync();
 
-        void GetMessages(VkStuff vkStuff);
+        Task GetMessagesAsync();
     }
 }
