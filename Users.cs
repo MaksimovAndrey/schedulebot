@@ -114,7 +114,7 @@ namespace Schedulebot
             }
         }
 
-        public bool ContainsUser(long id)
+        public bool ContainsUser(long? id)
         {
             for (int i = 0; i < users.Count; i++)
             {
@@ -132,7 +132,7 @@ namespace Schedulebot
         void AddUser(User user);
         void DeleteUser(long id);
         void EditUser(long id, int newSubgroup, string newGroup = null);
-        bool ContainsUser(long id);
+        bool ContainsUser(long? id);
         List<long> GetUsersIdsByGroupAndSubgroup(string group, int subgroup);
     }
 }
