@@ -24,19 +24,19 @@ namespace Schedulebot
     {
         private readonly string path;
         private VkStuff vkStuff = new VkStuff();
+        private Mapper mapper = new Mapper();
         private ICheckRelevanceStuff checkRelevanceStuffITMM = new CheckRelevanceStuffITMM();
         // private Dictionary<string, string> acronymToPhrase;
         // private Dictionary<string, string> doubleOptionallySubject;
         // private List<string> fullName;
         public int CoursesAmount { get; set; }
         private Course[] courses = new Course[4]; // 4 курса всегда ЫЫЫЫ
-
         private UserRepository userRepository = new UserRepository();
         private int startDay;
         private int startWeek;
         public ItmmDepartment(string _path)
         {
-            path = _path + @"itmm\"; // todo: вынести в LoadSettings()
+            path = _path + @"itmm\";
             vkStuff.MainMenuKeyboards = new MessageKeyboard[5]
             {
                 // main
@@ -299,8 +299,11 @@ namespace Schedulebot
             LoadAcronymToPhrase();
             LoadDoubleOptionallySubject();
             LoadFullName();
-            for (int i = 0; i < 4; ++i)
-                courses[i] = new Course(path + @"downloads\" + i + "_course.xls");
+            for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
+                courses[currentCourse] = new Course(path + @"downloads\" + currentCourse + "_course.xls");
+            mapper.CreateMaps(courses);
+            ConstructKeyboards();
+            LoadUploadedSchedule();
         }
         
         private static class ConstructKeyboardsProperties
@@ -309,19 +312,19 @@ namespace Schedulebot
             public const int linesInKeyboard = 4; // 1..9 
         }
 
-        private void СonstructKeyboards()
+        private void ConstructKeyboards()
         {
             for (int currentCourse = 0; currentCourse < CoursesAmount; ++currentCourse)
             {
-                int groupsAmount = courses[currentCourse].groups.GetLength(0);
-                int pagesAmount = (int)Math.Ceiling((double)groupsAmount
+                List<string> groupNames = mapper.GetGroupNames(currentCourse);
+                int pagesAmount = (int)Math.Ceiling((double)groupNames.Count
                     / (double)(ConstructKeyboardsProperties.linesInKeyboard * ConstructKeyboardsProperties.buttonsInLine));
                 int currentPage = 0;
                 courses[currentCourse].keyboards = new List<MessageKeyboard>();
                 List<MessageKeyboardButton> line = new List<MessageKeyboardButton>();
                 List<List<MessageKeyboardButton>> buttons = new List<List<MessageKeyboardButton>>();
                 List<MessageKeyboardButton> serviceLine = new List<MessageKeyboardButton>();
-                for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.GetLength(0); currentGroup++)
+                for (int currentName = 0; currentName < groupNames.Count; currentName++)
                 {
                     line.Add(new MessageKeyboardButton()
                     {
@@ -329,18 +332,18 @@ namespace Schedulebot
                         Action = new MessageKeyboardButtonAction
                         {
                             Type = KeyboardButtonActionType.Text,
-                            Label = courses[currentCourse].groups[currentGroup].name,
-                            Payload = "{\"menu\": \"30\", \"index\": \"" + currentGroup + "\", \"course\": \"" + currentCourse + "\"}"
+                            Label = groupNames[currentName],
+                            Payload = "{\"menu\": \"30\", \"index\": \"" + currentName + "\", \"course\": \"" + currentCourse + "\"}"
                         }
                     });
                     if (line.Count == ConstructKeyboardsProperties.buttonsInLine
-                        || (currentGroup + 1 == groupsAmount && line.Count != 0))
+                        || (currentName + 1 == groupNames.Count && line.Count != 0))
                     {
                         buttons.Add(new List<MessageKeyboardButton>(line));
                         line.Clear();
                     }
                     if (buttons.Count == ConstructKeyboardsProperties.linesInKeyboard
-                        || (currentGroup + 1 == groupsAmount && buttons.Count != 0))
+                        || (currentName + 1 == groupNames.Count && buttons.Count != 0))
                     {
                         string payloadService = "{\"menu\": \"30\", \"page\": \"" + currentPage + "\", \"course\": \"" + currentCourse + "\"}";
                         serviceLine.Add(new MessageKeyboardButton()
@@ -432,11 +435,6 @@ namespace Schedulebot
                                 vkStuff.MainAlbumId = Int64.Parse(value);
                                 break;
                             }
-                            // case "tomorrowAlbumId":
-                            // {
-                            //     vkStuff.TomorrowAlbumId = Int64.Parse(value);
-                            //     break;
-                            // }
                             case "startDay":
                             {
                                 startDay = Int32.Parse(value);
@@ -449,12 +447,7 @@ namespace Schedulebot
                             }
                             case "groupUrl":
                             {
-                                // todo
-                                break;
-                            }
-                            case "path":
-                            {
-                                // todo примерно itmm/
+                                vkStuff.GroupUrl = value;
                                 break;
                             }
                         }
@@ -496,6 +489,67 @@ namespace Schedulebot
                 System.Text.Encoding.Default);
             while (!file.EndOfStream)
                 Glob.fullName.Add(file.ReadLine());
+        }
+
+        public void LoadUploadedSchedule()
+        {
+            using (StreamReader file = new StreamReader(
+                path + "uploadedPhotos.txt",
+                System.Text.Encoding.Default))
+            {
+                string rawLine;
+                while (!file.EndOfStream)
+                {
+                    rawLine = file.ReadLine();
+                    var rawSpan = rawLine.AsSpan();
+
+                    int spaceIndex = rawSpan.IndexOf(' ');
+                    int lastSpaceIndex = rawSpan.LastIndexOf(' ');
+
+                    ulong id = ulong.Parse(rawSpan.Slice(0, spaceIndex));
+                    string group = rawSpan.Slice(spaceIndex + 1, lastSpaceIndex - spaceIndex - 1).ToString();
+                    int subgroup = int.Parse(rawSpan.Slice(lastSpaceIndex + 1, 1));
+
+                    for (int currentCourse = 0; currentCourse < CoursesAmount; currentCourse++)
+                    {
+                        int groupsAmount = courses[currentCourse].GroupsAmount;
+                        for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup++)
+                        {
+                            if (courses[currentCourse].groups[currentGroup].name == group)
+                            {
+                                courses[currentCourse].groups[currentGroup].photoIds[subgroup - 1] = id;
+                                currentCourse = CoursesAmount;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public void SaveUploadedSchedule()
+        {
+            using (StreamWriter file = new StreamWriter(path + "uploadedPhotos.txt"))
+            {
+                StringBuilder stringBuilder = new StringBuilder();
+                for (int currentCourse = 0; currentCourse < CoursesAmount; currentCourse++)
+                {
+                    int groupsAmount = courses[currentCourse].GroupsAmount;
+                    for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup++)
+                    {
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].photoIds[0]);
+                        stringBuilder.Append(' ');
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].name);
+                        stringBuilder.Append(" 1\n");
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].photoIds[1]);
+                        stringBuilder.Append(' ');
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].name);
+                        stringBuilder.Append(" 2\n");
+                    }
+                }
+                stringBuilder.Remove(stringBuilder.Length - 1, 1);
+                file.WriteLine(stringBuilder.ToString());
+            }
         }
 
         public void LoadUsers()
@@ -1925,22 +1979,49 @@ namespace Schedulebot
         {
             await Task.Run(async () => 
             {
-                // SaveUsers();
                 DatesAndUrls newDatesAndUrls = await checkRelevanceStuffITMM.CheckRelevance();
                 if (newDatesAndUrls != null)
                 {
+                    List<Task<List<PhotoUploadProperties>>> tasks = new List<Task<List<PhotoUploadProperties>>>();
                     for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
                     {
                         if (newDatesAndUrls.dates[currentCourse] != courses[currentCourse].date)
                         {
                             courses[currentCourse].urlToFile = newDatesAndUrls.urls[currentCourse];
                             courses[currentCourse].date = newDatesAndUrls.dates[currentCourse];
+                            // todo: рассылка по курсу "Вышло новое расписание тыры пыры"
                             UpdateProperties updateProperties = new UpdateProperties();
                             updateProperties.drawingStandartScheduleInfo = new Drawing.DrawingStandartScheduleInfo();
                             updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
                             updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
-                            courses[currentCourse].UpdateAsync(vkStuff.GroupUrl, updateProperties);
+                            tasks.Add(courses[currentCourse].UpdateAsync(vkStuff.GroupUrl, updateProperties));
                         }
+                    }
+                    if (tasks.Count != 0)
+                    {
+                        await Task.WhenAll(tasks);
+                        
+                        List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
+                        for (int i = 0; i < tasks.Count; i++)
+                            photosUploadProperties.AddRange(tasks[i].Result);
+
+                        for (int i = 0; i < photosUploadProperties.Count; i++)
+                            vkStuff.uploadPhotosQueue.Enqueue(photosUploadProperties[i]);
+
+                        mapper.CreateMaps(courses);
+                        ConstructKeyboards();
+
+                        while (true)
+                        {
+                            if (vkStuff.uploadPhotosQueue.IsEmpty)
+                            {
+                                for (int currentCourse = 0; currentCourse < 4; currentCourse++)
+                                    courses[currentCourse].isUpdating = false;
+                                break;
+                            }
+                            await Task.Delay(2000);
+                        }
+                        SaveUploadedSchedule();
                     }
                 }
             });
@@ -2038,6 +2119,175 @@ namespace Schedulebot
                 }
             }
             return notRelevantCourses;
+        }
+    
+        public static void ToGroupSubgroup(string group, string subgroup, string message)
+        {
+            Random random = new Random();
+            List<long> userIds = new List<long>();
+            MessagesSendParams messagesSendParams;
+            int count = 0;
+            lock (Glob.locker)
+            {
+                int usersCount = Glob.users.Count;
+                for (int i = 0; i < usersCount; ++i)
+                {
+                    if (Glob.users.ElementAt(i).Value.Group == group && Glob.users.ElementAt(i).Value.Subgroup == subgroup)
+                    {
+                        userIds.Add((long)Glob.users.ElementAt(i).Key);
+                        ++count;
+                        if (count == 100)
+                        {
+                            messagesSendParams = new MessagesSendParams()
+                            {
+                                UserIds = userIds,
+                                Message = message,
+                                RandomId = random.Next()
+                            };
+                            count = 0;
+                            Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+                            userIds.Clear();
+                        }
+                    }
+                }
+                if (count > 0)
+                {
+                    messagesSendParams = new MessagesSendParams()
+                    {
+                        UserIds = userIds,
+                        Message = message,
+                        RandomId = random.Next()
+                    };
+                    Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+                    userIds.Clear();
+                }
+            }
+        }
+        public static void ToGroup(string group, string message)
+        {
+            Random random = new Random();
+            List<long> userIds = new List<long>();
+            MessagesSendParams messagesSendParams;
+            int count = 0;
+            lock (Glob.locker)
+            {
+                int usersCount = Glob.users.Count;
+                for (int i = 0; i < usersCount; ++i)
+                {
+                    if (Glob.users.ElementAt(i).Value.Group == group)
+                    {
+                        userIds.Add((long)Glob.users.ElementAt(i).Key);
+                        ++count;
+                        if (count == 100)
+                        {
+                            messagesSendParams = new MessagesSendParams()
+                            {
+                                UserIds = userIds,
+                                Message = message,
+                                RandomId = random.Next()
+                            };
+                            count = 0;
+                            Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+                            userIds.Clear();
+                        }
+                    }
+                }
+                if (count > 0)
+                {
+                    messagesSendParams = new MessagesSendParams()
+                    {
+                        UserIds = userIds,
+                        Message = message,
+                        RandomId = random.Next()
+                    };
+                    Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+                    userIds.Clear();
+                }
+            }
+        }
+        public static void ToCourse(int course, string message)
+        {
+            Random random = new Random();
+            List<long> userIds = new List<long>();
+            MessagesSendParams messagesSendParams;
+            int count = 0;
+            lock (Glob.locker)
+            {
+                int usersCount = Glob.users.Count;
+                for (int i = 0; i < usersCount; ++i)
+                {
+                    if (Glob.schedule_mapping.ContainsKey(Glob.users.ElementAt(i).Value))
+                    {
+                        if (Glob.schedule_mapping[Glob.users.ElementAt(i).Value].Course == course)
+                        {
+                            userIds.Add((long)Glob.users.ElementAt(i).Key);
+                            ++count;
+                            if (count == 100)
+                            {
+                                messagesSendParams = new MessagesSendParams()
+                                {
+                                    UserIds = userIds,
+                                    Message = message,
+                                    RandomId = random.Next()
+                                };
+                                count = 0;
+                                Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+                                userIds.Clear();
+                            }
+                        }
+                    }
+                }
+                if (count > 0)
+                {
+                    messagesSendParams = new MessagesSendParams()
+                    {
+                        UserIds = userIds,
+                        Message = message,
+                        RandomId = random.Next()
+                    };
+                    Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+                    userIds.Clear(); // возможно убрать
+                }
+            }
+        }     
+        public static void ToAll(string message)
+        {
+            Random random = new Random();
+            List<long> userIds = new List<long>();
+            MessagesSendParams messagesSendParams;
+            int count = 0;
+            lock (Glob.locker)
+            {
+                int usersCount = Glob.users.Count;
+                for (int i = 0; i < usersCount; ++i)
+                {
+                    userIds.Add((long)Glob.users.ElementAt(i).Key);
+                    ++count;
+                    if (count == 100)
+                    {
+                        messagesSendParams = new MessagesSendParams()
+                        {
+                            UserIds = userIds,
+                            Message = message,
+                            RandomId = random.Next()
+                        };
+                        count = 0;
+                        Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+                        userIds.Clear();
+                    }
+                }
+            }
+            if (count > 0)
+            {
+                messagesSendParams = new MessagesSendParams()
+                {
+                    UserIds = userIds,
+                    Message = message,
+                    RandomId = random.Next()
+                };
+                Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+                userIds.Clear();
+            }
         }
     }
     
