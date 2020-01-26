@@ -29,7 +29,7 @@ namespace Schedulebot
         // private Dictionary<string, string> acronymToPhrase;
         // private Dictionary<string, string> doubleOptionallySubject;
         // private List<string> fullName;
-        public int CoursesAmount { get; set; }
+        public int CoursesAmount { get; set; } = 4;
         private Course[] courses = new Course[4]; // 4 курса всегда ЫЫЫЫ
         private UserRepository userRepository = new UserRepository();
         private int startDay;
@@ -37,7 +37,7 @@ namespace Schedulebot
         public ItmmDepartment(string _path)
         {
             path = _path + @"itmm\";
-            vkStuff.MainMenuKeyboards = new MessageKeyboard[5]
+            vkStuff.MainMenuKeyboards = new MessageKeyboard[6]
             {
                 // main
                 new MessageKeyboard
@@ -139,7 +139,45 @@ namespace Schedulebot
                     },
                     OneTime = false
                 },
-                // settings
+                // настройки когда НЕ подписан
+                new MessageKeyboard
+                {
+                    Buttons = new List<List<MessageKeyboardButton>>
+                    {
+                        new List<MessageKeyboardButton> {
+                            new MessageKeyboardButton() {
+                                Color = KeyboardButtonColor.Default,
+                                Action = new MessageKeyboardButtonAction {
+                                    Type = KeyboardButtonActionType.Text,
+                                    Label = "Вы не подписаны",
+                                    Payload = "{\"menu\": \"2\"}"
+                                }
+                            }
+                        },
+                        new List<MessageKeyboardButton> {
+                            new MessageKeyboardButton() {
+                                Color = KeyboardButtonColor.Positive,
+                                Action = new MessageKeyboardButtonAction {
+                                    Type = KeyboardButtonActionType.Text,
+                                    Label = "Подписаться",
+                                    Payload = "{\"menu\": \"2\"}"
+                                }
+                            }
+                        },
+                        new List<MessageKeyboardButton> {
+                            new MessageKeyboardButton() {
+                                Color = KeyboardButtonColor.Default,
+                                Action = new MessageKeyboardButtonAction {
+                                    Type = KeyboardButtonActionType.Text,
+                                    Label = "Назад",
+                                    Payload = "{\"menu\": \"2\"}"
+                                }
+                            }
+                        }
+                    },
+                    OneTime = false
+                },
+                 // настройки когда подписан
                 new MessageKeyboard
                 {
                     Buttons = new List<List<MessageKeyboardButton>>
@@ -167,7 +205,7 @@ namespace Schedulebot
                                 Color = KeyboardButtonColor.Positive,
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
-                                    Label = "Подписаться",
+                                    Label = "Переподписаться",
                                     Payload = "{\"menu\": \"2\"}"
                                 }
                             }
@@ -206,7 +244,7 @@ namespace Schedulebot
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
                                     Label = "Выберите курс",
-                                    Payload = "{\"menu\": \"3\"}"
+                                    Payload = "{\"menu\": \"4\"}"
                                 }
                             }
                         },
@@ -216,7 +254,7 @@ namespace Schedulebot
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
                                     Label = "1",
-                                    Payload = "{\"menu\": \"3\"}"
+                                    Payload = "{\"menu\": \"4\"}"
                                 }
                             },
                             new MessageKeyboardButton() {
@@ -224,7 +262,7 @@ namespace Schedulebot
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
                                     Label = "2",
-                                    Payload = "{\"menu\": \"3\"}"
+                                    Payload = "{\"menu\": \"4\"}"
                                 }
                             },
                             new MessageKeyboardButton() {
@@ -232,7 +270,7 @@ namespace Schedulebot
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
                                     Label = "3",
-                                    Payload = "{\"menu\": \"3\"}"
+                                    Payload = "{\"menu\": \"4\"}"
                                 }
                             },
                             new MessageKeyboardButton() {
@@ -240,7 +278,7 @@ namespace Schedulebot
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
                                     Label = "4",
-                                    Payload = "{\"menu\": \"3\"}"
+                                    Payload = "{\"menu\": \"4\"}"
                                 }
                             }
                         },
@@ -250,7 +288,7 @@ namespace Schedulebot
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
                                     Label = "Назад",
-                                    Payload = "{\"menu\": \"3\"}"
+                                    Payload = "{\"menu\": \"4\"}"
                                 }
                             }
                         }
@@ -268,7 +306,7 @@ namespace Schedulebot
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
                                     Label = "1",
-                                    Payload = "{\"menu\": \"4\"}"
+                                    Payload = "{\"menu\": \"5\"}"
                                 }
                             },
                             new MessageKeyboardButton() {
@@ -276,7 +314,7 @@ namespace Schedulebot
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
                                     Label = "2",
-                                    Payload = "{\"menu\": \"4\"}"
+                                    Payload = "{\"menu\": \"5\"}"
                                 }
                             }
                         },
@@ -286,7 +324,7 @@ namespace Schedulebot
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
                                     Label = "Назад",
-                                    Payload = "{\"menu\": \"4\"}"
+                                    Payload = "{\"menu\": \"5\"}"
                                 }
                             }
                         }
@@ -301,6 +339,7 @@ namespace Schedulebot
             LoadFullName();
             for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
                 courses[currentCourse] = new Course(path + @"downloads\" + currentCourse + "_course.xls");
+            LoadDatesAndUrls();
             mapper.CreateMaps(courses);
             ConstructKeyboards();
             LoadUploadedSchedule();
@@ -333,7 +372,7 @@ namespace Schedulebot
                         {
                             Type = KeyboardButtonActionType.Text,
                             Label = groupNames[currentName],
-                            Payload = "{\"menu\": \"30\", \"index\": \"" + currentName + "\", \"course\": \"" + currentCourse + "\"}"
+                            Payload = "{\"menu\": \"40\", \"course\": \"" + currentCourse + "\"}"
                         }
                     });
                     if (line.Count == ConstructKeyboardsProperties.buttonsInLine
@@ -345,7 +384,7 @@ namespace Schedulebot
                     if (buttons.Count == ConstructKeyboardsProperties.linesInKeyboard
                         || (currentName + 1 == groupNames.Count && buttons.Count != 0))
                     {
-                        string payloadService = "{\"menu\": \"30\", \"page\": \"" + currentPage + "\", \"course\": \"" + currentCourse + "\"}";
+                        string payloadService = "{\"menu\": \"40\", \"page\": \"" + currentPage + "\", \"course\": \"" + currentCourse + "\"}";
                         serviceLine.Add(new MessageKeyboardButton()
                         {
                             Color = KeyboardButtonColor.Default,
@@ -457,6 +496,21 @@ namespace Schedulebot
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка настроек");
         }
 
+        public void LoadDatesAndUrls()
+        {
+            using (StreamReader file = new StreamReader(
+                path + "datesAndUrls.txt",
+                System.Text.Encoding.Default))
+            {
+                for (int currentCourse = 0; currentCourse < 4; currentCourse++)
+                {
+                    string str = file.ReadLine();
+                    courses[currentCourse].urlToFile = str.Substring(0, str.IndexOf(' '));
+                    courses[currentCourse].date = str.Substring(str.IndexOf(' ') + 1);
+                }
+            }
+        }
+
         private void LoadAcronymToPhrase()
         {
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка ManualAcronymToPhrase");
@@ -494,7 +548,7 @@ namespace Schedulebot
         public void LoadUploadedSchedule()
         {
             using (StreamReader file = new StreamReader(
-                path + "uploadedPhotos.txt",
+                path + "uploadedSchedule.txt",
                 System.Text.Encoding.Default))
             {
                 string rawLine;
@@ -589,7 +643,7 @@ namespace Schedulebot
                 };
                 while (true)
                 {
-                    // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " Получаю сообщения");
+                    Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " Получаю сообщения");
                     try
                     {
                         historyResponse = vkStuff.api.Groups.GetBotsLongPollHistory(botsLongPollHistoryParams);
@@ -600,8 +654,10 @@ namespace Schedulebot
                             continue;
                         foreach (var update in historyResponse.Updates)
                         {
+                            Console.WriteLine(update.Message.Text);
                             if (update.Type == GroupUpdateType.MessageNew)
                             {
+                                Console.WriteLine(update.Message.Text);
                                 MessageResponseAsync(update.Message);
                             }
                         }
@@ -634,10 +690,11 @@ namespace Schedulebot
 
         public class PayloadStuff
         {
-            public string Command { get; set; }
-            public int? Menu { get; set; }
-            public int? Course { get; set; }
-            public int? Index { get; set; }
+            public string Command { get; set; } = "";
+            public int? Menu { get; set; } = null;
+            public int Course { get; set; } = -1;
+            public string Group { get; set; } = "";
+            public int Page { get; set; } = -1;
         }
 
         public async void MessageResponseAsync(Message message)
@@ -653,7 +710,7 @@ namespace Schedulebot
                         if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
                         {
                             string help = "Команды:\n\nРассылка <всем,*КУРС*,*ГРУППА*>\n--отправляет расписание на неделю выбранным юзерам\nОбновить <все,*КУРС*> [нет]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nПерезагрузка\n--перезагружает бота(для применения обновления версии бота)\n\nCommands:\n\nDistribution <all,*COURSE*,*GROUP*>\n--отправляет расписание на неделю выбранным юзерам\nUpdate <all,*COURSE*> [false]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nReboot\n--перезагружает бота(для применения обновления версии бота)\n";
-                            SendMessage(userId: message.PeerId, message: help);
+                            SendMessageAsync(userId: message.PeerId, message: help);
                         }
                         else if (message.Text.IndexOf("Рассылка") == 0 || message.Text.IndexOf("Distribution") == 0)
                         {
@@ -663,7 +720,7 @@ namespace Schedulebot
                             if (toWhom == "всем" || toWhom == "all")
                             {
                                 Distribution.ToAll(temp);
-                                SendMessage(userId: message.PeerId, message: "Выполнено");
+                                SendMessageAsync(userId: message.PeerId, message: "Выполнено");
                             }
                             else if (toWhom.Length == 1)
                             {
@@ -673,17 +730,17 @@ namespace Schedulebot
                                 if (toCourse != -1 && toCourse >= 0 && toCourse < 4)
                                 {
                                     Distribution.ToCourse(toCourse, temp);
-                                    SendMessage(userId: message.PeerId, message: "Выполнено");
+                                    SendMessageAsync(userId: message.PeerId, message: "Выполнено");
                                 }
                                 else
                                 {
-                                    SendMessage(userId: message.PeerId, message: "Ошибка рассылки:\nневерный курс: " + toWhom + "\nВведите значение от 1 до 4");
+                                    SendMessageAsync(userId: message.PeerId, message: "Ошибка рассылки:\nневерный курс: " + toWhom + "\nВведите значение от 1 до 4");
                                 }
                             }
                             else
                             {
                                 Distribution.ToGroup(toWhom, temp);
-                                SendMessage(userId: message.PeerId, message: "Выполнено");
+                                SendMessageAsync(userId: message.PeerId, message: "Выполнено");
                             }
                         }
                         else if (message.Text.IndexOf("Обновить") == 0 || message.Text.IndexOf("Update") == 0)
@@ -794,7 +851,7 @@ namespace Schedulebot
                                     }
                                 }
                             }
-                            SendMessage(userId: message.PeerId, message: "Выполнено");
+                            SendMessageAsync(userId: message.PeerId, message: "Выполнено");
                         }
                         else if (message.Text.IndexOf("Перезагрузка") == 0 || message.Text.IndexOf("Reboot") == 0)
                         {
@@ -827,8 +884,10 @@ namespace Schedulebot
                     }
                     else
                     {
-                        SendMessageAsync(userId: message.PeerId,
-                                    message: "Нажмите на кнопку");
+                        SendMessageAsync(
+                            userId: message.PeerId,
+                            message: "Нажмите на кнопку",
+                            keyboardId: 0);
                         return;
                     }
                     return;
@@ -846,9 +905,10 @@ namespace Schedulebot
                 {
                     case null:
                     {
-                        SendMessageAsync(userId: message.PeerId,
-                                    message: "Что-то пошло не так",
-                                    keyboardId: 0);
+                        SendMessageAsync(
+                            userId: message.PeerId,
+                            message: "Что-то пошло не так",
+                            keyboardId: 0);
                         return;
                     }
                     case 0:
@@ -857,156 +917,68 @@ namespace Schedulebot
                         {
                             case "Расписание":
                             {
-                                SendMessageAsync(userId: message.PeerId,
-                                            keyboardId: 1);
+                                SendMessageAsync(
+                                    userId: message.PeerId,
+                                    keyboardId: 1);
                                 return;
                             }
                             case "Неделя":
                             {
-                                SendMessageAsync(userId: message.PeerId,
-                                            message: CurrentWeek());
+                                SendMessageAsync(
+                                    userId: message.PeerId,
+                                    message: CurrentWeek());
                                 return;
                             }
                             case "Настройки":
                             {
-                                MessageKeyboard keyboardCustom;
-                                keyboardCustom = vkStuff.MainMenuKeyboards[2];
-                                //!
-                                if (!userRepository.ContainsUser(message.PeerId))
+                                if (userRepository.ContainsUser(message.PeerId))
                                 {
-                                    keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
+                                    User user = userRepository.GetUser(message.PeerId);
+
+                                    StringBuilder stringBuilder = new StringBuilder();
+                                    stringBuilder.Append("Вы подписаны: ");
+                                    stringBuilder.Append(user.Group);
+                                    stringBuilder.Append(" (");
+                                    stringBuilder.Append(user.Subgroup);
+                                    stringBuilder.Append(')');
+
+                                    MessageKeyboard keyboardCustom = vkStuff.MainMenuKeyboards[3];
+                                    keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
+                                    
+                                    SendMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Отправляю клавиатуру",
+                                        customKeyboard: keyboardCustom);
                                 }
                                 else
                                 {
-                                    // keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
+                                    SendMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Отправляю клавиатуру",
+                                        keyboardId: 2);
                                 }
+                                return;
+                            }
+                            case "Информация":
+                            {
                                 SendMessageAsync(
                                     userId: message.PeerId,
-                                    message: "Отправляю клавиатуру",
-                                    keyboardId: -1,
-                                    customKeyboard: keyboardCustom);
-                                return;
-                            }
-                            case "Информация":
-                            {
-                                SendMessageAsync(userId: message.PeerId,
-                                            message: "Текущая версия - v2.2\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie");
+                                    message: "Текущая версия - v2.2\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie");
                                 return;
                             }
                             default:
                             {
-                                SendMessageAsync(userId: message.PeerId, message: "Произошла ошибка в меню 0, что-то с message.Text", keyboardId: 0);
-                                return;
-                            }
-                        }
-                    }
-                    case 1:
-                    {
-
-                        return;
-                    }
-                    case 2:
-                    {
-
-                        return;
-                    }
-                    case 3:
-                    {
-
-                        return;
-                    }
-                    case 4:
-                    {
-
-                        return;
-                    }
-                    case 30:
-                    {
-
-
-                        return;
-                    }
-                }
-                
-
-
-                /*
-                Regex regex = new Regex("[0-9]+");
-                int[] args = new int[4] { -1, -1, -1, -1 };
-                MatchCollection matches = regex.Matches(message.Payload);
-                if (matches.Count != 0)
-                {
-                    for (int i = 0; i < matches.Count; ++i)
-                    {
-                        args[i] = int.Parse(matches[i].Value);
-                    }
-                }
-                else
-                {
-                    SendMessage(userId: message.PeerId, message: "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.\nКнопка \"Информация\" для получения подробностей", keyboardId: 0);
-                    return;
-                }
-                */
-
-
-                /*
-                switch (args[0])
-                {
-                    case -1: // в случае ошибки
-                    {
-                        SendMessage(userId: message.PeerId, message: "Что-то пошло не так", keyboardId: 0);
-                        return;
-                    }
-                    case 0: // сделать информацию
-                    {
-                        switch (message.Text)
-                        {
-                            case "Расписание":
-                            {
-                                SendMessage(userId: message.PeerId, keyboardId: 1);
-                                return;
-                            }
-                            case "Неделя":
-                            {
-                                SendMessage(userId: message.PeerId, message: CurrentWeek(), keyboardId: 0);
-                                return;
-                            }
-                            case "Настройки":
-                            {
-                                MessageKeyboard keyboardCustom;
-                                keyboardCustom = vkStuff.mainMenuKeyboards[2];
-                                lock (Glob.locker)
-                                {
-                                    if (!Glob.users.Keys.Contains(message.PeerId))
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                    }
-                                    else
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                    }
-                                }
-                                SendMessage(
+                                SendMessageAsync(
                                     userId: message.PeerId,
-                                    message: "Отправляю клавиатуру",
-                                    keyboardId: -1,
-                                    customKeyboard: keyboardCustom);
-                                return;
-                            }
-                            case "Информация":
-                            {
-                                SendMessage(userId: message.PeerId, message: "Текущая версия - v2.2\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie", keyboardId: 0);
-                                return;
-                            }
-                            default:
-                            {
-                                SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 0, что-то с message.Text", keyboardId: 0);
+                                    message: "Произошла ошибка в меню 0, что-то с message.Text",
+                                    keyboardId: 0);
                                 return;
                             }
                         }
                     }
                     case 1:
                     {
+                        /*
                         bool isUpdating;
                         lock (Glob.lockerIsUpdating)
                         {
@@ -1014,7 +986,7 @@ namespace Schedulebot
                         }
                         if (message.Text == "Назад")
                         {
-                            SendMessage(userId: message.PeerId, keyboardId: 0);
+                            SendMessageAsync(userId: message.PeerId, keyboardId: 0);
                             return;
                         }
                         else if (message.Text == "Ссылка")
@@ -1023,7 +995,7 @@ namespace Schedulebot
                             bool contains;
                             lock (Glob.lockerKeyboards)
                             {
-                                keyboardCustom = vkStuff.mainMenuKeyboards[2];
+                                keyboardCustom = vkStuff.MainMenuKeyboards[2];
                             }
                             lock (Glob.locker)
                             {
@@ -1032,7 +1004,7 @@ namespace Schedulebot
                             if (!contains)
                             {
                                 keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                SendMessage(
+                                SendMessageAsync(
                                     userId: message.PeerId,
                                     message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
                                     keyboardId: -1,
@@ -1054,7 +1026,7 @@ namespace Schedulebot
                                         course = Glob.schedule_mapping[Glob.users[message.PeerId]].Course;
                                         url = Glob.schedule_url[course];
                                     }
-                                    SendMessage(
+                                    SendMessageAsync(
                                         userId: message.PeerId,
                                         message: "Расписание для " + (course + 1) + " курса: " + url,
                                         keyboardId: 1,
@@ -1065,7 +1037,7 @@ namespace Schedulebot
                                 else
                                 {
                                     keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                    SendMessage(
+                                    SendMessageAsync(
                                         userId: message.PeerId,
                                         message: "Ваша группа не существует, настройте заново",
                                         keyboardId: -1,
@@ -1077,7 +1049,7 @@ namespace Schedulebot
                         }
                         else if (isUpdating)
                         {
-                            SendMessage(
+                            SendMessageAsync(
                                 userId: message.PeerId,
                                 message: "Происходит обновление расписания, повторите попытку через несколько минут",
                                 keyboardId: 1);
@@ -1095,7 +1067,7 @@ namespace Schedulebot
                                     bool contains;
                                     lock (Glob.lockerKeyboards)
                                     {
-                                        keyboardCustom = vkStuff.mainMenuKeyboards[2];
+                                        keyboardCustom = vkStuff.MainMenuKeyboards[2];
                                     }
                                     lock (Glob.locker)
                                     {
@@ -1104,7 +1076,7 @@ namespace Schedulebot
                                     if (!contains)
                                     {
                                         keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                        SendMessage(
+                                        SendMessageAsync(
                                             userId: message.PeerId,
                                             message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
                                             keyboardId: -1,
@@ -1126,7 +1098,7 @@ namespace Schedulebot
                                             }
                                             if (isBroken)
                                             {
-                                                SendMessage(
+                                                SendMessageAsync(
                                                     userId: message.PeerId,
                                                     message: "Расписание Вашего курса не обработано",
                                                     keyboardId: 1);
@@ -1139,7 +1111,7 @@ namespace Schedulebot
                                                     messageTemp = "Расписание для " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
                                                     photoId = (long)Glob.schedule_uploaded[Glob.schedule_mapping[Glob.users[message.PeerId]].Course, Glob.schedule_mapping[Glob.users[message.PeerId]].Index];
                                                 }
-                                                SendMessage(
+                                                SendMessageAsync(
                                                     userId: message.PeerId,
                                                     message: messageTemp,
                                                     keyboardId: 1,
@@ -1158,7 +1130,7 @@ namespace Schedulebot
                                         else
                                         {
                                             keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                            SendMessage(
+                                            SendMessageAsync(
                                                 userId: message.PeerId,
                                                 message: "Ваша группа не существует, настройте заново",
                                                 keyboardId: -1,
@@ -1174,7 +1146,7 @@ namespace Schedulebot
                                     bool contains;
                                     lock (Glob.lockerKeyboards)
                                     {
-                                        keyboardCustom = vkStuff.mainMenuKeyboards[2];
+                                        keyboardCustom = vkStuff.MainMenuKeyboards[2];
                                     }
                                     lock (Glob.locker)
                                     {
@@ -1183,7 +1155,7 @@ namespace Schedulebot
                                     if (!contains)
                                     {
                                         keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                        SendMessage(
+                                        SendMessageAsync(
                                             userId: message.PeerId,
                                             message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
                                             keyboardId: -1,
@@ -1200,7 +1172,7 @@ namespace Schedulebot
                                         int today = (int)DateTime.Now.DayOfWeek;
                                         if (today == 0)
                                         {
-                                            SendMessage(
+                                            SendMessageAsync(
                                                 userId: message.PeerId,
                                                 message: "Сегодня воскресенье",
                                                 keyboardId: 1);
@@ -1221,7 +1193,7 @@ namespace Schedulebot
                                             }
                                             if (isBroken)
                                             {
-                                                SendMessage(
+                                                SendMessageAsync(
                                                     userId: message.PeerId,
                                                     message: "Расписание Вашего курса не обработано",
                                                     keyboardId: 1);
@@ -1251,7 +1223,7 @@ namespace Schedulebot
                                                             photoId = Glob.tomorrow_uploaded[mapping.Course, mapping.Index, today, week];
                                                         }
                                                     }
-                                                    SendMessage(
+                                                    SendMessageAsync(
                                                         userId: message.PeerId,
                                                         message: "Расписание на сегодня",
                                                         keyboardId: 1,
@@ -1268,7 +1240,7 @@ namespace Schedulebot
                                                 }
                                                 else
                                                 {
-                                                    SendMessage(
+                                                    SendMessageAsync(
                                                         userId: message.PeerId,
                                                         message: "Сегодня Вы не учитесь",
                                                         keyboardId: 1);
@@ -1279,7 +1251,7 @@ namespace Schedulebot
                                         else
                                         {
                                             keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                            SendMessage(
+                                            SendMessageAsync(
                                                 userId: message.PeerId,
                                                 message: "Ваша группа не существует, настройте заново",
                                                 keyboardId: -1,
@@ -1295,7 +1267,7 @@ namespace Schedulebot
                                     bool contains;
                                     lock (Glob.lockerKeyboards)
                                     {
-                                        keyboardCustom = vkStuff.mainMenuKeyboards[2];
+                                        keyboardCustom = vkStuff.MainMenuKeyboards[2];
                                     }
                                     lock (Glob.locker)
                                     {
@@ -1304,7 +1276,7 @@ namespace Schedulebot
                                     if (!contains)
                                     {
                                         keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                        SendMessage(
+                                        SendMessageAsync(
                                             userId: message.PeerId,
                                             message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
                                             keyboardId: -1,
@@ -1334,7 +1306,7 @@ namespace Schedulebot
                                             }
                                             if (isBroken)
                                             {
-                                                SendMessage(
+                                                SendMessageAsync(
                                                     userId: message.PeerId,
                                                     message: "Расписание Вашего курса не обработано",
                                                     keyboardId: 1);
@@ -1373,7 +1345,7 @@ namespace Schedulebot
                                                             photoId = Glob.tomorrow_uploaded[mapping.Course, mapping.Index, day, week];
                                                         }
                                                     }
-                                                    SendMessage(
+                                                    SendMessageAsync(
                                                         userId: message.PeerId,
                                                         message: "Завтра воскресенье, вот расписание на ближайший учебный день",
                                                         keyboardId: 1,
@@ -1421,7 +1393,7 @@ namespace Schedulebot
                                                     {
                                                         messageTemp = "Расписание на завтра";
                                                     }
-                                                    SendMessage(
+                                                    SendMessageAsync(
                                                         userId: message.PeerId,
                                                         message: messageTemp,
                                                         keyboardId: 1,
@@ -1441,7 +1413,7 @@ namespace Schedulebot
                                         else
                                         {
                                             keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                            SendMessage(
+                                            SendMessageAsync(
                                                 userId: message.PeerId,
                                                 message: "Ваша группа не существует, настройте заново",
                                                 keyboardId: -1,
@@ -1452,373 +1424,247 @@ namespace Schedulebot
                                 }
                                 default:
                                 {
-                                    SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 1, что-то с message.Text", keyboardId: 0);
+                                    SendMessageAsync(userId: message.PeerId, message: "Произошла ошибка в меню 1, что-то с message.Text", keyboardId: 0);
                                     return;
                                 }
                             }
                         }
+                        */
+                        return;
                     }
-                    case 2:
+                    case 2: // 2 и 3 тут
                     {
                         if (message.Text.Contains("Вы подписаны") || message.Text.Contains("Вы не подписаны"))
                         {
-                            MessageKeyboard keyboardCustom;
-                            lock (Glob.lockerKeyboards)
-                            {
-                                keyboardCustom = vkStuff.mainMenuKeyboards[2];
-                            }
-                            lock (Glob.locker)
-                            {
-                                if (!Glob.users.Keys.Contains(message.PeerId))
-                                {
-                                    keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                }
-                                else
-                                {
-                                    keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                }
-                            }
-                            SendMessage(
+                            SendMessageAsync(
                                 userId: message.PeerId,
-                                message: "Попробуйте нажать на другую кнопку",
-                                keyboardId: -1,
-                                customKeyboard: keyboardCustom);
+                                message: "Попробуйте нажать на другую кнопку");
                             return;
                         }
                         switch (message.Text)
                         {
                             case "Отписаться":
                             {
-                                MessageKeyboard keyboardCustom;
-                                lock (Glob.lockerKeyboards)
-                                {
-                                    keyboardCustom = vkStuff.mainMenuKeyboards[2];
-                                }
-                                keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                string messageTemp;
-                                lock (Glob.locker)
-                                {
+                                User user = userRepository.GetUser(message.PeerId);
 
-                                    if (!Glob.users.ContainsKey(message.PeerId))
-                                    {
-                                        messageTemp = "Вы не подписаны";
-                                    }
-                                    else
-                                    {
-                                        messageTemp = "Отменена подписка на " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                        Glob.users.Remove(message.PeerId);
-                                        if (!Glob.subsChanges)
-                                            Glob.subsChanges = true;
-                                    }
-                                }
-                                SendMessage(
+                                StringBuilder stringBuilder = new StringBuilder();
+                                stringBuilder.Append("Отменена подписка на ");
+                                stringBuilder.Append(user.Group);
+                                stringBuilder.Append(" (");
+                                stringBuilder.Append(user.Subgroup);
+                                stringBuilder.Append(')');
+
+                                userRepository.DeleteUser((long)message.PeerId);
+
+                                SendMessageAsync(
                                     userId: message.PeerId,
-                                    message: messageTemp,
-                                    keyboardId: -1,
-                                    customKeyboard: keyboardCustom);
+                                    message: stringBuilder.ToString(),
+                                    keyboardId: 2);
                                 return;
                             }
                             case "Подписаться":
                             {
-                                SendMessage(userId: message.PeerId, keyboardId: 3);
+                                SendMessageAsync(
+                                    userId: message.PeerId,
+                                    keyboardId: 4);
+                                return;
+                            }
+                            case "Переподписаться":
+                            {
+                                SendMessageAsync(
+                                    userId: message.PeerId,
+                                    keyboardId: 4);
                                 return;
                             }
                             case "Изменить подгруппу":
                             {
-                                bool contains = false;
+                                User user = userRepository.ChangeSubgroup(message.PeerId);
+
+                                StringBuilder stringBuilder = new StringBuilder();
+                                stringBuilder.Append("Вы подписаны: ");
+                                stringBuilder.Append(user.Group);
+                                stringBuilder.Append(" (");
+                                stringBuilder.Append(user.Subgroup);
+                                stringBuilder.Append(')');
+
                                 MessageKeyboard keyboardCustom;
-                                lock (Glob.lockerKeyboards)
-                                {
-                                    keyboardCustom = vkStuff.mainMenuKeyboards[2];
-                                }
-                                lock (Glob.locker)
-                                {
-                                    if (!Glob.users.Keys.Contains(message.PeerId))
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                    }
-                                    else
-                                    {
-                                        contains = true;
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group;
-                                    }
-                                }
-                                if (contains)
-                                {
-                                    User temp;
-                                    lock (Glob.locker)
-                                    {
-                                        temp = Glob.users[message.PeerId];
-                                        Glob.users.Remove(message.PeerId);
-                                        if (temp.Subgroup == "1")
-                                        {
-                                            temp.Subgroup = "2";
-                                            keyboardCustom.Buttons.First().First().Action.Label += " (2)";
-                                        }
-                                        else
-                                        {
-                                            temp.Subgroup = "1";
-                                            keyboardCustom.Buttons.First().First().Action.Label += " (1)";
-                                        }
-                                        Glob.users.Add(message.PeerId, temp);
-                                        if (!Glob.subsChanges)
-                                            Glob.subsChanges = true;
-                                    }
-                                    SendMessage(
-                                        userId: message.PeerId,
-                                        message: "Ваша подгруппа: " + temp.Subgroup,
-                                        keyboardId: -1,
-                                        customKeyboard: keyboardCustom);
-                                    return;
-                                }
-                                else
-                                {
-                                    SendMessage(
-                                        userId: message.PeerId,
-                                        message: "Невозможно изменить подгруппу, Вы не подписаны",
-                                        keyboardId: -1,
-                                        customKeyboard: keyboardCustom);
-                                    return;
-                                }
-                            }
-                            case "Назад":
-                            {
-                                SendMessage(userId: message.PeerId, keyboardId: 0);
-                                return;
-                            }
-                            default:
-                            {
-                                SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 2, что-то с message.Text", keyboardId: 0);
-                                return;
-                            }
-                        }
-                    }
-                    case 3:
-                    {
-                        switch (message.Text)
-                        {
-                            case "Выберите курс":
-                            {
-                                SendMessage(
+                                keyboardCustom = vkStuff.MainMenuKeyboards[3];
+                                keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
+                            
+                                stringBuilder.Clear();
+                                stringBuilder.Append("Ваша подгруппа: ");
+                                stringBuilder.Append(user.Subgroup);
+
+                                SendMessageAsync(
                                     userId: message.PeerId,
-                                    message: "Попробуйте нажать на другую кнопку",
-                                    keyboardId: 3);
-                                return;
-                            }
-                            case "1":
-                            {
-                                MessageKeyboard keyboardCustom;
-                                lock (Glob.lockerKeyboards)
-                                {
-                                    keyboardCustom = Glob.keyboardsNewSub[0, 0];
-                                }
-                                SendMessage(
-                                    userId: message.PeerId,
-                                    message: "Выберите группу",
-                                    keyboardId: -1,
-                                    customKeyboard: keyboardCustom);
-                                return;
-                            }
-                            case "2":
-                            {
-                                MessageKeyboard keyboardCustom;
-                                lock (Glob.lockerKeyboards)
-                                {
-                                    keyboardCustom = Glob.keyboardsNewSub[1, 0];
-                                }
-                                SendMessage(
-                                    userId: message.PeerId,
-                                    message: "Выберите группу",
-                                    keyboardId: -1,
-                                    customKeyboard: keyboardCustom);
-                                return;
-                            }
-                            case "3":
-                            {
-                                MessageKeyboard keyboardCustom;
-                                lock (Glob.lockerKeyboards)
-                                {
-                                    keyboardCustom = Glob.keyboardsNewSub[2, 0];
-                                }
-                                SendMessage(
-                                    userId: message.PeerId,
-                                    message: "Выберите группу",
-                                    keyboardId: -1,
-                                    customKeyboard: keyboardCustom);
-                                return;
-                            }
-                            case "4":
-                            {
-                                MessageKeyboard keyboardCustom;
-                                lock (Glob.lockerKeyboards)
-                                {
-                                    keyboardCustom = Glob.keyboardsNewSub[3, 0];
-                                }
-                                SendMessage(
-                                    userId: message.PeerId,
-                                    message: "Выберите группу",
-                                    keyboardId: -1,
+                                    message: stringBuilder.ToString(),
                                     customKeyboard: keyboardCustom);
                                 return;
                             }
                             case "Назад":
                             {
-                                MessageKeyboard keyboardCustom;
-                                lock (Glob.lockerKeyboards)
-                                {
-                                    keyboardCustom = vkStuff.mainMenuKeyboards[2];
-                                }
-                                lock (Glob.locker)
-                                {
-                                    if (!Glob.users.Keys.Contains(message.PeerId))
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                    }
-                                    else
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                    }
-                                }
-                                SendMessage(
+                                SendMessageAsync(
                                     userId: message.PeerId,
-                                    message: "Отправляю клавиатуру",
-                                    keyboardId: -1,
-                                    customKeyboard: keyboardCustom);
+                                    keyboardId: 0);
                                 return;
                             }
                             default:
                             {
-                                SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 3, что-то с message.Text", keyboardId: 0);
+                                SendMessageAsync(
+                                    userId: message.PeerId,
+                                    message: "Произошла ошибка в меню 2, что-то с message.Text",
+                                    keyboardId: 0);
                                 return;
                             }
                         }
                     }
                     case 4:
                     {
-                        switch (message.Text)
+                        if (message.Text == "Выберите курс")
                         {
-                            case "1":
+                            SendMessageAsync(
+                                userId: message.PeerId,
+                                message: "Попробуйте нажать на другую кнопку");
+                            return;
+                        }
+                        else if (message.Text == "Назад")
+                        {
+                            if (userRepository.ContainsUser(message.PeerId))
                             {
-                                string messageTemp;
-                                lock (Glob.locker)
-                                {
-                                    if (Glob.users.ContainsKey(message.PeerId))
-                                    {
-                                        Glob.users.Remove(message.PeerId);
-                                    }
-                                    Glob.users.Add(message.PeerId, new User()
-                                    {
-                                        Group = Glob.schedule[args[2], args[1], 0],
-                                        Subgroup = "1"
-                                    });
-                                    if (!Glob.subsChanges)
-                                        Glob.subsChanges = true;
-                                    messageTemp = "Вы подписались на " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                }
-                                SendMessage(
-                                    userId: message.PeerId,
-                                    message: messageTemp,
-                                    keyboardId: 0);
-                                return;
-                            }
-                            case "2":
-                            {
-                                string messageTemp;
-                                lock (Glob.locker)
-                                {
-                                    if (Glob.users.ContainsKey(message.PeerId))
-                                    {
-                                        Glob.users.Remove(message.PeerId);
-                                    }
-                                    Glob.users.Add(message.PeerId, new User()
-                                    {
-                                        Group = Glob.schedule[args[2], args[1], 0],
-                                        Subgroup = "2"
-                                    });
-                                    if (!Glob.subsChanges)
-                                        Glob.subsChanges = true;
-                                    messageTemp = "Вы подписались на " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                }
-                                SendMessage(
-                                    userId: message.PeerId,
-                                    message: messageTemp,
-                                    keyboardId: 0);
-                                return;
-                            }
-                            case "Назад":
-                            {
-                                MessageKeyboard keyboardCustom;
-                                lock (Glob.lockerKeyboards)
-                                {
-                                    keyboardCustom = Glob.keyboardsNewSub[args[2], 0];
-                                }
-                                SendMessage(
+                                User user = userRepository.GetUser(message.PeerId);
+
+                                StringBuilder stringBuilder = new StringBuilder();
+                                stringBuilder.Append("Вы подписаны: ");
+                                stringBuilder.Append(user.Group);
+                                stringBuilder.Append(" (");
+                                stringBuilder.Append(user.Subgroup);
+                                stringBuilder.Append(')');
+
+                                MessageKeyboard keyboardCustom = vkStuff.MainMenuKeyboards[3];
+                                keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
+                                
+                                SendMessageAsync(
                                     userId: message.PeerId,
                                     message: "Отправляю клавиатуру",
-                                    keyboardId: -1,
-                                    customKeyboard: keyboardCustom,
-                                    onlyKeyboard: true);
-                                return;
+                                    customKeyboard: keyboardCustom);
                             }
-                            default:
+                            else
                             {
-                                SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 4, что-то с message.Text", keyboardId: 0);
-                                return;
+                                SendMessageAsync(
+                                    userId: message.PeerId,
+                                    message: "Отправляю клавиатуру",
+                                    keyboardId: 2);
                             }
+                            return;
+                        }
+                        else if (message.Text.Length == 1)
+                        {
+                            Int32.TryParse(message.Text, out int course);
+                            course--;
+                            SendMessageAsync(
+                                userId: message.PeerId,
+                                message: "Выберите группу",
+                                customKeyboard: courses[course].keyboards[0]);
+                            return;
+                        }
+                        else
+                        {
+                            SendMessageAsync(
+                                userId: message.PeerId,
+                                message: "Произошла ошибка в меню 4, что-то с message.Text", 
+                                keyboardId: 0);
+                            return;
                         }
                     }
-                    case 30:
+                    case 5:
                     {
-                        if (message.Payload.Contains("page"))
+                        if (message.Text == "Назад")
+                        {
+                            SendMessageAsync(
+                                userId: message.PeerId,
+                                customKeyboard: courses[payloadStuff.Course].keyboards[0]);
+                            return;
+                        }
+                        else if (message.Text.Length == 1)
+                        {
+                            StringBuilder stringBuilder = new StringBuilder();
+
+                            Int32.TryParse(message.Text, out int subgroup);
+                            if (userRepository.ContainsUser(message.PeerId))
+                            {
+                                userRepository.EditUser(
+                                    id: (long)message.PeerId,
+                                    newGroup: payloadStuff.Group,
+                                    newSubgroup: subgroup);
+
+                                stringBuilder.Append("Вы изменили настройки на ");
+                            }
+                            else
+                            {
+                                userRepository.AddUser(new User((long)message.PeerId, payloadStuff.Group, subgroup));
+
+                                stringBuilder.Append("Вы подписались на ");
+                            }
+
+                            stringBuilder.Append(payloadStuff.Group);
+                            stringBuilder.Append(" (");
+                            stringBuilder.Append(message.Text);
+                            stringBuilder.Append(')');
+
+                            SendMessageAsync(
+                                userId: message.PeerId,
+                                message: stringBuilder.ToString(),
+                                keyboardId: 0);
+                            return;
+                        }
+                        else
+                        {
+                            SendMessageAsync(
+                                userId: message.PeerId,
+                                message: "Произошла ошибка в меню 5, что-то с message.Text",
+                                keyboardId: 0);
+                            return;
+                        }
+                    }
+                    case 40:
+                    {
+                        if (payloadStuff.Page != -1)
                         {
                             switch (message.Text)
                             {
                                 case "Назад":
                                 {
-                                    if (args[1] == 0)
+                                    if (payloadStuff.Page == 0)
                                     {
-                                        SendMessage(
+                                        SendMessageAsync(
                                             userId: message.PeerId,
                                             message: "Отправляю клавиатуру",
-                                            keyboardId: 3,
-                                            onlyKeyboard: true);
+                                            keyboardId: 4);
                                         return;
                                     }
                                     else
                                     {
-                                        MessageKeyboard keyboardCustom;
-                                        lock (Glob.lockerKeyboards)
-                                        {
-                                            keyboardCustom = Glob.keyboardsNewSub[args[2], args[1] - 1];
-                                        }
-                                        SendMessage(
+                                        SendMessageAsync(
                                             userId: message.PeerId,
                                             message: "Отправляю клавиатуру",
-                                            onlyKeyboard: true,
-                                            keyboardId: -1,
-                                            customKeyboard: keyboardCustom);
+                                            customKeyboard: courses[payloadStuff.Course].keyboards[payloadStuff.Page - 1]);
                                         return;
                                     }
                                 }
                                 case "Вперед":
                                 {
                                     MessageKeyboard keyboardCustom;
-                                    lock (Glob.lockerKeyboards)
+                                    if (payloadStuff.Page == courses[payloadStuff.Course].keyboards.Count - 1)
                                     {
-                                        if (args[1] == Glob.keyboardsNewSubCount[args[2]] - 1)
-                                        {
-                                            keyboardCustom = Glob.keyboardsNewSub[args[2], 0];
-                                        }
-                                        else
-                                        {
-                                            keyboardCustom = Glob.keyboardsNewSub[args[2], args[1] + 1];
-                                        }
+                                        keyboardCustom = courses[payloadStuff.Course].keyboards[0];
                                     }
-                                    SendMessage(
+                                    else
+                                    {
+                                        keyboardCustom = courses[payloadStuff.Course].keyboards[payloadStuff.Page + 1];
+                                    }
+                                    SendMessageAsync(
                                         userId: message.PeerId,
                                         message: "Отправляю клавиатуру",
-                                        onlyKeyboard: true,
-                                        keyboardId: -1,
                                         customKeyboard: keyboardCustom);
                                     return;
                                 }
@@ -1826,50 +1672,40 @@ namespace Schedulebot
                                 {
                                     if (message.Text.Contains(" из "))
                                     {
-                                        MessageKeyboard keyboardCustom;
-                                        lock (Glob.lockerKeyboards)
-                                        {
-                                            keyboardCustom = Glob.keyboardsNewSub[args[2], args[1]];
-                                        }
-                                        SendMessage(
+                                        SendMessageAsync(
                                             userId: message.PeerId,
-                                            message: "Меню страниц не реализовано",
-                                            keyboardId: -1,
-                                            customKeyboard: keyboardCustom);
+                                            message: "Меню страниц не реализовано");
                                         return;
                                     }
-                                    SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 30, что-то с message.Text", keyboardId: 0);
+                                    SendMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Произошла ошибка в меню 40, что-то с message.Text",
+                                        keyboardId: 0);
                                     return;
                                 }
                             }
                         }
-                        if (message.Payload.Contains("index"))
+                        else
                         {
                             MessageKeyboard customKeyboard;
-                            lock (Glob.lockerKeyboards)
-                            {
-                                customKeyboard = vkStuff.mainMenuKeyboards[4];
-                            }
-                            string payload = "{\"menu\": \"4\", \"index\": \"" + args[1] + "\", \"course\": \"" + args[2] + "\"}";
-                            customKeyboard.Buttons.First().First().Action.Payload = payload;
-                            customKeyboard.Buttons.First().ElementAt(1).Action.Payload = payload;
-                            customKeyboard.Buttons.ElementAt(1).First().Action.Payload = payload;
-                            SendMessage(
+                            customKeyboard = vkStuff.MainMenuKeyboards[5];
+                            StringBuilder stringBuilder = new StringBuilder();
+                            stringBuilder.Append("{\"menu\": \"4\", \"group\": \"");
+                            stringBuilder.Append(message.Text);
+                            stringBuilder.Append("\", \"course\": \"");
+                            stringBuilder.Append(payloadStuff.Course);
+                            stringBuilder.Append("\"}");
+                            customKeyboard.Buttons.First().First().Action.Payload = stringBuilder.ToString();
+                            customKeyboard.Buttons.First().ElementAt(1).Action.Payload = customKeyboard.Buttons.First().First().Action.Payload;
+                            customKeyboard.Buttons.ElementAt(1).First().Action.Payload = customKeyboard.Buttons.First().First().Action.Payload;
+                            SendMessageAsync(
                                 userId: message.PeerId,
                                 message: "Выберите подгруппу, если нет - 1",
-                                keyboardId: -1,
                                 customKeyboard: customKeyboard);
                             return;
                         }
-                        break;
-                    }
-                    default:
-                    {
-                        SendMessage(userId: message.PeerId, message: "Если Вы видите это сообщение, пожалуйста, напишите разработчику vk.com/id133040900");
-                        return;
                     }
                 }
-                */
             });
             return;
         }
@@ -1880,7 +1716,6 @@ namespace Schedulebot
             string message = "Отправляю клавиатуру",
             List<MediaAttachment> attachments = null,
             int? keyboardId = null,
-            string keyboardSpecial = "",
             MessageKeyboard customKeyboard = null)
         {
             await Task.Run(() => 
@@ -1894,32 +1729,39 @@ namespace Schedulebot
                     messageSendParams.UserIds = userIds;
                 else
                     messageSendParams.PeerId = userId;
-                switch (keyboardId)
+                if (customKeyboard != null)
                 {
-                    case null:
+                    messageSendParams.Keyboard = customKeyboard;
+                }
+                else
+                {
+                    switch (keyboardId)
                     {
-                        break;
-                    }
-                    case -1:
-                    {
-                        messageSendParams.Keyboard = customKeyboard;
-                        break;
-                    }
-                    case 0:
-                    {
-                        messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[0];
-                        break;
-                    }
-                    case 1:
-                    {
-                        messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[1];
-                        messageSendParams.Attachments = attachments;
-                        break;
-                    }
-                    case 3:
-                    {
-                        messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[3];
-                        break;
+                        case null:
+                        {
+                            break;
+                        }
+                        case 0:
+                        {
+                            messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[0];
+                            break;
+                        }
+                        case 1:
+                        {
+                            messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[1];
+                            messageSendParams.Attachments = attachments;
+                            break;
+                        }
+                        case 2:
+                        {
+                            messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[2];
+                            break;
+                        }
+                        case 4:
+                        {
+                            messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[4];
+                            break;
+                        }
                     }
                 }
                 vkStuff.commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messageSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
@@ -2173,6 +2015,7 @@ namespace Schedulebot
             return notRelevantCourses;
         }
     
+        /*
         public static void ToGroupSubgroup(string group, string subgroup, string message)
         {
             Random random = new Random();
@@ -2341,8 +2184,8 @@ namespace Schedulebot
                 userIds.Clear();
             }
         }
+        */
     }
-    
 
 
 
@@ -2357,5 +2200,7 @@ namespace Schedulebot
         Task GetMessagesAsync();
 
         Task UploadPhotosAsync();
+
+        Task ExecuteMethodsAsync();
     }
 }
