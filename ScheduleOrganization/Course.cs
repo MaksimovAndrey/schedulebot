@@ -16,14 +16,22 @@ namespace Schedulebot
         public string date;
         public string pathToFile;
         public Group[] groups;
-        public int GroupsAmount => groups.GetLength(0);
+        public int GroupsAmount
+        {
+            get
+            {
+                if (groups != null)
+                    return groups.GetLength(0);
+                return 0;
+            }
+        }
         public bool isBroken;
         public bool isUpdating;
         public List<MessageKeyboard> keyboards;
         public Course(string _pathToFile)
         {
             pathToFile = _pathToFile;
-            Group[] groups = Parsing.Mapper(pathToFile);
+            groups = Parsing.Mapper(pathToFile);
             if (groups == null)
                 isBroken = true;
             else
