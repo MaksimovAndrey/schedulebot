@@ -49,17 +49,14 @@ namespace Schedulebot.Vk
         public int Subgroup { get; set; } = 0;
 
         public long AlbumId { get; set; }
+
+        public int Week { get; set; } = -1;
+
+        public int Day { get; set; }
+
+        public string Message { get; set; } = null;
         
         public long PeerId { get; set; } = 0; // когда на день, кому отправить
-
-        public PhotoUploadProperties(byte[] photo, long albumId, string group = null, int subgroup = 0, long peerId = 0)
-        {
-            Photo = photo;
-            Group = group;
-            Subgroup = subgroup;
-            AlbumId = albumId;
-            PeerId = peerId;
-        }
     }
     
     public class UpdateProperties

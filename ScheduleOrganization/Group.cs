@@ -8,6 +8,7 @@ using VkNet.Model.Keyboard;
 using VkNet.Enums.SafetyEnums;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using System.Text;
 
 using Schedulebot.Schedule;
 using Schedulebot.Drawing;
@@ -49,6 +50,14 @@ namespace Schedulebot
                 var test = DrawingSchedule.StandartSchedule.Draw(updateProperties.drawingStandartScheduleInfo);
                 updateProperties.photoUploadProperties.Photo
                     = DrawingSchedule.StandartSchedule.Draw(updateProperties.drawingStandartScheduleInfo);
+                StringBuilder stringBuilder = new StringBuilder();
+                stringBuilder.Append("Новое расписание для ");
+                stringBuilder.Append(updateProperties.photoUploadProperties.Group);
+                stringBuilder.Append(" (");
+                stringBuilder.Append(updateProperties.photoUploadProperties.Subgroup);
+                stringBuilder.Append(") ");
+                stringBuilder.Append(updateProperties.drawingStandartScheduleInfo.date);
+                updateProperties.photoUploadProperties.Message = stringBuilder.ToString();
                 return updateProperties.photoUploadProperties;
             });
         }
