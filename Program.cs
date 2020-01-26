@@ -37,23 +37,17 @@ namespace Schedulebot
             departments = new[] { new ItmmDepartment(path) };
         }
 
-        // провреряем актуальность расписания для всех факультетов
-        public Task CheckRelevance()
+        public async Task CheckRelevanceAsync()
         {
-            return Task.Run(async () =>
+            await Task.Run(async () =>
             {
                 while (true)
                 {
                     for (int i = 0; i < departmentsAmount; ++i)
-                        // todo
-                    await Task.Delay(60000);
+                        departments[i].CheckRelevanceAsync();
+                    await Task.Delay(600000);
                 }
             });
-        }
-        
-        private void UpdateSchedule(int departmentIndex, List<int> coursesToUpdate)
-        {
-
         }
     }
     class Program
@@ -62,13 +56,17 @@ namespace Schedulebot
         {
             SpreadsheetInfo.SetLicense("FREE-LIMITED-KEY");
             ScheduleBot scheduleBot = new ScheduleBot();
+
+
             Console.WriteLine("1");
             scheduleBot.departments[0].GetMessagesAsync();
             Console.WriteLine("2");
-            scheduleBot.departments[0].CheckRelevanceAsync();
+            var checkRelevanceTask = scheduleBot.CheckRelevanceAsync(); // active
             Console.WriteLine("3");
-
-
+            var test = scheduleBot.departments[0].GetMessagesAsync();
+            Console.WriteLine("4");
+            var test1 = scheduleBot.departments[0].UploadPhotosAsync();
+            Console.WriteLine("5");
 
             while (true)
             {

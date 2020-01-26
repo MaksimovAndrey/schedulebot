@@ -28,17 +28,46 @@ namespace Schedulebot.Vk
 {
     public class VkStuff
     {
-        public ConcurrentQueue<string> commandsQueue = new ConcurrentQueue<string>();
-        public VkApi api = new VkApi();
-        public VkApi apiPhotos = new VkApi();
-        public ulong groupId;
-        public long mainAlbumId;
-        public long tomorrowAlbumId;
-        public long adminId = 133040900;
-        public MessageKeyboard[] mainMenuKeyboards;
+        public readonly ConcurrentQueue<string> commandsQueue = new ConcurrentQueue<string>();
+        public readonly ConcurrentQueue<PhotoUploadProperties> uploadPhotosQueue = new ConcurrentQueue<PhotoUploadProperties>();
+        public readonly VkApi api = new VkApi();
+        public readonly VkApi apiPhotos = new VkApi();
+        public long GroupId { get; set; }
+        public long MainAlbumId { get; set; }
+        // public long TomorrowAlbumId { get; set; } нельзя юзать, потому что одновременная загрузка возможна только в 1 альбом, а делать 2 очереди и соответственно метода я пока не желаю
+        public long AdminId { get; set; }
+        public string GroupUrl { get; set; }
+        public MessageKeyboard[] MainMenuKeyboards { get; set; }
     }
 
+    public class PhotoUploadProperties
+    {
+        public byte[] Photo { get; set; }
+
+        public string Group { get; set; } = null;
+
+        public int Subgroup { get; set; } = 0;
+
+        public long AlbumId { get; set; }
+        
+        public long PeerId { get; set; } = 0; // когда на день, кому отправить
+
+        public PhotoUploadProperties(byte[] photo, long albumId, string group = null, int subgroup = 0, long peerId = 0)
+        {
+            Photo = photo;
+            Group = group;
+            Subgroup = subgroup;
+            AlbumId = albumId;
+            PeerId = peerId;
+        }
+    }
     
+    public class UpdateProperties
+    {
+        public Drawing.DrawingStandartScheduleInfo drawingStandartScheduleInfo;
+        public Vk.PhotoUploadProperties photoUploadProperties;
+    }
+
     /*
     public static class Vk
     {

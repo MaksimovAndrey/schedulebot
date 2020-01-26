@@ -11,6 +11,8 @@ using System.Text.RegularExpressions;
 
 using Schedulebot.Parse;
 using Schedulebot.Schedule;
+using Schedulebot.Drawing;
+using Schedulebot.Vk;
 
 namespace Schedulebot
 {
@@ -92,99 +94,106 @@ namespace Schedulebot
                 isBroken = false;
         }
         // Обновляем расписание, true - успешно, false - не смогли
-        public async Task Update()
+        public async void UpdateAsync(string groupUrl, UpdateProperties updateProperties) 
         {
-            isUpdating = true;
-            int triesAmount = 0;
-            while (true)
+            await Task.Run(async () => 
             {
-                HttpResponseMessage response = await ScheduleBot.client.GetAsync(urlToFile);
-                if (response.IsSuccessStatusCode)
+                isUpdating = true;
+                int triesAmount = 0;
+                while (true)
                 {
-                    using (var fs = new FileStream(pathToFile, FileMode.CreateNew))
-                        await response.Content.CopyToAsync(fs);
-                    break;
+                    HttpResponseMessage response = await ScheduleBot.client.GetAsync(urlToFile);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using (FileStream fileStream = new FileStream(pathToFile, FileMode.CreateNew))
+                            await response.Content.CopyToAsync(fileStream);
+                        break;
+                    }
+                    ++triesAmount;
+                    if (triesAmount == 5)
+                    {
+                        isBroken = true;
+                        isUpdating = false;
+                        return;
+                    }
+                    await Task.Delay(60000);
                 }
-                ++triesAmount;
-                if (triesAmount == 5)
+                Group[] newGroups = await Parsing.MapperAsync(pathToFile);
+                List<Tuple<int, int>> groupsSubgroupToUpdate = CompareGroups(newGroups);
+                groups = newGroups;
+                updateProperties.drawingStandartScheduleInfo.date = date;
+                for (int i = 0; i < groupsSubgroupToUpdate.Count; i++)
                 {
-                    isBroken = true;
-                    isUpdating = false;
-                    return;
+                    groups[groupsSubgroupToUpdate[i].Item1].UpdateAsync(groupsSubgroupToUpdate[i].Item2, updateProperties);
                 }
-                await Task.Delay(60000);
-            }
-            Group[] newGroups = Parsing.Mapper(pathToFile);
-
-
-            // List<GroupWithSubgroups> notEqualGroupsWithSubgroups = CompareGroups(newGroups);
-            
-            isBroken = false;
-            isUpdating = false;
+                isBroken = false;
+                isUpdating = false;
+            });
         }
-        public void ProcessSchedule(List<GroupWithSubgroups> notEqualGroupsWithSubgroups)
+        
+        public void ProcessSchedule(List<Tuple<string, int>> groupSubgroupTuplesToUpdate)
         {
             // todo: рисуем и заливаем картинки, формируем список photo_id + group_id + subgroup
         }
-        public List<GroupWithSubgroups> CompareGroups(Group[] _groups)
+        
+        public List<Tuple<int, int>> CompareGroups(Group[] newGroups)
         {
-            List<GroupWithSubgroups> notEqualGroupsWithSubgroups = new List<GroupWithSubgroups>();
-            for (int i = 0; i < _groups.GetLength(0); ++i)
+            List<Tuple<int, int>> groupSubgroupTuplesToUpdate = new List<Tuple<int, int>>(); // index of a group, subgroup
+            int groupsAmount = groups.GetLength(0);
+            int newGroupsAmount = newGroups.GetLength(0);
+            for (int currentNewGroup = 0; currentNewGroup < newGroupsAmount; ++currentNewGroup)
             {
-                for (int j = 0; j < 11111111; ++j) //! error
+                for (int currentGroup = 0; currentGroup < groupsAmount; ++currentGroup)
                 {
-                    if (groups[i].name == _groups[j].name)
+                    if (groups[currentGroup].name == newGroups[currentNewGroup].name)
                     {
-                        List<int> notEqualSubgroups = groups[i].ScheduleCompare(_groups[i]);
-                        if (notEqualSubgroups.Count != 0)
-                            notEqualGroupsWithSubgroups.Add(new GroupWithSubgroups(groups[i].name, notEqualSubgroups));
+                        List<int> subgroupsToUpdate = groups[currentGroup].CompareSchedule(newGroups[currentNewGroup]);
+                        for (int i = 0; i < subgroupsToUpdate.Count; ++i)
+                            groupSubgroupTuplesToUpdate.Add(Tuple.Create(currentNewGroup, subgroupsToUpdate[i]));
                         break;
                     }
                 }
             }
-            // groupsCount != _groups.GetLength(0)
-            // foreach (Group gr in newGroups)
-            // {
-
-            // }
-
-            return null;
+            return groupSubgroupTuplesToUpdate;
         }
         // Скачиваем новое расписание, true - успешно, false - не удалось скачать
-    }
-    
-    public class GroupWithSubgroups
-    {
-        public string name;
-        public List<int> subgroups;
-        public GroupWithSubgroups(string _name, List<int> _subgroups)
-        {
-            name = _name;
-            subgroups = _subgroups;
-        }
     }
     
     public class Group
     {
         public string name = "";
-        public ScheduleSubgroup[] schedule = new ScheduleSubgroup[2]; // 2 подгруппы
+        public ScheduleSubgroup[] scheduleSubgroups = new ScheduleSubgroup[2]; // 2 подгруппы
         public Group()
         {
             for (int i = 0; i < 2; ++i)
-                schedule[i] = new ScheduleSubgroup();
+                scheduleSubgroups[i] = new ScheduleSubgroup();
         }
         // Сравнивает расписание, возвращает список несовпадающих подгрупп
-        public List<int> ScheduleCompare(Group group)
+        public List<int> CompareSchedule(Group group)
         {
             List<int> notEqualSubgroups = new List<int>();
             for (int i = 0; i < 2; ++i)
             {
-                if (schedule[i] != group.schedule[i])
+                if (scheduleSubgroups[i] != group.scheduleSubgroups[i])
                 {
                     notEqualSubgroups.Add(i);
                 }
             }
             return notEqualSubgroups;
+        }
+
+        public async void UpdateAsync(int subgroup, UpdateProperties updateProperties)
+        {
+            await Task.Run(() =>
+            {
+                updateProperties.drawingStandartScheduleInfo.schedule = scheduleSubgroups[subgroup - 1];
+                updateProperties.drawingStandartScheduleInfo.group = name;
+                updateProperties.drawingStandartScheduleInfo.subgroup = subgroup;
+                var test = DrawingSchedule.StandartSchedule.Draw(updateProperties.drawingStandartScheduleInfo);
+                updateProperties.photoUploadProperties.Photo
+                    = DrawingSchedule.StandartSchedule.Draw(updateProperties.drawingStandartScheduleInfo);
+
+            });
         }
     }
 

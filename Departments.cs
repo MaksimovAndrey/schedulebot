@@ -13,6 +13,7 @@ using VkNet.Exception;
 using VkNet.Enums.SafetyEnums;
 using Newtonsoft.Json;
 using System.Text;
+using System.Net.Http;
 
 
 using Schedulebot.Vk;
@@ -35,8 +36,8 @@ namespace Schedulebot
         private int startWeek;
         public ItmmDepartment(string _path)
         {
-            path = _path + @"itmm\";
-            vkStuff.mainMenuKeyboards = new MessageKeyboard[5]
+            path = _path + @"itmm\"; // todo: вынести в LoadSettings()
+            vkStuff.MainMenuKeyboards = new MessageKeyboard[5]
             {
                 // main
                 new MessageKeyboard
@@ -423,19 +424,19 @@ namespace Schedulebot
                             }
                             case "groupId":
                             {
-                                vkStuff.groupId = ulong.Parse(value);
+                                vkStuff.GroupId = long.Parse(value);
                                 break;
                             }
                             case "mainAlbumId":
                             {
-                                vkStuff.mainAlbumId = Int64.Parse(value);
+                                vkStuff.MainAlbumId = Int64.Parse(value);
                                 break;
                             }
-                            case "tomorrowAlbumId":
-                            {
-                                vkStuff.tomorrowAlbumId = Int64.Parse(value);
-                                break;
-                            }
+                            // case "tomorrowAlbumId":
+                            // {
+                            //     vkStuff.TomorrowAlbumId = Int64.Parse(value);
+                            //     break;
+                            // }
                             case "startDay":
                             {
                                 startDay = Int32.Parse(value);
@@ -444,6 +445,16 @@ namespace Schedulebot
                             case "startWeek":
                             {
                                 startWeek = Int32.Parse(value);
+                                break;
+                            }
+                            case "groupUrl":
+                            {
+                                // todo
+                                break;
+                            }
+                            case "path":
+                            {
+                                // todo примерно itmm/
                                 break;
                             }
                         }
@@ -513,7 +524,7 @@ namespace Schedulebot
         {
             await Task.Run(() =>
             {
-                LongPollServerResponse serverResponse = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
+                LongPollServerResponse serverResponse = vkStuff.api.Groups.GetLongPollServer((ulong)vkStuff.GroupId);
                 BotsLongPollHistoryResponse historyResponse = null;
                 BotsLongPollHistoryParams botsLongPollHistoryParams = new BotsLongPollHistoryParams()
                 {
@@ -548,7 +559,7 @@ namespace Schedulebot
                             botsLongPollHistoryParams.Ts = outdateException.Ts;
                         else
                         {
-                            LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
+                            LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer((ulong)vkStuff.GroupId);
                             botsLongPollHistoryParams.Ts = server.Ts;
                             botsLongPollHistoryParams.Key = server.Key;
                             botsLongPollHistoryParams.Server = server.Server;
@@ -557,7 +568,7 @@ namespace Schedulebot
                     catch (Exception exception)
                     {
                         // todo: long poll error
-                        LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer(vkStuff.groupId);
+                        LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer((ulong)vkStuff.GroupId);
                         botsLongPollHistoryParams.Ts = server.Ts;
                         botsLongPollHistoryParams.Key = server.Key;
                         botsLongPollHistoryParams.Server = server.Server;
@@ -582,7 +593,7 @@ namespace Schedulebot
                 if (message.Payload == null)
                 {
                     // todo: Переписать админку
-                    if (message.PeerId == vkStuff.adminId)
+                    if (message.PeerId == vkStuff.AdminId)
                     {
                         /*
                         if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
@@ -805,7 +816,7 @@ namespace Schedulebot
                             case "Настройки":
                             {
                                 MessageKeyboard keyboardCustom;
-                                keyboardCustom = vkStuff.mainMenuKeyboards[2];
+                                keyboardCustom = vkStuff.MainMenuKeyboards[2];
                                 //!
                                 if (!userRepository.ContainsUser(message.PeerId))
                                 {
@@ -1839,18 +1850,18 @@ namespace Schedulebot
                 }
                 case 0:
                 {
-                    messagesSendParams.Keyboard = vkStuff.mainMenuKeyboards[0];
+                    messagesSendParams.Keyboard = vkStuff.MainMenuKeyboards[0];
                     break;
                 }
                 case 1:
                 {
-                    messagesSendParams.Keyboard = vkStuff.mainMenuKeyboards[1];
+                    messagesSendParams.Keyboard = vkStuff.MainMenuKeyboards[1];
                     messagesSendParams.Attachments = attachments;
                     break;
                 }
                 case 3:
                 {
-                    messagesSendParams.Keyboard = vkStuff.mainMenuKeyboards[3];
+                    messagesSendParams.Keyboard = vkStuff.MainMenuKeyboards[3];
                     break;
                 }
             }
@@ -1861,7 +1872,7 @@ namespace Schedulebot
         }
 
         
-        public async void ExecuteMethods()
+        public async Task ExecuteMethodsAsync()
         {
             await Task.Run(async () => 
             {
@@ -1872,10 +1883,10 @@ namespace Schedulebot
                 while (true)
                 {
                     queueCommandsAmount = vkStuff.commandsQueue.Count();
-                    if (queueCommandsAmount > 25 - commandsInRequestAmount)
-                    {
-                        queueCommandsAmount = 25 - commandsInRequestAmount;
-                    }
+                    // if (queueCommandsAmount > 25 - commandsInRequestAmount)
+                    // {
+                    //     queueCommandsAmount = 25 - commandsInRequestAmount;
+                    // }
                     for (int i = 0; i < queueCommandsAmount; ++i)
                     {
                         if (vkStuff.commandsQueue.TryDequeue(out string command))
@@ -1910,32 +1921,110 @@ namespace Schedulebot
             });
         }
 
-        //! Все что ниже не работает
-        public async Task CheckRelevanceAsync()
+        public async void CheckRelevanceAsync()
         {
             await Task.Run(async () => 
             {
                 // SaveUsers();
-                Console.WriteLine("CheckRelevance started"); // test
                 DatesAndUrls newDatesAndUrls = await checkRelevanceStuffITMM.CheckRelevance();
-                Console.WriteLine("CheckRelevance ended"); // test
                 if (newDatesAndUrls != null)
                 {
-                    // CoursesAmount = newDatesAndUrls.count;
-                    // List<int> coursesToUpdate = AreScheduleRelevant(newDatesAndUrls);
-                    // await UpdateSchedule(coursesToUpdate);
+                    for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
+                    {
+                        if (newDatesAndUrls.dates[currentCourse] != courses[currentCourse].date)
+                        {
+                            courses[currentCourse].urlToFile = newDatesAndUrls.urls[currentCourse];
+                            courses[currentCourse].date = newDatesAndUrls.dates[currentCourse];
+                            UpdateProperties updateProperties = new UpdateProperties();
+                            updateProperties.drawingStandartScheduleInfo = new Drawing.DrawingStandartScheduleInfo();
+                            updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
+                            updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
+                            courses[currentCourse].UpdateAsync(vkStuff.GroupUrl, updateProperties);
+                        }
+                    }
                 }
             });
         }
         
-        // private void UpdateSchedule(List<int> coursesToUpdate)
-        // {
-        //     for (int i = 0; i < coursesToUpdate.Count; ++i)
-        //     {
-        //         // async
-        //         // courses[i].Update();
-        //     }
-        // }
+        public async Task UploadPhotosAsync()
+        {
+            await Task.Run(async () => 
+            {
+                int queuePhotosAmount;
+                int photosInRequestAmount = 0;
+                int timer = 0;
+                MultipartFormDataContent form = new MultipartFormDataContent();
+                while (true)
+                {
+                    queuePhotosAmount = vkStuff.commandsQueue.Count();
+                    if (queuePhotosAmount > 5 - photosInRequestAmount)
+                    {
+                        queuePhotosAmount = 5 - photosInRequestAmount;
+                    }
+                    for (int i = 0; i < queuePhotosAmount; ++i)
+                    {
+                        if (vkStuff.uploadPhotosQueue.TryDequeue(out PhotoUploadProperties photoUploadProperties))
+                        {
+                            form.Add(new ByteArrayContent(photoUploadProperties.Photo), "file" + i.ToString(), i.ToString() + ".png");
+                            ++photosInRequestAmount;
+                        }
+                        else
+                        {
+                            --i;
+                            timer += 1;
+                            await Task.Delay(1);
+                        }
+                    }
+                    if (photosInRequestAmount == 5 || timer >= 333)
+                    {
+                        if (photosInRequestAmount == 0)
+                        {
+                            timer = 0;
+                        }
+                        else
+                        {
+                            bool success = false;
+                            HttpResponseMessage response;
+                            while (!success)
+                            {
+                                try
+                                {
+                                    var uploadServer = vkStuff.apiPhotos.Photo.GetUploadServer(vkStuff.MainAlbumId, vkStuff.GroupId);
+                                    response = null;
+                                    response = (ScheduleBot.client.PostAsync(new Uri(uploadServer.UploadUrl), form)).Result;
+                                    if (response != null)
+                                    {
+                                        IReadOnlyCollection<Photo> photos = vkStuff.apiPhotos.Photo.Save(new PhotoSaveParams
+                                        {
+                                            SaveFileResponse = Encoding.ASCII.GetString(response.Content.ReadAsByteArrayAsync().Result),
+                                            AlbumId = vkStuff.MainAlbumId,
+                                            GroupId = vkStuff.GroupId
+                                        });
+                                        if (photos.Count() == photosInRequestAmount)
+                                        {
+                                            // todo: сохранение id фоток
+                                            // ! error empty photos_list nado testit' 
+                                            // for (int i = 0; i < count; ++i)
+                                            //     Glob.schedule_uploaded[photosToUpload[i].course, photosToUpload[i].index] = (ulong)photos.ElementAt(i).Id;
+                                            success = true;
+                                        }
+                                    }
+                                }
+                                catch
+                                {
+                                    await Task.Delay(1000);
+                                }
+                            }
+                            timer = 0;
+                            photosInRequestAmount = 0;
+                            form.Dispose();
+                        }
+                    }
+                    timer += 333;
+                    await Task.Delay(333);
+                }
+            });
+        }
         
         private List<int> AreScheduleRelevant(DatesAndUrls newDatesAndUrls)
         {
@@ -1961,8 +2050,10 @@ namespace Schedulebot
     {
         int CoursesAmount { get; set; }
 
-        Task CheckRelevanceAsync();
+        void CheckRelevanceAsync();
 
         Task GetMessagesAsync();
+
+        Task UploadPhotosAsync();
     }
 }

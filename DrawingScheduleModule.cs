@@ -11,7 +11,7 @@ namespace Schedulebot.Drawing
     {
         public ScheduleSubgroup schedule;
         public string group;
-        public string subgroup;
+        public int subgroup;
         public string date;
         public string vkGroupUrl;
     }
@@ -27,9 +27,9 @@ namespace Schedulebot.Drawing
     }
     public static class DrawingSchedule
     {
-        public class StandartSchedule
+        public static class StandartSchedule
         {
-            public static void Draw(DrawingStandartScheduleInfo drawingScheduleInfo) // Обработка расписания для рассылки
+            public static byte[] Draw(DrawingStandartScheduleInfo drawingScheduleInfo) // Обработка расписания для рассылки
             {
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Обрабока расписания для рассылки " + course + " " + number);
                 Bitmap temp = new Bitmap(Image.width, Image.height);
@@ -100,12 +100,7 @@ namespace Schedulebot.Drawing
                 graphics.Save();
                 graphics.Dispose();
                 // todo: возращаем объект класса, содержащий: ByteArray, описание фото в вк, группу + подгруппу
-                var byteArray = ImageToByteArray(imageCroped);
-
-                
-                // imageCroped.Save(Const.path_images + course + "_" + number + ".jpg");
-                // Vk.UploadPhoto(Const.path_images + course + "_" + number + ".jpg", Const.mainAlbumId, header, course, number);
-                // Thread.Sleep(350);
+                return ImageToByteArray(imageCroped);
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Обрабока расписания для рассылки " + course + " " + number);
             }
             static void DrawDay(ScheduleDay[] scheduleDays, ref int pos, ref System.Drawing.Image image, string day)
@@ -659,10 +654,10 @@ namespace Schedulebot.Drawing
                 fix = 6
             };
         }
-        public class DaySchedule
+        public static class DaySchedule
         {
             // weekProperties: 0 - Верхняя, 1 - Нижняя
-            public static void Draw(DrawingDayScheduleInfo drawingScheduleInfo)
+            public static byte[] Draw(DrawingDayScheduleInfo drawingScheduleInfo)
             {
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Обрабока расписания на завтра " + course + " " + number + " " + dayOfWeek + " " + weekProperties); // 2log
                 //! кто меня из дурки выпустил? разобраться
@@ -813,11 +808,7 @@ namespace Schedulebot.Drawing
                 // Cохраняем
                 graphics.Save();
                 graphics.Dispose();
-                // todo: возращаем объект класса, содержащий: ByteArray, описание фото в вк, группу + подгруппуБ на какой день, какой недели
-                var byteArray = ImageToByteArray(image);
-                // image.Save(Const.path_images + @"tomorrow/" + course + "_" + number + "_" + dayOfWeek + "_" + weekProperties + ".jpg");
-                // Vk.UploadPhoto(Const.path_images + @"tomorrow/" + course + "_" + number + "_" + dayOfWeek + "_" + weekProperties + ".jpg", Const.tomorrowAlbumId, header, course, number, dayOfWeek, weekProperties);
-                
+                return ImageToByteArray(image);
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Обрабока расписания для рассылки " + course + " " + number + " " + dayOfWeek + " " + weekProperties);
             }
             static void DrawLecture(ScheduleLecture lecture, ref int pos, ref System.Drawing.Image image, string[] times)
