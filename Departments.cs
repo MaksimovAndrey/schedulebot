@@ -820,14 +820,14 @@ namespace Schedulebot
                         if (message.Attachments.Single().ToString() == "Sticker")
                         {
                             
-                            SendMessage(userId: message.PeerId,
+                            SendMessageAsync(userId: message.PeerId,
                                         message: "🤡");
                             return;
                         }
                     }
                     else
                     {
-                        SendMessage(userId: message.PeerId,
+                        SendMessageAsync(userId: message.PeerId,
                                     message: "Нажмите на кнопку");
                         return;
                     }
@@ -836,7 +836,7 @@ namespace Schedulebot
                 PayloadStuff payloadStuff = Newtonsoft.Json.JsonConvert.DeserializeObject<PayloadStuff>(message.Payload);
                 if (payloadStuff.Command == "start")
                 {
-                    SendMessage(userId: message.PeerId,
+                    SendMessageAsync(userId: message.PeerId,
                                 message: "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.\nКнопка \"Информация\" для получения подробностей",
                                 keyboardId: 0);
                     return;
@@ -846,7 +846,7 @@ namespace Schedulebot
                 {
                     case null:
                     {
-                        SendMessage(userId: message.PeerId,
+                        SendMessageAsync(userId: message.PeerId,
                                     message: "Что-то пошло не так",
                                     keyboardId: 0);
                         return;
@@ -857,13 +857,13 @@ namespace Schedulebot
                         {
                             case "Расписание":
                             {
-                                SendMessage(userId: message.PeerId,
+                                SendMessageAsync(userId: message.PeerId,
                                             keyboardId: 1);
                                 return;
                             }
                             case "Неделя":
                             {
-                                SendMessage(userId: message.PeerId,
+                                SendMessageAsync(userId: message.PeerId,
                                             message: CurrentWeek());
                                 return;
                             }
@@ -880,7 +880,7 @@ namespace Schedulebot
                                 {
                                     // keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
                                 }
-                                SendMessage(
+                                SendMessageAsync(
                                     userId: message.PeerId,
                                     message: "Отправляю клавиатуру",
                                     keyboardId: -1,
@@ -889,13 +889,13 @@ namespace Schedulebot
                             }
                             case "Информация":
                             {
-                                SendMessage(userId: message.PeerId,
+                                SendMessageAsync(userId: message.PeerId,
                                             message: "Текущая версия - v2.2\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie");
                                 return;
                             }
                             default:
                             {
-                                SendMessage(userId: message.PeerId, message: "Произошла ошибка в меню 0, что-то с message.Text", keyboardId: 0);
+                                SendMessageAsync(userId: message.PeerId, message: "Произошла ошибка в меню 0, что-то с message.Text", keyboardId: 0);
                                 return;
                             }
                         }
@@ -1873,56 +1873,57 @@ namespace Schedulebot
             });
             return;
         }
-        
-        public void SendMessage(long? userId,
-                                // bool oneTime = false,
-                                string message = "Отправляю клавиатуру",
-                                List<MediaAttachment> attachments = null,
-                                int? keyboardId = null,
-                                string keyboardSpecial = "",
-                                MessageKeyboard customKeyboard = null)
+
+        public async void SendMessageAsync(
+            long? userId = null,
+            List<long> userIds = null,
+            string message = "Отправляю клавиатуру",
+            List<MediaAttachment> attachments = null,
+            int? keyboardId = null,
+            string keyboardSpecial = "",
+            MessageKeyboard customKeyboard = null)
         {
-            Random random = new Random();
-            Int32 randomId;
-            randomId = (Int32)((2 * random.NextDouble() - 1) * Int32.MaxValue);
-            MessagesSendParams messagesSendParams = new MessagesSendParams()
+            await Task.Run(() => 
             {
-                PeerId = userId,
-                Message = message,
-                RandomId = randomId
-            };
-            switch (keyboardId)
-            {
-                case null:
+                MessagesSendParams messageSendParams = new MessagesSendParams()
                 {
-                    break;
-                }
-                case -1:
+                    Message = message,
+                    RandomId = (int)DateTime.Now.Ticks
+                };
+                if (userId == null)
+                    messageSendParams.UserIds = userIds;
+                else
+                    messageSendParams.PeerId = userId;
+                switch (keyboardId)
                 {
-                    messagesSendParams.Keyboard = customKeyboard;
-                    break;
+                    case null:
+                    {
+                        break;
+                    }
+                    case -1:
+                    {
+                        messageSendParams.Keyboard = customKeyboard;
+                        break;
+                    }
+                    case 0:
+                    {
+                        messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[0];
+                        break;
+                    }
+                    case 1:
+                    {
+                        messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[1];
+                        messageSendParams.Attachments = attachments;
+                        break;
+                    }
+                    case 3:
+                    {
+                        messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[3];
+                        break;
+                    }
                 }
-                case 0:
-                {
-                    messagesSendParams.Keyboard = vkStuff.MainMenuKeyboards[0];
-                    break;
-                }
-                case 1:
-                {
-                    messagesSendParams.Keyboard = vkStuff.MainMenuKeyboards[1];
-                    messagesSendParams.Attachments = attachments;
-                    break;
-                }
-                case 3:
-                {
-                    messagesSendParams.Keyboard = vkStuff.MainMenuKeyboards[3];
-                    break;
-                }
-            }
-            // if (oneTime)
-            //     messagesSendParams.Keyboard.OneTime = true;
-            vkStuff.commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-            Console.WriteLine(messagesSendParams.Message); // test
+                vkStuff.commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messageSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+            });
         }
 
         
@@ -2000,7 +2001,7 @@ namespace Schedulebot
                     if (tasks.Count != 0)
                     {
                         await Task.WhenAll(tasks);
-                        
+
                         List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
                         for (int i = 0; i < tasks.Count; i++)
                             photosUploadProperties.AddRange(tasks[i].Result);
@@ -2035,6 +2036,7 @@ namespace Schedulebot
                 int photosInRequestAmount = 0;
                 int timer = 0;
                 MultipartFormDataContent form = new MultipartFormDataContent();
+                List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
                 while (true)
                 {
                     queuePhotosAmount = vkStuff.commandsQueue.Count();
@@ -2046,6 +2048,7 @@ namespace Schedulebot
                     {
                         if (vkStuff.uploadPhotosQueue.TryDequeue(out PhotoUploadProperties photoUploadProperties))
                         {
+                            photosUploadProperties.Add(photoUploadProperties);
                             form.Add(new ByteArrayContent(photoUploadProperties.Photo), "file" + i.ToString(), i.ToString() + ".png");
                             ++photosInRequestAmount;
                         }
@@ -2083,11 +2086,59 @@ namespace Schedulebot
                                         });
                                         if (photos.Count() == photosInRequestAmount)
                                         {
-                                            // todo: сохранение id фоток
-                                            // ! error empty photos_list nado testit' 
-                                            // for (int i = 0; i < count; ++i)
-                                            //     Glob.schedule_uploaded[photosToUpload[i].course, photosToUpload[i].index] = (ulong)photos.ElementAt(i).Id;
+                                            for (int currentPhoto = 0; currentPhoto < photosInRequestAmount; currentPhoto++)
+                                            {
+                                                (int?, int) CourseIndexAndGroupIndex = mapper.GetCourseAndIndex(photosUploadProperties[currentPhoto].Group);
+                                                if (photosUploadProperties[currentPhoto].Week == -1)
+                                                {
+                                                    // на неделю
+                                                    courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].photoIds[photosUploadProperties[currentPhoto].Subgroup - 1]
+                                                        = (ulong)photos.ElementAt(currentPhoto).Id;
+                                                    List<long> ids = userRepository.GetIds((int)CourseIndexAndGroupIndex.Item1, mapper);
+                                                    SendMessageAsync(
+                                                        userIds: ids,
+                                                        message: photosUploadProperties[currentPhoto].Message,
+                                                        attachments: new List<MediaAttachment>
+                                                        {
+                                                            new Photo()
+                                                            {
+                                                                AlbumId = photosUploadProperties[currentPhoto].AlbumId,
+                                                                OwnerId = -vkStuff.GroupId,
+                                                                Id = photos.ElementAt(currentPhoto).Id
+                                                            }
+                                                        });
+                                                }
+                                                else
+                                                {
+                                                    courses[(int)CourseIndexAndGroupIndex.Item1]
+                                                        .groups[CourseIndexAndGroupIndex.Item2]
+                                                        .scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup - 1]
+                                                        .weeks[photosUploadProperties[currentPhoto].Week]
+                                                        .days[photosUploadProperties[currentPhoto].Day]
+                                                        .photoId
+                                                        = (ulong)photos.ElementAt(currentPhoto).Id;
+                                                    if (photosUploadProperties[currentPhoto].PeerId != 0)
+                                                    {
+                                                        SendMessageAsync(
+                                                            userId: photosUploadProperties[currentPhoto].PeerId,
+                                                            message: photosUploadProperties[currentPhoto].Message,
+                                                            attachments: new List<MediaAttachment>
+                                                            {
+                                                                new Photo()
+                                                                {
+                                                                    AlbumId = photosUploadProperties[currentPhoto].AlbumId,
+                                                                    OwnerId = -vkStuff.GroupId,
+                                                                    Id = photos.ElementAt(currentPhoto).Id
+                                                                }
+                                                            });
+                                                    }
+                                                }
+                                            }
                                             success = true;
+                                        }
+                                        else
+                                        {
+                                            await Task.Delay(1000);
                                         }
                                     }
                                 }
@@ -2099,6 +2150,7 @@ namespace Schedulebot
                             timer = 0;
                             photosInRequestAmount = 0;
                             form.Dispose();
+                            photosUploadProperties.Clear();
                         }
                     }
                     timer += 333;
