@@ -69,6 +69,16 @@ namespace Schedulebot
             stringBuilder.Remove(stringBuilder.Length - 1, 1);
             return stringBuilder.ToString();
         }
+
+        public User GetUser(long? id)
+        {
+            for (int currentUser = 0; currentUser < UsersCount; currentUser++)
+            {
+                if (users[currentUser].Id == id)
+                    return users[currentUser];
+            }
+            return null;
+        }
         
         public List<long> GetIds(int course, Mapper mapper)
         {
@@ -137,6 +147,19 @@ namespace Schedulebot
             }
         }
 
+        public User ChangeSubgroup(long? id)
+        {
+            for (int i = 0; i < users.Count; i++)
+            {
+                if (users[i].Id == id)
+                {
+                    users[i].Subgroup = users[i].Subgroup % 2 + 1;
+                    return users[i];
+                }
+            }
+            return null;
+        }
+
         public bool ContainsUser(long? id)
         {
             for (int i = 0; i < users.Count; i++)
@@ -155,6 +178,7 @@ namespace Schedulebot
         void AddUser(User user);
         void DeleteUser(long id);
         void EditUser(long id, int newSubgroup, string newGroup = null);
+        User ChangeSubgroup(long? id);
         bool ContainsUser(long? id);
         List<long> GetIds(int course, Mapper mapper);
         List<long> GetIds(string group);
