@@ -3,6 +3,7 @@ namespace Schedulebot.Schedule
     public class ScheduleDay
     {
         public ScheduleLecture[] lectures = new ScheduleLecture[8];
+        public ulong photoId = 0;
         public ScheduleDay()
         {
             for (int i = 0; i < 8; ++i)
