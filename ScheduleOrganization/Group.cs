@@ -20,7 +20,7 @@ namespace Schedulebot
     {
         public string name = "";
         public ScheduleSubgroup[] scheduleSubgroups = new ScheduleSubgroup[2]; // 2 подгруппы
-        public ulong[] photoIds = { 0, 0 };
+        public long[] photoIds = { 0, 0 };
         public Group()
         {
             for (int i = 0; i < 2; ++i)
