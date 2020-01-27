@@ -429,13 +429,18 @@ namespace Schedulebot
             }
         }
 
-        public string CurrentWeek() // Определение недели (верхняя или нижняя)
+        public string CurrentWeekStr() // Определение недели (верхняя или нижняя)
         {
-            if ((DateTime.Now.DayOfYear - startDay) / 7 % 2 != startWeek)
+            if (CurrentWeek() == 0)
             {
-                return "Нижняя";
+                return "Верхняя";
             }
-            return "Верхняя";
+            return "Нижняя";
+        }
+
+        public int CurrentWeek() // Определение недели (верхняя или нижняя)
+        {
+            return ((DateTime.Now.DayOfYear - startDay) / 7 + startWeek) % 2;
         }
         
         public void LoadSettings()
@@ -560,7 +565,7 @@ namespace Schedulebot
                     int spaceIndex = rawSpan.IndexOf(' ');
                     int lastSpaceIndex = rawSpan.LastIndexOf(' ');
 
-                    ulong id = ulong.Parse(rawSpan.Slice(0, spaceIndex));
+                    long id = long.Parse(rawSpan.Slice(0, spaceIndex));
                     string group = rawSpan.Slice(spaceIndex + 1, lastSpaceIndex - spaceIndex - 1).ToString();
                     int subgroup = int.Parse(rawSpan.Slice(lastSpaceIndex + 1, 1));
 
@@ -877,8 +882,9 @@ namespace Schedulebot
                         if (message.Attachments.Single().ToString() == "Sticker")
                         {
                             
-                            SendMessageAsync(userId: message.PeerId,
-                                        message: "🤡");
+                            SendMessageAsync(
+                                userId: message.PeerId,
+                                message: "🤡");
                             return;
                         }
                     }
@@ -926,7 +932,7 @@ namespace Schedulebot
                             {
                                 SendMessageAsync(
                                     userId: message.PeerId,
-                                    message: CurrentWeek());
+                                    message: CurrentWeekStr());
                                 return;
                             }
                             case "Настройки":
@@ -976,461 +982,333 @@ namespace Schedulebot
                             }
                         }
                     }
-                    case 1: // todo
+                    case 1:
                     {
-                        /*
-                        bool isUpdating;
-                        lock (Glob.lockerIsUpdating)
-                        {
-                            isUpdating = Glob.isUpdating;
-                        }
                         if (message.Text == "Назад")
-                        {
-                            SendMessageAsync(userId: message.PeerId, keyboardId: 0);
-                            return;
-                        }
-                        else if (message.Text == "Ссылка")
-                        {
-                            MessageKeyboard keyboardCustom;
-                            bool contains;
-                            lock (Glob.lockerKeyboards)
-                            {
-                                keyboardCustom = vkStuff.MainMenuKeyboards[2];
-                            }
-                            lock (Glob.locker)
-                            {
-                                contains = Glob.users.Keys.Contains(message.PeerId);
-                            }
-                            if (!contains)
-                            {
-                                keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                SendMessageAsync(
-                                    userId: message.PeerId,
-                                    message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
-                                    keyboardId: -1,
-                                    customKeyboard: keyboardCustom);
-                                return;
-                            }
-                            else
-                            {
-                                lock (Glob.locker)
-                                {
-                                    contains = Glob.schedule_mapping.ContainsKey(Glob.users[message.PeerId]);
-                                }
-                                if (contains)
-                                {
-                                    int course;
-                                    string url;
-                                    lock (Glob.locker)
-                                    {
-                                        course = Glob.schedule_mapping[Glob.users[message.PeerId]].Course;
-                                        url = Glob.schedule_url[course];
-                                    }
-                                    SendMessageAsync(
-                                        userId: message.PeerId,
-                                        message: "Расписание для " + (course + 1) + " курса: " + url,
-                                        keyboardId: 1,
-                                        customKeyboard: keyboardCustom,
-                                        onlyKeyboard: true);
-                                    return;
-                                }
-                                else
-                                {
-                                    keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                    SendMessageAsync(
-                                        userId: message.PeerId,
-                                        message: "Ваша группа не существует, настройте заново",
-                                        keyboardId: -1,
-                                        customKeyboard: keyboardCustom,
-                                        onlyKeyboard: true);
-                                    return;
-                                }
-                            }
-                        }
-                        else if (isUpdating)
                         {
                             SendMessageAsync(
                                 userId: message.PeerId,
-                                message: "Происходит обновление расписания, повторите попытку через несколько минут",
-                                keyboardId: 1);
+                                keyboardId: 0);
                             return;
                         }
                         else
                         {
-                            switch (message.Text)
+                            User user = null;
+                            if (userRepository.ContainsUser(message.PeerId))
+                                user = userRepository.GetUser(message.PeerId);
+                            (int?, int) userMapping = mapper.GetCourseAndIndex(user.Group);
+                            if (user != null)
                             {
-                                case "На неделю":
+                                if (userMapping.Item1 != null)
                                 {
-                                    MessageKeyboard keyboardCustom;
-                                    string messageTemp;
-                                    long? photoId = null;
-                                    bool contains;
-                                    lock (Glob.lockerKeyboards)
+                                    if (courses[(int)userMapping.Item1].isUpdating)
                                     {
-                                        keyboardCustom = vkStuff.MainMenuKeyboards[2];
-                                    }
-                                    lock (Glob.locker)
-                                    {
-                                        contains = Glob.users.Keys.Contains(message.PeerId);
-                                    }
-                                    if (!contains)
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
                                         SendMessageAsync(
                                             userId: message.PeerId,
-                                            message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
-                                            keyboardId: -1,
-                                            customKeyboard: keyboardCustom);
+                                            message: "Происходит обновление расписания, повторите попытку через несколько минут");
+                                        return;
+                                    }
+                                    else if (message.Text == "Ссылка")
+                                    {
+                                        StringBuilder stringBuilder = new StringBuilder();
+                                        stringBuilder.Append("Расписание для ");
+                                        stringBuilder.Append(userMapping.Item1 + 1);
+                                        stringBuilder.Append(" курса: ");
+                                        stringBuilder.Append(courses[(int)userMapping.Item1].urlToFile);
+
+                                        SendMessageAsync(
+                                            userId: message.PeerId,
+                                            message: stringBuilder.ToString());
+                                        return;
+                                    }
+                                    else if (courses[(int)userMapping.Item1].isBroken)
+                                    {
+                                        SendMessageAsync(
+                                            userId: message.PeerId,
+                                            message: "Расписание Вашего курса не обработано");
                                         return;
                                     }
                                     else
                                     {
-                                        lock (Glob.locker)
+                                        switch (message.Text)
                                         {
-                                            contains = Glob.schedule_mapping.ContainsKey(Glob.users[message.PeerId]);
-                                        }
-                                        if (contains)
-                                        {
-                                            bool isBroken;
-                                            lock (Glob.lockerIsBroken)
+                                            case "На неделю":
                                             {
-                                                isBroken = Glob.isBroken[Glob.schedule_mapping[Glob.users[message.PeerId]].Course];
-                                            }
-                                            if (isBroken)
-                                            {
-                                                SendMessageAsync(
-                                                    userId: message.PeerId,
-                                                    message: "Расписание Вашего курса не обработано",
-                                                    keyboardId: 1);
-                                                return;
-                                            }
-                                            else
-                                            {
-                                                lock (Glob.locker)
+                                                if (courses[(int)userMapping.Item1].isBroken)
                                                 {
-                                                    messageTemp = "Расписание для " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                                    photoId = (long)Glob.schedule_uploaded[Glob.schedule_mapping[Glob.users[message.PeerId]].Course, Glob.schedule_mapping[Glob.users[message.PeerId]].Index];
-                                                }
-                                                SendMessageAsync(
-                                                    userId: message.PeerId,
-                                                    message: messageTemp,
-                                                    keyboardId: 1,
-                                                    attachments: new List<MediaAttachment>
-                                                    {
-                                                        new Photo()
-                                                        {
-                                                            AlbumId = Const.mainAlbumId,
-                                                            OwnerId = -178155012,
-                                                            Id = photoId
-                                                        }
-                                                    });
-                                                return;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                            SendMessageAsync(
-                                                userId: message.PeerId,
-                                                message: "Ваша группа не существует, настройте заново",
-                                                keyboardId: -1,
-                                                customKeyboard: keyboardCustom,
-                                                onlyKeyboard: true);
-                                            return;
-                                        }
-                                    }
-                                }
-                                case "На сегодня":
-                                {
-                                    MessageKeyboard keyboardCustom;
-                                    bool contains;
-                                    lock (Glob.lockerKeyboards)
-                                    {
-                                        keyboardCustom = vkStuff.MainMenuKeyboards[2];
-                                    }
-                                    lock (Glob.locker)
-                                    {
-                                        contains = Glob.users.Keys.Contains(message.PeerId);
-                                    }
-                                    if (!contains)
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                        SendMessageAsync(
-                                            userId: message.PeerId,
-                                            message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
-                                            keyboardId: -1,
-                                            customKeyboard: keyboardCustom);
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        int week = 0;
-                                        if ((DateTime.Now.DayOfYear - Glob.startDay) / 7 % 2 == 0)
-                                        {
-                                            week = 1;
-                                        }
-                                        int today = (int)DateTime.Now.DayOfWeek;
-                                        if (today == 0)
-                                        {
-                                            SendMessageAsync(
-                                                userId: message.PeerId,
-                                                message: "Сегодня воскресенье",
-                                                keyboardId: 1);
-                                            return;
-                                        }
-                                        else
-                                            --today;
-                                        lock (Glob.locker)
-                                        {
-                                            contains = Glob.schedule_mapping.ContainsKey(Glob.users[message.PeerId]);
-                                        }
-                                        if (contains)
-                                        {
-                                            bool isBroken;
-                                            lock (Glob.lockerIsBroken)
-                                            {
-                                                isBroken = Glob.isBroken[Glob.schedule_mapping[Glob.users[message.PeerId]].Course];
-                                            }
-                                            if (isBroken)
-                                            {
-                                                SendMessageAsync(
-                                                    userId: message.PeerId,
-                                                    message: "Расписание Вашего курса не обработано",
-                                                    keyboardId: 1);
-                                                return;
-                                            }
-                                            else
-                                            {
-                                                Mapping mapping;
-                                                ulong photoId;
-                                                bool study;
-                                                lock (Glob.locker)
-                                                {
-                                                    mapping = Glob.schedule_mapping[Glob.users[message.PeerId]];
-                                                    study = Glob.tomorrow_studying[mapping.Course, mapping.Index, today, week];
-                                                }
-                                                if (study)
-                                                {
-                                                    lock (Glob.locker)
-                                                    {   
-                                                        photoId = Glob.tomorrow_uploaded[mapping.Course, mapping.Index, today, week];
-                                                    }
-                                                    if (photoId == 0)
-                                                    {
-                                                        Process.TomorrowSchedule(mapping.Course, mapping.Index, today, week);
-                                                        lock (Glob.locker)
-                                                        {
-                                                            photoId = Glob.tomorrow_uploaded[mapping.Course, mapping.Index, today, week];
-                                                        }
-                                                    }
                                                     SendMessageAsync(
                                                         userId: message.PeerId,
-                                                        message: "Расписание на сегодня",
-                                                        keyboardId: 1,
-                                                        attachments: new List<MediaAttachment>
-                                                        {
-                                                            new Photo()
-                                                            {
-                                                                AlbumId = Const.tomorrowAlbumId,
-                                                                OwnerId = -178155012,
-                                                                Id = (long?)photoId
-                                                            }
-                                                        });
+                                                        message: "Расписание Вашего курса не обработано",
+                                                        keyboardId: 1);
                                                     return;
                                                 }
                                                 else
                                                 {
+                                                    StringBuilder stringBuilder = new StringBuilder();
+                                                    stringBuilder.Append("Расписание для ");
+                                                    stringBuilder.Append(user.Group);
+                                                    stringBuilder.Append(" (");
+                                                    stringBuilder.Append(user.Subgroup);
+                                                    stringBuilder.Append(')');    
+
                                                     SendMessageAsync(
                                                         userId: message.PeerId,
-                                                        message: "Сегодня Вы не учитесь",
-                                                        keyboardId: 1);
+                                                        message: stringBuilder.ToString(),
+                                                        attachments: new List<MediaAttachment>
+                                                        {
+                                                            new Photo()
+                                                            {
+                                                                AlbumId = vkStuff.MainAlbumId,
+                                                                OwnerId = -vkStuff.GroupId,
+                                                                Id = courses[(int)userMapping.Item1].groups[userMapping.Item2].photoIds[user.Subgroup - 1]
+                                                            }
+                                                        });
                                                     return;
                                                 }
                                             }
-                                        }
-                                        else
-                                        {
-                                            keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                            SendMessageAsync(
-                                                userId: message.PeerId,
-                                                message: "Ваша группа не существует, настройте заново",
-                                                keyboardId: -1,
-                                                customKeyboard: keyboardCustom,
-                                                onlyKeyboard: true);
-                                            return;
-                                        }
-                                    }
-                                }
-                                case "На завтра":
-                                {
-                                    MessageKeyboard keyboardCustom;
-                                    bool contains;
-                                    lock (Glob.lockerKeyboards)
-                                    {
-                                        keyboardCustom = vkStuff.MainMenuKeyboards[2];
-                                    }
-                                    lock (Glob.locker)
-                                    {
-                                        contains = Glob.users.Keys.Contains(message.PeerId);
-                                    }
-                                    if (!contains)
-                                    {
-                                        keyboardCustom.Buttons.First().First().Action.Label = "Вы не подписаны";
-                                        SendMessageAsync(
-                                            userId: message.PeerId,
-                                            message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
-                                            keyboardId: -1,
-                                            customKeyboard: keyboardCustom,
-                                            onlyKeyboard: true);
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        int week = 0;
-                                        if ((DateTime.Now.DayOfYear - Glob.startDay) / 7 % 2 == 0)
-                                        {
-                                            week = 1;
-                                        }
-                                        int today = (int)DateTime.Now.DayOfWeek;
-                                        Console.WriteLine(today + " " + week);
-                                        lock (Glob.locker)
-                                        {
-                                            contains = Glob.schedule_mapping.ContainsKey(Glob.users[message.PeerId]);
-                                        }
-                                        if (contains)
-                                        {
-                                            bool isBroken;
-                                            lock (Glob.lockerIsBroken)
+                                            case "На сегодня":
                                             {
-                                                isBroken = Glob.isBroken[Glob.schedule_mapping[Glob.users[message.PeerId]].Course];
-                                            }
-                                            if (isBroken)
-                                            {
-                                                SendMessageAsync(
-                                                    userId: message.PeerId,
-                                                    message: "Расписание Вашего курса не обработано",
-                                                    keyboardId: 1);
-                                                return;
-                                            }
-                                            else
-                                            {
-                                                Mapping mapping;
-                                                lock (Glob.locker)
+                                                int week = CurrentWeek();
+                                                int today = (int)DateTime.Now.DayOfWeek;
+                                                if (today == 0)
                                                 {
-                                                    mapping = Glob.schedule_mapping[Glob.users[message.PeerId]];
+                                                    SendMessageAsync(
+                                                        userId: message.PeerId,
+                                                        message: "Сегодня воскресенье");
+                                                    return;
                                                 }
+                                                else
+                                                {
+                                                    --today;
+                                                    if (courses[(int)userMapping.Item1].groups[userMapping.Item2]
+                                                        .scheduleSubgroups[user.Subgroup].weeks[week]
+                                                        .days[today].isStudying)
+                                                    {
+                                                        long photoId = courses[(int)userMapping.Item1].groups[userMapping.Item2]
+                                                            .scheduleSubgroups[user.Subgroup].weeks[week]
+                                                            .days[today].photoId;
+                                                        if (photoId == 0)
+                                                        {
+                                                            Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
+                                                            drawingDayScheduleInfo.date = courses[(int)userMapping.Item1].date;
+                                                            drawingDayScheduleInfo.day = courses[(int)userMapping.Item1].groups[userMapping.Item2]
+                                                                .scheduleSubgroups[user.Subgroup].weeks[week].days[today];
+                                                            drawingDayScheduleInfo.dayOfWeek = today;
+                                                            drawingDayScheduleInfo.group = user.Group;
+                                                            drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
+                                                            drawingDayScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
+                                                            drawingDayScheduleInfo.weekProperties = week;
+
+                                                            PhotoUploadProperties photoUploadProperties = new PhotoUploadProperties();
+                                                            photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
+                                                            photoUploadProperties.Day = today;
+                                                            photoUploadProperties.Group = user.Group;
+                                                            photoUploadProperties.Subgroup = user.Subgroup;
+                                                            photoUploadProperties.Week = week;
+                                                            photoUploadProperties.PeerId = (long)message.PeerId;
+                                                            photoUploadProperties.Message = "Расписание на сегодня";
+                                                            photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
+                                                        
+                                                            vkStuff.uploadPhotosQueue.Enqueue(photoUploadProperties);
+                                                            return;
+                                                        }
+                                                        else
+                                                        {
+                                                            SendMessageAsync(
+                                                                userId: message.PeerId,
+                                                                message: "Расписание на сегодня",
+                                                                attachments: new List<MediaAttachment>
+                                                                {
+                                                                    new Photo()
+                                                                    {
+                                                                        AlbumId = vkStuff.MainAlbumId,
+                                                                        OwnerId = -vkStuff.GroupId,
+                                                                        Id = photoId
+                                                                    }
+                                                                });
+                                                            return;
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        SendMessageAsync(
+                                                            userId: message.PeerId,
+                                                            message: "Сегодня Вы не учитесь");
+                                                        return;
+                                                    }
+                                                }
+                                            }
+                                            case "На завтра":
+                                            {
+                                                int week = CurrentWeek();
+                                                int today = (int)DateTime.Now.DayOfWeek;
                                                 if (today == 6)
                                                 {
                                                     week = (week + 1) % 2;
                                                     int day = 0;
-                                                    ulong photoId;
-                                                    lock (Glob.locker)
+                                                    while (!courses[(int)userMapping.Item1].groups[userMapping.Item2]
+                                                        .scheduleSubgroups[user.Subgroup].weeks[week]
+                                                        .days[day].isStudying)
                                                     {
-                                                        while (!Glob.tomorrow_studying[mapping.Course, mapping.Index, day, week])
+                                                        ++day;
+                                                        if (day == 6)
                                                         {
-                                                            ++day;
-                                                            if (day == 6)
-                                                            {
-                                                                day = 0;
-                                                                week = (week + 1) % 2;
-                                                            }
+                                                            day = 0;
+                                                            week = (week + 1) % 2;
                                                         }
-                                                        photoId = Glob.tomorrow_uploaded[mapping.Course, mapping.Index, day, week];
                                                     }
+                                                    long photoId = courses[(int)userMapping.Item1].groups[userMapping.Item2]
+                                                        .scheduleSubgroups[user.Subgroup].weeks[week]
+                                                        .days[day].photoId;
                                                     if (photoId == 0)
                                                     {
-                                                        Process.TomorrowSchedule(mapping.Course, mapping.Index, day, week);
-                                                        lock (Glob.locker)
-                                                        {
-                                                            photoId = Glob.tomorrow_uploaded[mapping.Course, mapping.Index, day, week];
-                                                        }
+                                                        Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
+                                                        drawingDayScheduleInfo.date = courses[(int)userMapping.Item1].date;
+                                                        drawingDayScheduleInfo.day = courses[(int)userMapping.Item1].groups[userMapping.Item2]
+                                                            .scheduleSubgroups[user.Subgroup].weeks[week].days[day];
+                                                        drawingDayScheduleInfo.dayOfWeek = day;
+                                                        drawingDayScheduleInfo.group = user.Group;
+                                                        drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
+                                                        drawingDayScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
+                                                        drawingDayScheduleInfo.weekProperties = week;
+
+                                                        PhotoUploadProperties photoUploadProperties = new PhotoUploadProperties();
+                                                        photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
+                                                        photoUploadProperties.Day = day;
+                                                        photoUploadProperties.Group = user.Group;
+                                                        photoUploadProperties.Subgroup = user.Subgroup;
+                                                        photoUploadProperties.Week = week;
+                                                        photoUploadProperties.PeerId = (long)message.PeerId;
+                                                        photoUploadProperties.Message = "Завтра воскресенье, вот расписание на ближайший учебный день";
+                                                        photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
+                                                    
+                                                        vkStuff.uploadPhotosQueue.Enqueue(photoUploadProperties);
+                                                        return;
                                                     }
-                                                    SendMessageAsync(
-                                                        userId: message.PeerId,
-                                                        message: "Завтра воскресенье, вот расписание на ближайший учебный день",
-                                                        keyboardId: 1,
-                                                        attachments: new List<MediaAttachment>
-                                                        {
-                                                            new Photo()
+                                                    else
+                                                    {
+                                                        SendMessageAsync(
+                                                            userId: message.PeerId,
+                                                            message: "Завтра воскресенье, вот расписание на ближайший учебный день",
+                                                            attachments: new List<MediaAttachment>
                                                             {
-                                                                AlbumId = Const.tomorrowAlbumId,
-                                                                OwnerId = -178155012,
-                                                                Id = (long?)photoId
-                                                            }
-                                                        });
-                                                    return;
+                                                                new Photo()
+                                                                {
+                                                                    AlbumId = vkStuff.MainAlbumId,
+                                                                    OwnerId = -vkStuff.GroupId,
+                                                                    Id = photoId
+                                                                }
+                                                            });
+                                                        return;
+                                                    }
                                                 }
                                                 else
                                                 {
+                                                    // в связи с тем, что DateTime.Now.DayOfWeek == 0 это воскресенье
                                                     int day = today;
                                                     if (today == 0)
                                                         week = (week + 1) % 2;
                                                     int weekTemp = week;
-                                                    ulong photoId;
-                                                    lock (Glob.locker)
+                                                    while (!courses[(int)userMapping.Item1].groups[userMapping.Item2]
+                                                        .scheduleSubgroups[user.Subgroup].weeks[week]
+                                                        .days[day].isStudying)
                                                     {
-                                                        while (!Glob.tomorrow_studying[mapping.Course, mapping.Index, day, week])
+                                                        ++day;
+                                                        if (day == 6)
                                                         {
-                                                            ++day;
-                                                            if (day == 6)
-                                                            {
-                                                                day = 0;
-                                                                week = (week + 1) % 2;
-                                                            }
-                                                        }
-                                                        photoId = Glob.tomorrow_uploaded[mapping.Course, mapping.Index, day, week];
-                                                    }
-                                                    if (photoId == 0)
-                                                    {
-                                                        Process.TomorrowSchedule(mapping.Course, mapping.Index, day, week);
-                                                        lock (Glob.locker)
-                                                        {
-                                                            photoId = Glob.tomorrow_uploaded[mapping.Course, mapping.Index, day, week];
+                                                            day = 0;
+                                                            week = (week + 1) % 2;
                                                         }
                                                     }
                                                     string messageTemp = "Завтра Вы не учитесь, вот расписание на ближайший учебный день";
-                                                    if (day == today && weekTemp == week)
-                                                    {
+                                                    if (day == today && week == weekTemp)
                                                         messageTemp = "Расписание на завтра";
+                                                    long photoId = courses[(int)userMapping.Item1].groups[userMapping.Item2]
+                                                        .scheduleSubgroups[user.Subgroup].weeks[week]
+                                                        .days[day].photoId;
+                                                    if (photoId == 0)
+                                                    {
+                                                        Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
+                                                        drawingDayScheduleInfo.date = courses[(int)userMapping.Item1].date;
+                                                        drawingDayScheduleInfo.day = courses[(int)userMapping.Item1].groups[userMapping.Item2]
+                                                            .scheduleSubgroups[user.Subgroup].weeks[week].days[day];
+                                                        drawingDayScheduleInfo.dayOfWeek = day;
+                                                        drawingDayScheduleInfo.group = user.Group;
+                                                        drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
+                                                        drawingDayScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
+                                                        drawingDayScheduleInfo.weekProperties = week;
+
+                                                        PhotoUploadProperties photoUploadProperties = new PhotoUploadProperties();
+                                                        photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
+                                                        photoUploadProperties.Day = day;
+                                                        photoUploadProperties.Group = user.Group;
+                                                        photoUploadProperties.Subgroup = user.Subgroup;
+                                                        photoUploadProperties.Week = week;
+                                                        photoUploadProperties.PeerId = (long)message.PeerId;
+                                                        photoUploadProperties.Message = messageTemp;
+                                                        photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
+                                                    
+                                                        vkStuff.uploadPhotosQueue.Enqueue(photoUploadProperties);
+                                                        return;
                                                     }
-                                                    SendMessageAsync(
-                                                        userId: message.PeerId,
-                                                        message: messageTemp,
-                                                        keyboardId: 1,
-                                                        attachments: new List<MediaAttachment>
-                                                        {
-                                                            new Photo()
+                                                    else
+                                                    {
+                                                        SendMessageAsync(
+                                                            userId: message.PeerId,
+                                                            message: messageTemp,
+                                                            attachments: new List<MediaAttachment>
                                                             {
-                                                                AlbumId = Const.tomorrowAlbumId,
-                                                                OwnerId = -178155012,
-                                                                Id = (long?)photoId
-                                                            }
-                                                        });
-                                                    return;
+                                                                new Photo()
+                                                                {
+                                                                    AlbumId = vkStuff.MainAlbumId,
+                                                                    OwnerId = -vkStuff.GroupId,
+                                                                    Id = photoId
+                                                                }
+                                                            });
+                                                        return;
+                                                    }
                                                 }
                                             }
-                                        }
-                                        else
-                                        {
-                                            keyboardCustom.Buttons.First().First().Action.Label = "Вы подписаны: " + Glob.users[message.PeerId].Group + " (" + Glob.users[message.PeerId].Subgroup + ")";
-                                            SendMessageAsync(
-                                                userId: message.PeerId,
-                                                message: "Ваша группа не существует, настройте заново",
-                                                keyboardId: -1,
-                                                customKeyboard: keyboardCustom);
-                                            return;
+                                            default:
+                                            {
+                                                SendMessageAsync(
+                                                    userId: message.PeerId,
+                                                    message: "Произошла ошибка в меню 1, что-то с message.Text",
+                                                    keyboardId: 0);
+                                                return;
+                                            }
                                         }
                                     }
                                 }
-                                default:
+                                else
                                 {
-                                    SendMessageAsync(userId: message.PeerId, message: "Произошла ошибка в меню 1, что-то с message.Text", keyboardId: 0);
+                                    MessageKeyboard keyboardCustom = vkStuff.MainMenuKeyboards[3];
+
+                                    StringBuilder stringBuilder = new StringBuilder();
+                                    stringBuilder.Append("Вы подписаны: ");
+                                    stringBuilder.Append(user.Group);
+                                    stringBuilder.Append(" (");
+                                    stringBuilder.Append(user.Subgroup);
+                                    stringBuilder.Append(")");
+
+                                    keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
+
+                                    SendMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Ваша группа не существует, настройте заново",
+                                        customKeyboard: keyboardCustom);
                                     return;
                                 }
                             }
+                            else
+                            {
+                                SendMessageAsync(
+                                    userId: message.PeerId,
+                                    message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
+                                    keyboardId: 2);
+                                return;
+                            }
                         }
-                        */
-                        return;
                     }
                     case 2: // 2 и 3 тут
                     {
@@ -1935,7 +1813,7 @@ namespace Schedulebot
                                                 {
                                                     // на неделю
                                                     courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].photoIds[photosUploadProperties[currentPhoto].Subgroup - 1]
-                                                        = (ulong)photos.ElementAt(currentPhoto).Id;
+                                                        = (long)photos.ElementAt(currentPhoto).Id;
                                                     List<long> ids = userRepository.GetIds((int)CourseIndexAndGroupIndex.Item1, mapper);
                                                     SendMessageAsync(
                                                         userIds: ids,
@@ -1958,7 +1836,7 @@ namespace Schedulebot
                                                         .weeks[photosUploadProperties[currentPhoto].Week]
                                                         .days[photosUploadProperties[currentPhoto].Day]
                                                         .photoId
-                                                        = (ulong)photos.ElementAt(currentPhoto).Id;
+                                                        = (long)photos.ElementAt(currentPhoto).Id;
                                                     if (photosUploadProperties[currentPhoto].PeerId != 0)
                                                     {
                                                         SendMessageAsync(
