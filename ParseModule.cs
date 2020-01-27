@@ -14,7 +14,7 @@ namespace Schedulebot.Parse
         public static readonly string[] errors = { "¹", "²", "³" };
         public const string lectureConst = "+Л+";
         
-        public static Group[] Mapper(string pathToFile)
+        public static List<Group> Mapper(string pathToFile)
         {
             string format = pathToFile.Substring(pathToFile.LastIndexOf('.') + 1);
             string[,] schedule = null;
@@ -74,10 +74,10 @@ namespace Schedulebot.Parse
                 }
             }
             // Собираем группы
-            Group[] groups = new Group[uniqueGroups.Count];
+            List<Group> groups = new List<Group>();
             for (int i = 0; i < uniqueGroups.Count; ++i)
             {
-                groups[i] = new Group();
+                groups.Add(new Group());
                 groups[i].name = schedule[uniqueGroups[i] * 2, 0];
                 for (int currentSubgroup = 0; currentSubgroup < 2; ++currentSubgroup)
                 {
@@ -90,6 +90,8 @@ namespace Schedulebot.Parse
                                 groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].lectures[currentLecture]
                                     = new ScheduleLecture(schedule[uniqueGroups[i] * 2 + currentSubgroup, 2 + currentDay * 16 + currentLecture * 2 + currentWeek]);
                             }
+                            groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].isStudying
+                                = !groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].IsEmpty();
                         }
                     }
                 }
@@ -97,7 +99,7 @@ namespace Schedulebot.Parse
             return groups;
         }
         
-        public static async Task<Group[]> MapperAsync(string pathToFile)
+        public static async Task<List<Group>> MapperAsync(string pathToFile)
         {
             return await Task.Run(async () => 
             {
@@ -159,10 +161,10 @@ namespace Schedulebot.Parse
                     }
                 }
                 // Собираем группы
-                Group[] groups = new Group[uniqueGroups.Count];
+                List<Group> groups = new List<Group>();                
                 for (int i = 0; i < uniqueGroups.Count; ++i)
                 {
-                    groups[i] = new Group();
+                    groups.Add(new Group());
                     groups[i].name = schedule[uniqueGroups[i] * 2, 0];
                     for (int currentSubgroup = 0; currentSubgroup < 2; ++currentSubgroup)
                     {
@@ -175,6 +177,8 @@ namespace Schedulebot.Parse
                                     groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].lectures[currentLecture]
                                         = new ScheduleLecture(schedule[uniqueGroups[i] * 2 + currentSubgroup, 2 + currentDay * 16 + currentLecture * 2 + currentWeek]);
                                 }
+                                groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].isStudying
+                                    = !groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].IsEmpty();
                             }
                         }
                     }

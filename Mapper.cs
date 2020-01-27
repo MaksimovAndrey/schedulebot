@@ -14,7 +14,7 @@ namespace Schedulebot
             for (int currentCourse = 0; currentCourse < coursesAmount; currentCourse++)
             {
                 List<string> groupNames = new List<string>();
-                for (int currentGroup = 0; currentGroup < courses[currentCourse].GroupsAmount; currentGroup++)
+                for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.Count; currentGroup++)
                 {
                     groupNames.Add(courses[currentCourse].groups[currentGroup].name);
                     groupsMap.Add(courses[currentCourse].groups[currentGroup].name, (currentCourse, currentGroup));

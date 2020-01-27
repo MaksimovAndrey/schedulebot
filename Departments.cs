@@ -566,7 +566,7 @@ namespace Schedulebot
 
                     for (int currentCourse = 0; currentCourse < CoursesAmount; currentCourse++)
                     {
-                        int groupsAmount = courses[currentCourse].GroupsAmount;
+                        int groupsAmount = courses[currentCourse].groups.Count;
                         for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup++)
                         {
                             if (courses[currentCourse].groups[currentGroup].name == group)
@@ -588,7 +588,7 @@ namespace Schedulebot
                 StringBuilder stringBuilder = new StringBuilder();
                 for (int currentCourse = 0; currentCourse < CoursesAmount; currentCourse++)
                 {
-                    int groupsAmount = courses[currentCourse].GroupsAmount;
+                    int groupsAmount = courses[currentCourse].groups.Count;
                     for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup++)
                     {
                         stringBuilder.Append(courses[currentCourse].groups[currentGroup].photoIds[0]);
@@ -976,7 +976,7 @@ namespace Schedulebot
                             }
                         }
                     }
-                    case 1:
+                    case 1: // todo
                     {
                         /*
                         bool isUpdating;

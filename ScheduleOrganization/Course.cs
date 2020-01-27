@@ -15,16 +15,7 @@ namespace Schedulebot
         public string urlToFile;
         public string date;
         public string pathToFile;
-        public Group[] groups;
-        public int GroupsAmount
-        {
-            get
-            {
-                if (groups != null)
-                    return groups.GetLength(0);
-                return 0;
-            }
-        }
+        public List<Group> groups = new List<Group>();
         public bool isBroken;
         public bool isUpdating;
         public List<MessageKeyboard> keyboards;
@@ -32,7 +23,7 @@ namespace Schedulebot
         {
             pathToFile = _pathToFile;
             groups = Parsing.Mapper(pathToFile);
-            if (groups == null)
+            if (groups.Count == 0)
                 isBroken = true;
             else
                 isBroken = false;
@@ -61,7 +52,7 @@ namespace Schedulebot
                     }
                     await Task.Delay(60000);
                 }
-                Group[] newGroups = await Parsing.MapperAsync(pathToFile);
+                List<Group> newGroups = await Parsing.MapperAsync(pathToFile);
                 List<Tuple<int, int>> groupsSubgroupToUpdate = CompareGroups(newGroups);
                 groups = newGroups;
                 updateProperties.drawingStandartScheduleInfo.date = date;
@@ -84,14 +75,12 @@ namespace Schedulebot
             // todo: рисуем и заливаем картинки, формируем список photo_id + group_id + subgroup
         }
         
-        public List<Tuple<int, int>> CompareGroups(Group[] newGroups)
+        public List<Tuple<int, int>> CompareGroups(List<Group> newGroups)
         {
             List<Tuple<int, int>> groupSubgroupTuplesToUpdate = new List<Tuple<int, int>>(); // index of a group, subgroup
-            int groupsAmount = groups.GetLength(0);
-            int newGroupsAmount = newGroups.GetLength(0);
-            for (int currentNewGroup = 0; currentNewGroup < newGroupsAmount; ++currentNewGroup)
+            for (int currentNewGroup = 0; currentNewGroup < newGroups.Count; ++currentNewGroup)
             {
-                for (int currentGroup = 0; currentGroup < groupsAmount; ++currentGroup)
+                for (int currentGroup = 0; currentGroup < groups.Count; ++currentGroup)
                 {
                     if (groups[currentGroup].name == newGroups[currentNewGroup].name)
                     {
