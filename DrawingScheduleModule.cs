@@ -70,7 +70,7 @@ namespace Schedulebot.Drawing
                 string[] days = { "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота" };
                 for (int i = 0; i < 6; ++i)
                 {
-                    if (!(drawingScheduleInfo.schedule.weeks[0].days[i].IsEmpty() && drawingScheduleInfo.schedule.weeks[1].days[i].IsEmpty()))
+                    if (drawingScheduleInfo.schedule.weeks[0].days[i].isStudying || drawingScheduleInfo.schedule.weeks[1].days[i].isStudying)
                         DrawDay(new ScheduleDay[] { drawingScheduleInfo.schedule.weeks[0].days[i], drawingScheduleInfo.schedule.weeks[1].days[i] },
                             ref pos, ref image, days[i]);
                 }
