@@ -785,8 +785,7 @@ namespace Schedulebot.Drawing
                                       new string[] { "19:40", "21:10" } };
                 for (int i = 0; i < 8; ++i)
                 {
-                    if (!(drawingScheduleInfo.day.lectures[i].IsEmpty()))
-                        DrawLecture(drawingScheduleInfo.day.lectures[i], ref pos, ref image, times[i]);
+                    DrawLecture(drawingScheduleInfo.day.lectures[i], ref pos, ref image, times[i]);
                 }
                 // Рисуем подвал
                 graphics.DrawString(
