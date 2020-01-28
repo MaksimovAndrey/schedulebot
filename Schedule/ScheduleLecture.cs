@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Text;
 
 using Schedulebot.Parse;
 
@@ -32,6 +33,8 @@ namespace Schedulebot.Schedule
                 parse = parse.Replace(Parsing.lectureConst, "");
             }
             Parse(parse);
+            if (subject == "Физическая культура")
+                isLecture = false;
         }
         
         public ScheduleLecture(string _status, string _subject)
@@ -49,47 +52,46 @@ namespace Schedulebot.Schedule
         
         public string ConstructLecture() // собираем лекцию полностью
         {
-            string lecture = "";
-            if (subject != null)
-                lecture = subject;
+            StringBuilder lectureBuilder = new StringBuilder();
+            lectureBuilder.Append(subject);
             if (lecturer != null)
             {
-                if (lecture != "")
-                    lecture += delimiter + lecturer;
-                else
-                    lecture = lecturer;
+                if (lectureBuilder.Length != 0)
+                    lectureBuilder.Append(delimiter);
+                lectureBuilder.Append(lecturer);
             }
             if (lectureHall != null)
             {
-                if (lecture != "")
-                    lecture += delimiter + lectureHall;
-                else
-                    lecture = lectureHall;
+                if (lectureBuilder.Length != 0)
+                    lectureBuilder.Append(delimiter);
+                lectureBuilder.Append(lectureHall);
             }
             if (isLecture)
-                lecture += delimiter + "Л";
-            lecture += errorType;
-            return lecture;
+            {
+                lectureBuilder.Append(delimiter);
+                lectureBuilder.Append('Л');
+            }
+            lectureBuilder.Append(errorType);
+            return lectureBuilder.ToString();
         }
         
         public string ConstructLectureWithoutSubject() // собираем лекцию без предмета
         {
-            string lectureWithoutSubject = "";
-            if (lecturer != null)
-            {
-                lectureWithoutSubject = lecturer;
-            }
+            StringBuilder lectureWithoutSubjectBuilder = new StringBuilder();
+            lectureWithoutSubjectBuilder.Append(lecturer);
             if (lectureHall != null)
             {
-                if (lectureWithoutSubject != "")
-                    lectureWithoutSubject += delimiter + lectureHall;
-                else
-                    lectureWithoutSubject = lectureHall;
+                if (lectureWithoutSubjectBuilder.Length != 0)
+                    lectureWithoutSubjectBuilder.Append(delimiter);
+                lectureWithoutSubjectBuilder.Append(lectureHall);
             }
             if (isLecture)
-                lectureWithoutSubject += delimiter + "Л";
-            lectureHall += errorType;
-            return lectureWithoutSubject;
+            {
+                lectureWithoutSubjectBuilder.Append(delimiter);
+                lectureWithoutSubjectBuilder.Append('Л');
+            }
+            lectureWithoutSubjectBuilder.Append(errorType);
+            return lectureWithoutSubjectBuilder.ToString();
         }
         
         public ScheduleLecture GetLectureWithOnlySubject()
