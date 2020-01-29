@@ -19,6 +19,7 @@ namespace Schedulebot
         public bool isBroken;
         public bool isUpdating;
         public List<MessageKeyboard> keyboards;
+        
         public Course(string _pathToFile)
         {
             pathToFile = _pathToFile;
@@ -28,7 +29,7 @@ namespace Schedulebot
             else
                 isBroken = false;
         }
-        // Обновляем расписание, true - успешно, false - не смогли
+
         public async Task<List<PhotoUploadProperties>> UpdateAsync(string groupUrl, UpdateProperties updateProperties) 
         {
             return await Task.Run(async () => 
@@ -59,7 +60,7 @@ namespace Schedulebot
                 List<Task<PhotoUploadProperties>> tasks = new List<Task<PhotoUploadProperties>>();
                 for (int i = 0; i < groupsSubgroupToUpdate.Count; i++)
                 {
-                    tasks.Add(groups[groupsSubgroupToUpdate[i].Item1].UpdateAsync(groupsSubgroupToUpdate[i].Item2, updateProperties));
+                    tasks.Add(groups[groupsSubgroupToUpdate[i].Item1].UpdateSubgroupAsync(groupsSubgroupToUpdate[i].Item2, updateProperties));
                 }
                 await Task.WhenAll(tasks);
                 isBroken = false;
@@ -68,11 +69,6 @@ namespace Schedulebot
                     photosToUpload.Add(tasks[i].Result);
                 return photosToUpload;
             });
-        }
-        
-        public void ProcessSchedule(List<Tuple<string, int>> groupSubgroupTuplesToUpdate)
-        {
-            // todo: рисуем и заливаем картинки, формируем список photo_id + group_id + subgroup
         }
         
         public List<Tuple<int, int>> CompareGroups(List<Group> newGroups)
@@ -84,7 +80,7 @@ namespace Schedulebot
                 {
                     if (groups[currentGroup].name == newGroups[currentNewGroup].name)
                     {
-                        List<int> subgroupsToUpdate = groups[currentGroup].CompareSchedule(newGroups[currentNewGroup]);
+                        List<int> subgroupsToUpdate = groups[currentGroup].CompareSubgroupsSchedule(newGroups[currentNewGroup]);
                         for (int i = 0; i < subgroupsToUpdate.Count; ++i)
                             groupSubgroupTuplesToUpdate.Add(Tuple.Create(currentNewGroup, subgroupsToUpdate[i]));
                         break;
@@ -93,7 +89,5 @@ namespace Schedulebot
             }
             return groupSubgroupTuplesToUpdate;
         }
-        // Скачиваем новое расписание, true - успешно, false - не удалось скачать
     }
-
 }

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using VkNet.Model;
 using VkNet.Model.Keyboard;
 using VkNet.Model.Attachments;
@@ -29,8 +28,8 @@ namespace Schedulebot
         // private Dictionary<string, string> acronymToPhrase;
         // private Dictionary<string, string> doubleOptionallySubject;
         // private List<string> fullName;
-        public int CoursesAmount { get; set; } = 4;
-        private Course[] courses = new Course[4]; // 4 курса всегда ЫЫЫЫ
+        private int CoursesAmount { get; set; } = 4;
+        private Course[] courses = new Course[4]; // 4 курса
         private UserRepository userRepository = new UserRepository();
         private int startDay;
         private int startWeek;
@@ -429,7 +428,7 @@ namespace Schedulebot
             }
         }
 
-        public string CurrentWeekStr() // Определение недели (верхняя или нижняя)
+        private string CurrentWeekStr() // Определение недели (верхняя или нижняя)
         {
             if (CurrentWeek() == 0)
             {
@@ -438,12 +437,12 @@ namespace Schedulebot
             return "Нижняя";
         }
 
-        public int CurrentWeek() // Определение недели (верхняя или нижняя)
+        private int CurrentWeek() // Определение недели (верхняя или нижняя)
         {
             return ((DateTime.Now.DayOfYear - startDay) / 7 + startWeek) % 2;
         }
         
-        public void LoadSettings()
+        private void LoadSettings()
         {
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка настроек");
             using (StreamReader file = new StreamReader(
@@ -506,7 +505,7 @@ namespace Schedulebot
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка настроек");
         }
 
-        public void LoadDatesAndUrls()
+        private void LoadDatesAndUrls()
         {
             using (StreamReader file = new StreamReader(
                 path + "datesAndUrls.txt",
@@ -555,7 +554,7 @@ namespace Schedulebot
                 Glob.fullName.Add(file.ReadLine());
         }
 
-        public void LoadUploadedSchedule()
+        private void LoadUploadedSchedule()
         {
             using (StreamReader file = new StreamReader(
                 path + "uploadedSchedule.txt",
@@ -581,7 +580,7 @@ namespace Schedulebot
                         {
                             if (courses[currentCourse].groups[currentGroup].name == group)
                             {
-                                courses[currentCourse].groups[currentGroup].photoIds[subgroup - 1] = id;
+                                courses[currentCourse].groups[currentGroup].scheduleSubgroups[subgroup - 1].photoId = id;
                                 currentCourse = CoursesAmount;
                                 break;
                             }
@@ -591,7 +590,7 @@ namespace Schedulebot
             }
         }
 
-        public void SaveUploadedSchedule()
+        private void SaveUploadedSchedule()
         {
             using (StreamWriter file = new StreamWriter(path + "uploadedPhotos.txt"))
             {
@@ -601,11 +600,11 @@ namespace Schedulebot
                     int groupsAmount = courses[currentCourse].groups.Count;
                     for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup++)
                     {
-                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].photoIds[0]);
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].scheduleSubgroups[0].photoId);
                         stringBuilder.Append(' ');
                         stringBuilder.Append(courses[currentCourse].groups[currentGroup].name);
                         stringBuilder.Append(" 1\n");
-                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].photoIds[1]);
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].scheduleSubgroups[1].photoId);
                         stringBuilder.Append(' ');
                         stringBuilder.Append(courses[currentCourse].groups[currentGroup].name);
                         stringBuilder.Append(" 2\n");
@@ -616,7 +615,7 @@ namespace Schedulebot
             }
         }
 
-        public void LoadUsers()
+        private void LoadUsers()
         {
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка подписанных");
             using (StreamReader file = new StreamReader(
@@ -632,7 +631,7 @@ namespace Schedulebot
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка подписанных");
         }
 
-        public async void SaveUsers()
+        private async void SaveUsers()
         {
             using (StreamWriter file = new StreamWriter(path + "users.txt"))
             await file.WriteLineAsync(userRepository.ToString());
@@ -707,7 +706,7 @@ namespace Schedulebot
                         if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
                         {
                             string help = "Команды:\n\nРассылка <всем,*КУРС*,*ГРУППА*>\n--отправляет расписание на неделю выбранным юзерам\nОбновить <все,*КУРС*> [нет]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nПерезагрузка\n--перезагружает бота(для применения обновления версии бота)\n\nCommands:\n\nDistribution <all,*COURSE*,*GROUP*>\n--отправляет расписание на неделю выбранным юзерам\nUpdate <all,*COURSE*> [false]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nReboot\n--перезагружает бота(для применения обновления версии бота)\n";
-                            SendMessageAsync(userId: message.PeerId, message: help);
+                            EnqueueMessageAsync(userId: message.PeerId, message: help);
                         }
                         else if (message.Text.IndexOf("Рассылка") == 0 || message.Text.IndexOf("Distribution") == 0)
                         {
@@ -716,10 +715,10 @@ namespace Schedulebot
                             string messageStr = temp.Substring(temp.IndexOf(' ') + 1); // сообщение
                             if (toWhom == "всем" || toWhom == "all")
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userIds: userRepository.GetIds(),
                                     message: messageStr);
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: "Выполнено");
                             }
@@ -730,26 +729,26 @@ namespace Schedulebot
                                 --toCourse;
                                 if (toCourse != -1 && toCourse >= 0 && toCourse < 4)
                                 {
-                                    SendMessageAsync(
+                                    EnqueueMessageAsync(
                                         userIds: userRepository.GetIds(toCourse, mapper),
                                         message: messageStr);
-                                    SendMessageAsync(
+                                    EnqueueMessageAsync(
                                         userId: message.PeerId,
                                         message: "Выполнено");
                                 }
                                 else
                                 {
-                                    SendMessageAsync(
+                                    EnqueueMessageAsync(
                                         userId: message.PeerId,
                                         message: "Ошибка рассылки:\nневерный курс: " + toWhom + "\nВведите значение от 1 до 4");
                                 }
                             }
                             else
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userIds: userRepository.GetIds(toWhom),
                                     message: messageStr);
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: "Выполнено");
                             }
@@ -882,7 +881,7 @@ namespace Schedulebot
                         if (message.Attachments.Single().ToString() == "Sticker")
                         {
                             
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 message: "🤡");
                             return;
@@ -890,7 +889,7 @@ namespace Schedulebot
                     }
                     else
                     {
-                        SendMessageAsync(
+                        EnqueueMessageAsync(
                             userId: message.PeerId,
                             message: "Нажмите на кнопку",
                             keyboardId: 0);
@@ -901,7 +900,7 @@ namespace Schedulebot
                 PayloadStuff payloadStuff = Newtonsoft.Json.JsonConvert.DeserializeObject<PayloadStuff>(message.Payload);
                 if (payloadStuff.Command == "start")
                 {
-                    SendMessageAsync(
+                    EnqueueMessageAsync(
                         userId: message.PeerId,
                         message: "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.\nКнопка \"Информация\" для получения подробностей",
                         keyboardId: 0);
@@ -912,7 +911,7 @@ namespace Schedulebot
                 {
                     case null:
                     {
-                        SendMessageAsync(
+                        EnqueueMessageAsync(
                             userId: message.PeerId,
                             message: "Что-то пошло не так",
                             keyboardId: 0);
@@ -924,14 +923,14 @@ namespace Schedulebot
                         {
                             case "Расписание":
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     keyboardId: 1);
                                 return;
                             }
                             case "Неделя":
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: CurrentWeekStr());
                                 return;
@@ -952,14 +951,14 @@ namespace Schedulebot
                                     MessageKeyboard keyboardCustom = vkStuff.MainMenuKeyboards[3];
                                     keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
                                     
-                                    SendMessageAsync(
+                                    EnqueueMessageAsync(
                                         userId: message.PeerId,
                                         message: "Отправляю клавиатуру",
                                         customKeyboard: keyboardCustom);
                                 }
                                 else
                                 {
-                                    SendMessageAsync(
+                                    EnqueueMessageAsync(
                                         userId: message.PeerId,
                                         message: "Отправляю клавиатуру",
                                         keyboardId: 2);
@@ -968,14 +967,14 @@ namespace Schedulebot
                             }
                             case "Информация":
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: "Текущая версия - v2.2\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie");
                                 return;
                             }
                             default:
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: "Произошла ошибка в меню 0, что-то с message.Text",
                                     keyboardId: 0);
@@ -987,7 +986,7 @@ namespace Schedulebot
                     {
                         if (message.Text == "Назад")
                         {
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 keyboardId: 0);
                             return;
@@ -1007,7 +1006,7 @@ namespace Schedulebot
                                 {
                                     if (courses[(int)userMapping.Item1].isUpdating)
                                     {
-                                        SendMessageAsync(
+                                        EnqueueMessageAsync(
                                             userId: message.PeerId,
                                             message: "Происходит обновление расписания, повторите попытку через несколько минут");
                                         return;
@@ -1020,14 +1019,14 @@ namespace Schedulebot
                                         stringBuilder.Append(" курса: ");
                                         stringBuilder.Append(courses[(int)userMapping.Item1].urlToFile);
 
-                                        SendMessageAsync(
+                                        EnqueueMessageAsync(
                                             userId: message.PeerId,
                                             message: stringBuilder.ToString());
                                         return;
                                     }
                                     else if (courses[(int)userMapping.Item1].isBroken)
                                     {
-                                        SendMessageAsync(
+                                        EnqueueMessageAsync(
                                             userId: message.PeerId,
                                             message: "Расписание Вашего курса не обработано");
                                         return;
@@ -1040,7 +1039,7 @@ namespace Schedulebot
                                             {
                                                 if (courses[(int)userMapping.Item1].isBroken)
                                                 {
-                                                    SendMessageAsync(
+                                                    EnqueueMessageAsync(
                                                         userId: message.PeerId,
                                                         message: "Расписание Вашего курса не обработано",
                                                         keyboardId: 1);
@@ -1055,7 +1054,7 @@ namespace Schedulebot
                                                     stringBuilder.Append(user.Subgroup);
                                                     stringBuilder.Append(')');    
 
-                                                    SendMessageAsync(
+                                                    EnqueueMessageAsync(
                                                         userId: message.PeerId,
                                                         message: stringBuilder.ToString(),
                                                         attachments: new List<MediaAttachment>
@@ -1064,7 +1063,7 @@ namespace Schedulebot
                                                             {
                                                                 AlbumId = vkStuff.MainAlbumId,
                                                                 OwnerId = -vkStuff.GroupId,
-                                                                Id = courses[(int)userMapping.Item1].groups[userMapping.Item2].photoIds[user.Subgroup - 1]
+                                                                Id = courses[(int)userMapping.Item1].groups[userMapping.Item2].scheduleSubgroups[user.Subgroup - 1].photoId
                                                             }
                                                         });
                                                     return;
@@ -1076,7 +1075,7 @@ namespace Schedulebot
                                                 int today = (int)DateTime.Now.DayOfWeek;
                                                 if (today == 0)
                                                 {
-                                                    SendMessageAsync(
+                                                    EnqueueMessageAsync(
                                                         userId: message.PeerId,
                                                         message: "Сегодня воскресенье");
                                                     return;
@@ -1118,7 +1117,7 @@ namespace Schedulebot
                                                         }
                                                         else
                                                         {
-                                                            SendMessageAsync(
+                                                            EnqueueMessageAsync(
                                                                 userId: message.PeerId,
                                                                 message: "Расписание на сегодня",
                                                                 attachments: new List<MediaAttachment>
@@ -1135,7 +1134,7 @@ namespace Schedulebot
                                                     }
                                                     else
                                                     {
-                                                        SendMessageAsync(
+                                                        EnqueueMessageAsync(
                                                             userId: message.PeerId,
                                                             message: "Сегодня Вы не учитесь");
                                                         return;
@@ -1191,7 +1190,7 @@ namespace Schedulebot
                                                     }
                                                     else
                                                     {
-                                                        SendMessageAsync(
+                                                        EnqueueMessageAsync(
                                                             userId: message.PeerId,
                                                             message: "Завтра воскресенье, вот расписание на ближайший учебный день",
                                                             attachments: new List<MediaAttachment>
@@ -1257,7 +1256,7 @@ namespace Schedulebot
                                                     }
                                                     else
                                                     {
-                                                        SendMessageAsync(
+                                                        EnqueueMessageAsync(
                                                             userId: message.PeerId,
                                                             message: messageTemp,
                                                             attachments: new List<MediaAttachment>
@@ -1275,7 +1274,7 @@ namespace Schedulebot
                                             }
                                             default:
                                             {
-                                                SendMessageAsync(
+                                                EnqueueMessageAsync(
                                                     userId: message.PeerId,
                                                     message: "Произошла ошибка в меню 1, что-то с message.Text",
                                                     keyboardId: 0);
@@ -1297,7 +1296,7 @@ namespace Schedulebot
 
                                     keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
 
-                                    SendMessageAsync(
+                                    EnqueueMessageAsync(
                                         userId: message.PeerId,
                                         message: "Ваша группа не существует, настройте заново",
                                         customKeyboard: keyboardCustom);
@@ -1306,7 +1305,7 @@ namespace Schedulebot
                             }
                             else
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
                                     keyboardId: 2);
@@ -1318,7 +1317,7 @@ namespace Schedulebot
                     {
                         if (message.Text.Contains("Вы подписаны") || message.Text.Contains("Вы не подписаны"))
                         {
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 message: "Попробуйте нажать на другую кнопку");
                             return;
@@ -1338,7 +1337,7 @@ namespace Schedulebot
 
                                 userRepository.DeleteUser((long)message.PeerId);
 
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: stringBuilder.ToString(),
                                     keyboardId: 2);
@@ -1346,14 +1345,14 @@ namespace Schedulebot
                             }
                             case "Подписаться":
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     keyboardId: 4);
                                 return;
                             }
                             case "Переподписаться":
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     keyboardId: 4);
                                 return;
@@ -1377,7 +1376,7 @@ namespace Schedulebot
                                 stringBuilder.Append("Ваша подгруппа: ");
                                 stringBuilder.Append(user.Subgroup);
 
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: stringBuilder.ToString(),
                                     customKeyboard: keyboardCustom);
@@ -1385,14 +1384,14 @@ namespace Schedulebot
                             }
                             case "Назад":
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     keyboardId: 0);
                                 return;
                             }
                             default:
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: "Произошла ошибка в меню 2, что-то с message.Text",
                                     keyboardId: 0);
@@ -1404,7 +1403,7 @@ namespace Schedulebot
                     {
                         if (message.Text == "Выберите курс")
                         {
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 message: "Попробуйте нажать на другую кнопку");
                             return;
@@ -1425,14 +1424,14 @@ namespace Schedulebot
                                 MessageKeyboard keyboardCustom = vkStuff.MainMenuKeyboards[3];
                                 keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
                                 
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: "Отправляю клавиатуру",
                                     customKeyboard: keyboardCustom);
                             }
                             else
                             {
-                                SendMessageAsync(
+                                EnqueueMessageAsync(
                                     userId: message.PeerId,
                                     message: "Отправляю клавиатуру",
                                     keyboardId: 2);
@@ -1443,7 +1442,7 @@ namespace Schedulebot
                         {
                             Int32.TryParse(message.Text, out int course);
                             course--;
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 message: "Выберите группу",
                                 customKeyboard: courses[course].keyboards[0]);
@@ -1451,7 +1450,7 @@ namespace Schedulebot
                         }
                         else
                         {
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 message: "Произошла ошибка в меню 4, что-то с message.Text", 
                                 keyboardId: 0);
@@ -1462,7 +1461,7 @@ namespace Schedulebot
                     {
                         if (message.Text == "Назад")
                         {
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 customKeyboard: courses[payloadStuff.Course].keyboards[0]);
                             return;
@@ -1493,7 +1492,7 @@ namespace Schedulebot
                             stringBuilder.Append(message.Text);
                             stringBuilder.Append(')');
 
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 message: stringBuilder.ToString(),
                                 keyboardId: 0);
@@ -1501,7 +1500,7 @@ namespace Schedulebot
                         }
                         else
                         {
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 message: "Произошла ошибка в меню 5, что-то с message.Text",
                                 keyboardId: 0);
@@ -1518,7 +1517,7 @@ namespace Schedulebot
                                 {
                                     if (payloadStuff.Page == 0)
                                     {
-                                        SendMessageAsync(
+                                        EnqueueMessageAsync(
                                             userId: message.PeerId,
                                             message: "Отправляю клавиатуру",
                                             keyboardId: 4);
@@ -1526,7 +1525,7 @@ namespace Schedulebot
                                     }
                                     else
                                     {
-                                        SendMessageAsync(
+                                        EnqueueMessageAsync(
                                             userId: message.PeerId,
                                             message: "Отправляю клавиатуру",
                                             customKeyboard: courses[payloadStuff.Course].keyboards[payloadStuff.Page - 1]);
@@ -1544,7 +1543,7 @@ namespace Schedulebot
                                     {
                                         keyboardCustom = courses[payloadStuff.Course].keyboards[payloadStuff.Page + 1];
                                     }
-                                    SendMessageAsync(
+                                    EnqueueMessageAsync(
                                         userId: message.PeerId,
                                         message: "Отправляю клавиатуру",
                                         customKeyboard: keyboardCustom);
@@ -1554,12 +1553,12 @@ namespace Schedulebot
                                 {
                                     if (message.Text.Contains(" из "))
                                     {
-                                        SendMessageAsync(
+                                        EnqueueMessageAsync(
                                             userId: message.PeerId,
                                             message: "Меню страниц не реализовано");
                                         return;
                                     }
-                                    SendMessageAsync(
+                                    EnqueueMessageAsync(
                                         userId: message.PeerId,
                                         message: "Произошла ошибка в меню 40, что-то с message.Text",
                                         keyboardId: 0);
@@ -1580,7 +1579,7 @@ namespace Schedulebot
                             customKeyboard.Buttons.First().First().Action.Payload = stringBuilder.ToString();
                             customKeyboard.Buttons.First().ElementAt(1).Action.Payload = customKeyboard.Buttons.First().First().Action.Payload;
                             customKeyboard.Buttons.ElementAt(1).First().Action.Payload = customKeyboard.Buttons.First().First().Action.Payload;
-                            SendMessageAsync(
+                            EnqueueMessageAsync(
                                 userId: message.PeerId,
                                 message: "Выберите подгруппу, если нет - 1",
                                 customKeyboard: customKeyboard);
@@ -1592,7 +1591,7 @@ namespace Schedulebot
             return;
         }
 
-        public async void SendMessageAsync(
+        public async void EnqueueMessageAsync(
             long? userId = null,
             List<long> userIds = null,
             string message = "Отправляю клавиатуру",
@@ -1651,7 +1650,6 @@ namespace Schedulebot
             });
         }
 
-        
         public async Task ExecuteMethodsAsync()
         {
             await Task.Run(async () => 
@@ -1797,8 +1795,8 @@ namespace Schedulebot
                             HttpResponseMessage response;
                             while (!success)
                             {
-                                // try
-                                // {
+                                try
+                                {
                                     var uploadServer = vkStuff.apiPhotos.Photo.GetUploadServer(vkStuff.MainAlbumId, vkStuff.GroupId);
                                     response = null;
                                     response = await ScheduleBot.client.PostAsync(new Uri(uploadServer.UploadUrl), form);
@@ -1819,10 +1817,10 @@ namespace Schedulebot
                                                 if (photosUploadProperties[currentPhoto].Week == -1)
                                                 {
                                                     // на неделю
-                                                    courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].photoIds[photosUploadProperties[currentPhoto].Subgroup - 1]
+                                                    courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup - 1].photoId
                                                         = (long)photos.ElementAt(currentPhoto).Id;
                                                     List<long> ids = userRepository.GetIds((int)CourseIndexAndGroupIndex.Item1, mapper);
-                                                    SendMessageAsync(
+                                                    EnqueueMessageAsync(
                                                         userIds: ids,
                                                         message: photosUploadProperties[currentPhoto].Message,
                                                         attachments: new List<MediaAttachment>
@@ -1846,7 +1844,7 @@ namespace Schedulebot
                                                         = (long)photos.ElementAt(currentPhoto).Id;
                                                     if (photosUploadProperties[currentPhoto].PeerId != 0)
                                                     {
-                                                        SendMessageAsync(
+                                                        EnqueueMessageAsync(
                                                             userId: photosUploadProperties[currentPhoto].PeerId,
                                                             message: photosUploadProperties[currentPhoto].Message,
                                                             attachments: new List<MediaAttachment>
@@ -1868,11 +1866,11 @@ namespace Schedulebot
                                             await Task.Delay(1000);
                                         }
                                     }
-                                // }
-                                // catch
-                                // {
-                                //     await Task.Delay(1000);
-                                // }
+                                }
+                                catch
+                                {
+                                    await Task.Delay(1000);
+                                }
                             }
                             timer = 0;
                             photosInRequestAmount = 0;
@@ -1886,22 +1884,8 @@ namespace Schedulebot
                 }
             });
         }
-        
-        private List<int> AreScheduleRelevant(DatesAndUrls newDatesAndUrls)
-        {
-            List<int> notRelevantCourses = new List<int>();
-            CoursesAmount = newDatesAndUrls.count;
-            for (int i = 0; i < newDatesAndUrls.count; ++i)
-            {
-                if (newDatesAndUrls.dates[i] != null && courses[i].date != newDatesAndUrls.dates[i])
-                {
-                    notRelevantCourses.Add(i);
-                }
-            }
-            return notRelevantCourses;
-        }
     
-        public class PayloadStuff
+        private class PayloadStuff
         {
             public string Command { get; set; } = "";
             public int? Menu { get; set; } = null;
@@ -1909,177 +1893,5 @@ namespace Schedulebot
             public string Group { get; set; } = "";
             public int Page { get; set; } = -1;
         }
-
-        /*
-        public static void ToGroupSubgroup(string group, string subgroup, string message)
-        {
-            Random random = new Random();
-            List<long> userIds = new List<long>();
-            MessagesSendParams messagesSendParams;
-            int count = 0;
-            lock (Glob.locker)
-            {
-                int usersCount = Glob.users.Count;
-                for (int i = 0; i < usersCount; ++i)
-                {
-                    if (Glob.users.ElementAt(i).Value.Group == group && Glob.users.ElementAt(i).Value.Subgroup == subgroup)
-                    {
-                        userIds.Add((long)Glob.users.ElementAt(i).Key);
-                        ++count;
-                        if (count == 100)
-                        {
-                            messagesSendParams = new MessagesSendParams()
-                            {
-                                UserIds = userIds,
-                                Message = message,
-                                RandomId = random.Next()
-                            };
-                            count = 0;
-                            Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-                            userIds.Clear();
-                        }
-                    }
-                }
-                if (count > 0)
-                {
-                    messagesSendParams = new MessagesSendParams()
-                    {
-                        UserIds = userIds,
-                        Message = message,
-                        RandomId = random.Next()
-                    };
-                    Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-                    userIds.Clear();
-                }
-            }
-        }
-        public static void ToGroup(string group, string message)
-        {
-            Random random = new Random();
-            List<long> userIds = new List<long>();
-            MessagesSendParams messagesSendParams;
-            int count = 0;
-            lock (Glob.locker)
-            {
-                int usersCount = Glob.users.Count;
-                for (int i = 0; i < usersCount; ++i)
-                {
-                    if (Glob.users.ElementAt(i).Value.Group == group)
-                    {
-                        userIds.Add((long)Glob.users.ElementAt(i).Key);
-                        ++count;
-                        if (count == 100)
-                        {
-                            messagesSendParams = new MessagesSendParams()
-                            {
-                                UserIds = userIds,
-                                Message = message,
-                                RandomId = random.Next()
-                            };
-                            count = 0;
-                            Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-                            userIds.Clear();
-                        }
-                    }
-                }
-                if (count > 0)
-                {
-                    messagesSendParams = new MessagesSendParams()
-                    {
-                        UserIds = userIds,
-                        Message = message,
-                        RandomId = random.Next()
-                    };
-                    Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-                    userIds.Clear();
-                }
-            }
-        }
-        public static void ToCourse(int course, string message)
-        {
-            Random random = new Random();
-            List<long> userIds = new List<long>();
-            MessagesSendParams messagesSendParams;
-            int count = 0;
-            lock (Glob.locker)
-            {
-                int usersCount = Glob.users.Count;
-                for (int i = 0; i < usersCount; ++i)
-                {
-                    if (Glob.schedule_mapping.ContainsKey(Glob.users.ElementAt(i).Value))
-                    {
-                        if (Glob.schedule_mapping[Glob.users.ElementAt(i).Value].Course == course)
-                        {
-                            userIds.Add((long)Glob.users.ElementAt(i).Key);
-                            ++count;
-                            if (count == 100)
-                            {
-                                messagesSendParams = new MessagesSendParams()
-                                {
-                                    UserIds = userIds,
-                                    Message = message,
-                                    RandomId = random.Next()
-                                };
-                                count = 0;
-                                Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-                                userIds.Clear();
-                            }
-                        }
-                    }
-                }
-                if (count > 0)
-                {
-                    messagesSendParams = new MessagesSendParams()
-                    {
-                        UserIds = userIds,
-                        Message = message,
-                        RandomId = random.Next()
-                    };
-                    Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-                    userIds.Clear(); // возможно убрать
-                }
-            }
-        }     
-        public static void ToAll(string message)
-        {
-            Random random = new Random();
-            List<long> userIds = new List<long>();
-            MessagesSendParams messagesSendParams;
-            int count = 0;
-            lock (Glob.locker)
-            {
-                int usersCount = Glob.users.Count;
-                for (int i = 0; i < usersCount; ++i)
-                {
-                    userIds.Add((long)Glob.users.ElementAt(i).Key);
-                    ++count;
-                    if (count == 100)
-                    {
-                        messagesSendParams = new MessagesSendParams()
-                        {
-                            UserIds = userIds,
-                            Message = message,
-                            RandomId = random.Next()
-                        };
-                        count = 0;
-                        Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-                        userIds.Clear();
-                    }
-                }
-            }
-            if (count > 0)
-            {
-                messagesSendParams = new MessagesSendParams()
-                {
-                    UserIds = userIds,
-                    Message = message,
-                    RandomId = random.Next()
-                };
-                Glob.queueCommands.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messagesSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-                userIds.Clear();
-            }
-        }
-        */
     }
-
 }

@@ -5,8 +5,8 @@ namespace Schedulebot
 {
     public class Mapper
     {
-        List<List<string>> coursesMap = new List<List<string>>();
-        Dictionary<string, (int?, int)> groupsMap = new Dictionary<string, (int?, int)>();
+        private List<List<string>> coursesMap = new List<List<string>>();
+        private Dictionary<string, (int?, int)> groupsMap = new Dictionary<string, (int?, int)>();
         
         public void CreateMaps(Course[] courses)
         {

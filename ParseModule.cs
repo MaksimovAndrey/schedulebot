@@ -1442,7 +1442,7 @@ namespace Schedulebot.Parse
         // ░░██░░░░░░░░░░░░██░░██░░██░░██░░██░░
         // ░░████████████████░░░░░░░░░░░░░░░░░░
         // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-        public static void Cell1x1(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int x, int y)
+        private static void Cell1x1(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int x, int y)
         {
             string temp = "";
             if (worksheet.Cells[current.y + y, current.x + x].Value != null)
@@ -1467,7 +1467,7 @@ namespace Schedulebot.Parse
         // ░░██░░░░░░░░░░░░██░░██░░██░░██░░██████░░
         // ░░████████████████░░░░░░░░░░░░░░░░░░░░░░
         // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-        public static void Cell1x2(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int x)
+        private static void Cell1x2(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int x)
         {
             List<string> temp = new List<string>();
             temp.Add("");
@@ -1505,7 +1505,7 @@ namespace Schedulebot.Parse
         // ░░██████████████████████████████░░
         // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
         // Верно и для 2x2
-        public static void Cell2x2andMore(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, string error = null)
+        private static void Cell2x2andMore(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, string error = null)
         {
             List<string> temp = new List<string>();
             temp.Add("");
@@ -1570,7 +1570,7 @@ namespace Schedulebot.Parse
         // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██████░░██░░██░░██░░██░░██░░
         // ░░██████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
         // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-        public static void Cell2x1andMore(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int y)
+        private static void Cell2x1andMore(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int y)
         {
             List<string> temp = new List<string>();
             temp.Add("");
@@ -1605,7 +1605,7 @@ namespace Schedulebot.Parse
             } while (worksheet.Cells[current.y + y, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
         }
         // с правой стороны открытая ячейка
-        public static void Cell1x1andMoreRight(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int y)
+        private static void Cell1x1andMoreRight(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int y)
         {
             List<string> temp = new List<string>();
             temp.Add("");
@@ -1635,7 +1635,7 @@ namespace Schedulebot.Parse
             } while (worksheet.Cells[current.y + y, x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None);
         }
         //! test it
-        public static void Cell1x2andMoreRight(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current)
+        private static void Cell1x2andMoreRight(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current)
         {
             List<string> temp = new List<string>();
             temp.Add("");
@@ -1679,7 +1679,7 @@ namespace Schedulebot.Parse
 
         // how to use: y - ряд который парсим
         //             _x - ячейка которая не пуста
-        public static void CellTandMore(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int _x, int y)
+        private static void CellTandMore(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int _x, int y)
         {
             List<string> temp = new List<string>();
             temp.Add("");
@@ -1726,90 +1726,3 @@ namespace Schedulebot.Parse
         }
     }
 }
-
-/* 2x1
-// ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-        // ░░██████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░░░██████░░░░░░░░░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░░░░░░░██░░██░░██░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░░░░░██░░░░░░██░░░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░░░██████░░██░░██░░██░░
-        // ░░██████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░
-        // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-        public static void Cell2x1(ref ExcelWorksheet worksheet, ref string[,] schedule, CurrentInfo current, int y)
-        {
-            List<string> temp = new List<string>();
-            temp.Add("");
-            for (int i = 0; i < 2; ++i)
-            {
-                if (worksheet.Cells[current.y + y, current.x + i].Value != null)
-                {
-                    string yaDebil = worksheet.Cells[current.y + y, current.x + i].StringValue.Trim();
-                    if (!temp.Contains(yaDebil))
-                        temp.Add(yaDebil);
-                }
-            }
-            for (int i = 1; i < temp.Count; ++i)
-                temp[0] += temp[i] + ' ';
-            temp[0] = temp[0].TrimEnd();
-            ScheduleLecture tempLecture = new ScheduleLecture();
-            tempLecture.Parse(temp[0]);
-            for (int i = 0; i < 2; ++i)
-            {
-                groups[current.group].schedule[i].weeks[y].days[current.day].lectures[current.lecture] = tempLecture;
-                if (worksheet.Cells[current.y + y, current.x + i].Style.FillPattern.PatternStyle == FillPatternStyle.None
-                    && temp[0] != "")
-                    groups[current.group].schedule[i].weeks[y].days[current.day].lectures[current.lecture].errorType += errors[1];
-            }
-        }
-*/
-
-/* 2x2
-        // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-        // ░░██████████████████████████████░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░2x2
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░
-        // ░░██░░░░░░░░░░░░░░░░░░░░░░░░░░██░░
-        // ░░██████████████████████████████░░
-        // ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-        public static void Cell2x2(ref ExcelWorksheet worksheet, ref Group[] groups, CurrentInfo current)
-        {
-            List<string> temp = new List<string>();
-            temp.Add("");
-            for (int i = 0; i < 2; ++i)
-            {
-                for (int j = 0; j < 2; j++)
-                {
-                    if (worksheet.Cells[current.y + j, current.x + i].Value != null)
-                    {
-                        string yaDebil = worksheet.Cells[current.y + j, current.x + i].StringValue.Trim();
-                        if (!temp.Contains(yaDebil))
-                            temp.Add(yaDebil);
-                    }
-                }
-            }
-            for (int i = 1; i < temp.Count; ++i)
-                temp[0] += temp[i] + ' ';
-            temp[0] = temp[0].TrimEnd();
-            ScheduleLecture tempLecture = new ScheduleLecture();
-            tempLecture.Parse(temp[0]);
-            for (int i = 0; i < 2; ++i)
-            {
-                for (int j = 0; j < 2; j++)
-                {
-                    groups[current.group].schedule[i].weeks[j].days[current.day].lectures[current.lecture] = tempLecture;
-                    if (worksheet.Cells[current.y + j, current.x + i].Style.FillPattern.PatternStyle == FillPatternStyle.None
-                        && temp[0] != "")
-                        groups[current.group].schedule[i].weeks[j].days[current.day].lectures[current.lecture].errorType += errors[1];
-                }
-            }
-        }
-
-
-*/

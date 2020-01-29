@@ -59,7 +59,7 @@ namespace Schedulebot
 
 
             Console.WriteLine("1");
-            scheduleBot.departments[0].GetMessagesAsync();
+            var test0 = scheduleBot.departments[0].ExecuteMethodsAsync();
             Console.WriteLine("2");
             var checkRelevanceTask = scheduleBot.CheckRelevanceAsync(); // active
             Console.WriteLine("3");

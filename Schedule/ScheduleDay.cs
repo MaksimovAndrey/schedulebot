@@ -1,10 +1,13 @@
+using System;
+using System.Collections.Generic;
+
 namespace Schedulebot.Schedule
 {
     public class ScheduleDay
     {
         public ScheduleLecture[] lectures = new ScheduleLecture[8];
-        public long photoId = 0;
         public bool isStudying = false;
+        public long photoId = 0;
         
         public ScheduleDay()
         {
@@ -49,6 +52,18 @@ namespace Schedulebot.Schedule
                     ++count;
             }
             return count;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(lectures, isStudying);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is ScheduleDay day &&
+                   EqualityComparer<ScheduleLecture[]>.Default.Equals(lectures, day.lectures) &&
+                   isStudying == day.isStudying;
         }
     }
 }

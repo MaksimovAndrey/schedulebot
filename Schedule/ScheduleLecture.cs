@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 
 using Schedulebot.Parse;
+using System;
 
 namespace Schedulebot.Schedule
 {
@@ -273,7 +274,23 @@ namespace Schedulebot.Schedule
                 return;
             }
         }
-    
+
+        public override bool Equals(object obj)
+        {
+            return obj is ScheduleLecture lecture &&
+                   status == lecture.status &&
+                   subject == lecture.subject &&
+                   lectureHall == lecture.lectureHall &&
+                   lecturer == lecture.lecturer &&
+                   isLecture == lecture.isLecture &&
+                   errorType == lecture.errorType;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(status, subject, lectureHall, lecturer, isLecture, errorType);
+        }
+
         public static bool operator ==(ScheduleLecture lecture1, ScheduleLecture lecture2)
         {
             if (lecture1.isLecture != lecture2.isLecture
