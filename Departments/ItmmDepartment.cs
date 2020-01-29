@@ -696,10 +696,9 @@ namespace Schedulebot
             {
                 if (message.Payload == null)
                 {
-                    // todo: Переписать админку
+                    // todo: UPdate переписать
                     if (message.PeerId == vkStuff.AdminId)
                     {
-                        /*
                         if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
                         {
                             string help = "Команды:\n\nРассылка <всем,*КУРС*,*ГРУППА*>\n--отправляет расписание на неделю выбранным юзерам\nОбновить <все,*КУРС*> [нет]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nПерезагрузка\n--перезагружает бота(для применения обновления версии бота)\n\nCommands:\n\nDistribution <all,*COURSE*,*GROUP*>\n--отправляет расписание на неделю выбранным юзерам\nUpdate <all,*COURSE*> [false]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nReboot\n--перезагружает бота(для применения обновления версии бота)\n";
@@ -709,11 +708,15 @@ namespace Schedulebot
                         {
                             string temp = message.Text.Substring(message.Text.IndexOf(' ') + 1);
                             string toWhom = temp.Substring(0, temp.IndexOf(' '));
-                            temp = temp.Substring(temp.IndexOf(' ') + 1); // сообщение
+                            string messageStr = temp.Substring(temp.IndexOf(' ') + 1); // сообщение
                             if (toWhom == "всем" || toWhom == "all")
                             {
-                                Distribution.ToAll(temp);
-                                SendMessageAsync(userId: message.PeerId, message: "Выполнено");
+                                SendMessageAsync(
+                                    userIds: userRepository.GetIds(),
+                                    message: messageStr);
+                                SendMessageAsync(
+                                    userId: message.PeerId,
+                                    message: "Выполнено");
                             }
                             else if (toWhom.Length == 1)
                             {
@@ -722,22 +725,33 @@ namespace Schedulebot
                                 --toCourse;
                                 if (toCourse != -1 && toCourse >= 0 && toCourse < 4)
                                 {
-                                    Distribution.ToCourse(toCourse, temp);
-                                    SendMessageAsync(userId: message.PeerId, message: "Выполнено");
+                                    SendMessageAsync(
+                                        userIds: userRepository.GetIds(toCourse, mapper),
+                                        message: messageStr);
+                                    SendMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Выполнено");
                                 }
                                 else
                                 {
-                                    SendMessageAsync(userId: message.PeerId, message: "Ошибка рассылки:\nневерный курс: " + toWhom + "\nВведите значение от 1 до 4");
+                                    SendMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Ошибка рассылки:\nневерный курс: " + toWhom + "\nВведите значение от 1 до 4");
                                 }
                             }
                             else
                             {
-                                Distribution.ToGroup(toWhom, temp);
-                                SendMessageAsync(userId: message.PeerId, message: "Выполнено");
+                                SendMessageAsync(
+                                    userIds: userRepository.GetIds(toWhom),
+                                    message: messageStr);
+                                SendMessageAsync(
+                                    userId: message.PeerId,
+                                    message: "Выполнено");
                             }
                         }
                         else if (message.Text.IndexOf("Обновить") == 0 || message.Text.IndexOf("Update") == 0)
                         {
+                            /*
                             string temp = message.Text.Substring(message.Text.IndexOf(' ') + 1);
                             bool sendUpdates = true;
                             string course = temp.Substring(0, temp.IndexOf(' '));
@@ -845,24 +859,17 @@ namespace Schedulebot
                                 }
                             }
                             SendMessageAsync(userId: message.PeerId, message: "Выполнено");
+                            */
                         }
                         else if (message.Text.IndexOf("Перезагрузка") == 0 || message.Text.IndexOf("Reboot") == 0)
                         {
-                            while (Glob.isUpdating)
+                            while (courses[0].isUpdating || courses[1].isUpdating || courses[2].isUpdating || courses[3].isUpdating)
                                 Thread.Sleep(60000);
-                            Glob.relevanceCheck.Interrupt();
-                            while (!Glob.commandsQueue.IsEmpty)
+                            while (!vkStuff.commandsQueue.IsEmpty && !vkStuff.uploadPhotosQueue.IsEmpty)
                                 Thread.Sleep(5000); 
-                            lock (Glob.locker)
-                            {
-                                if (Glob.subsChanges)
-                                {
-                                    IO.SaveSubscribers();
-                                }
-                            }                               
+                            SaveUsers();                         
                             Environment.Exit(0);
                         }
-                        */
                     }
                     else if (message.Attachments.Count != 0)
                     {
