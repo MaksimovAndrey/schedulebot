@@ -79,6 +79,16 @@ namespace Schedulebot
             }
             return null;
         }
+
+        public List<long> GetIds()
+        {
+            List<long> ids = new List<long>();
+            for (int currentUser = 0; currentUser < users.Count; currentUser++)
+            {
+                ids.Add(users[currentUser].Id);
+            }
+            return ids;
+        }
         
         public List<long> GetIds(int course, Mapper mapper)
         {
