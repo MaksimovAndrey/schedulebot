@@ -494,6 +494,11 @@ namespace Schedulebot
                                 vkStuff.GroupUrl = value;
                                 break;
                             }
+                            case "adminId":
+                            {
+                                vkStuff.AdminId = Int64.Parse(value);
+                                break;
+                            }
                         }
                     }
                 }
