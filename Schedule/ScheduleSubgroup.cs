@@ -6,7 +6,7 @@ namespace Schedulebot.Schedule
     public class ScheduleSubgroup
     {
         public ScheduleWeek[] weeks = new ScheduleWeek[2];
-        public long photoId = 0;
+        public long PhotoId { get; set; } = 0; // вынести
         public ScheduleSubgroup()
         {
             for (int i = 0; i < 2; ++i)

@@ -7,7 +7,7 @@ namespace Schedulebot.Schedule
     {
         public ScheduleLecture[] lectures = new ScheduleLecture[8];
         public bool isStudying = false;
-        public long photoId = 0;
+        public long PhotoId { get; set; } = 0; // вынести 
         
         public ScheduleDay()
         {

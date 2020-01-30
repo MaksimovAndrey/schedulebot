@@ -99,7 +99,7 @@ namespace Schedulebot.Parse
             return groups;
         }
         
-        public static async Task<List<Group>> MapperAsync(string pathToFile)
+        public static async Task<List<Group>> MapperAsync(string pathToFile) // todo: сюда передаем словари
         {
             return await Task.Run(async () => 
             {

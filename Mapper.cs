@@ -10,6 +10,8 @@ namespace Schedulebot
         
         public void CreateMaps(Course[] courses)
         {
+            coursesMap.Clear();
+            groupsMap.Clear();
             int coursesAmount = courses.GetLength(0);
             for (int currentCourse = 0; currentCourse < coursesAmount; currentCourse++)
             {
@@ -21,6 +23,21 @@ namespace Schedulebot
                 }
                 coursesMap.Add(groupNames);
             }
+        }
+
+        public List<(string, int)> GetOldGroupSubgroupList(List<(string, int)> newGroupNames)
+        {
+            List<(string, int)> groupSubgroupList = new List<(string, int)>();
+
+            for (int currentCourse = 0; currentCourse < 4; currentCourse++)
+                for (int currentGroupName = 0; currentGroupName < coursesMap[currentCourse].Count; currentGroupName++)
+                    for (int currentSubgroup = 1; currentSubgroup < 3; currentSubgroup++)
+                        groupSubgroupList.Add((coursesMap[currentCourse][currentGroupName], currentSubgroup));
+
+            for (int currentNewGroupName = 0; currentNewGroupName < newGroupNames.Count; currentNewGroupName++)
+                groupSubgroupList.Remove(newGroupNames[currentNewGroupName]);
+            
+            return groupSubgroupList;
         }
 
         public List<string> GetGroupNames(int course)

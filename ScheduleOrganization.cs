@@ -7,7 +7,7 @@ namespace Schedulebot
     public class CheckRelevanceStuffITMM : ICheckRelevanceStuff
     {
         private const string url = @"http://www.itmm.unn.ru/studentam/raspisanie/raspisanie-bakalavriata-i-spetsialiteta-ochnoj-formy-obucheniya/";
-        public async Task<DatesAndUrls> CheckRelevance()
+        public async Task<DatesAndUrls> CheckRelevanceAsync()
         {
             HtmlDocument htmlDocument;
             HtmlWeb htmlWeb = new HtmlWeb();
@@ -21,12 +21,14 @@ namespace Schedulebot
                 return null;
             }
             if (htmlDocument != null)
-                return await Parse(htmlDocument);
+            {
+                return await ParseAsync(htmlDocument);
+            }
             return null;
         }
-        private async Task<DatesAndUrls> Parse(HtmlDocument htmlDocument)
+        private async Task<DatesAndUrls> ParseAsync(HtmlDocument htmlDocument)
         {
-            await Task.Run(() =>
+            return await Task.Run(() =>
             {
                 htmlDocument.DocumentNode.InnerHtml = Regex.Replace(htmlDocument.DocumentNode.InnerHtml, @"\u00ad|", "");
                 HtmlNodeCollection nodesWithDates = htmlDocument.DocumentNode.SelectNodes("//p[contains(text(), 'Расписание бакалавров')]");
@@ -59,7 +61,6 @@ namespace Schedulebot
                 }
                 return null;
             });
-            return null;
         }
     }
     
@@ -72,6 +73,6 @@ namespace Schedulebot
 
     public interface ICheckRelevanceStuff
     {
-        Task<DatesAndUrls> CheckRelevance();
+        Task<DatesAndUrls> CheckRelevanceAsync();
     }
 }

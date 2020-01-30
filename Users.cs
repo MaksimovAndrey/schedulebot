@@ -89,6 +89,24 @@ namespace Schedulebot
             }
             return ids;
         }
+
+        public List<long> GetIds(List<(string, int)> oldGroupSubgroupList)
+        {
+            List<long> ids = new List<long>();
+            for (int currentUser = 0; currentUser < users.Count; currentUser++)
+            {
+                for (int currentOldGroupSubgroup = 0; currentOldGroupSubgroup < oldGroupSubgroupList.Count; currentOldGroupSubgroup++)
+                {
+                    if (users[currentUser].Group == oldGroupSubgroupList[currentOldGroupSubgroup].Item1
+                        && users[currentUser].Subgroup == oldGroupSubgroupList[currentOldGroupSubgroup].Item2)
+                    {
+                        ids.Add(users[currentUser].Id);
+                        break;
+                    }
+                }
+            }
+            return ids;
+        }
         
         public List<long> GetIds(int course, Mapper mapper)
         {

@@ -28,7 +28,7 @@ namespace Schedulebot
         // private Dictionary<string, string> acronymToPhrase;
         // private Dictionary<string, string> doubleOptionallySubject;
         // private List<string> fullName;
-        private int CoursesAmount { get; set; } = 4;
+        private int CoursesAmount { get; } = 4;
         private Course[] courses = new Course[4]; // 4 курса
         private UserRepository userRepository = new UserRepository();
         private int startDay;
@@ -36,7 +36,7 @@ namespace Schedulebot
         public ItmmDepartment(string _path)
         {
             path = _path + @"itmm\";
-            vkStuff.MainMenuKeyboards = new MessageKeyboard[6]
+            vkStuff.MenuKeyboards = new MessageKeyboard[6]
             {
                 // main
                 new MessageKeyboard
@@ -520,6 +520,17 @@ namespace Schedulebot
             }
         }
 
+        private void SaveDatesAndUrls()
+        {
+            using (StreamWriter file = new StreamWriter(path + "datesAndUrls.txt"))
+            {
+                for (int currentCourse = 0; currentCourse < 4; currentCourse++)
+                {
+                    file.WriteLine(courses[currentCourse].urlToFile + " " + courses[currentCourse].date);
+                }
+            }
+        }
+
         private void LoadAcronymToPhrase()
         {
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка ManualAcronymToPhrase");
@@ -580,7 +591,7 @@ namespace Schedulebot
                         {
                             if (courses[currentCourse].groups[currentGroup].name == group)
                             {
-                                courses[currentCourse].groups[currentGroup].scheduleSubgroups[subgroup - 1].photoId = id;
+                                courses[currentCourse].groups[currentGroup].scheduleSubgroups[subgroup - 1].PhotoId = id;
                                 currentCourse = CoursesAmount;
                                 break;
                             }
@@ -592,7 +603,7 @@ namespace Schedulebot
 
         private void SaveUploadedSchedule()
         {
-            using (StreamWriter file = new StreamWriter(path + "uploadedPhotos.txt"))
+            using (StreamWriter file = new StreamWriter(path + "uploadedSchedule.txt"))
             {
                 StringBuilder stringBuilder = new StringBuilder();
                 for (int currentCourse = 0; currentCourse < CoursesAmount; currentCourse++)
@@ -600,11 +611,11 @@ namespace Schedulebot
                     int groupsAmount = courses[currentCourse].groups.Count;
                     for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup++)
                     {
-                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].scheduleSubgroups[0].photoId);
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].scheduleSubgroups[0].PhotoId);
                         stringBuilder.Append(' ');
                         stringBuilder.Append(courses[currentCourse].groups[currentGroup].name);
                         stringBuilder.Append(" 1\n");
-                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].scheduleSubgroups[1].photoId);
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].scheduleSubgroups[1].PhotoId);
                         stringBuilder.Append(' ');
                         stringBuilder.Append(courses[currentCourse].groups[currentGroup].name);
                         stringBuilder.Append(" 2\n");
@@ -869,7 +880,7 @@ namespace Schedulebot
                         {
                             while (courses[0].isUpdating || courses[1].isUpdating || courses[2].isUpdating || courses[3].isUpdating)
                                 Thread.Sleep(60000);
-                            while (!vkStuff.commandsQueue.IsEmpty && !vkStuff.uploadPhotosQueue.IsEmpty)
+                            while (!vkStuff.commandsQueue.IsEmpty && !vkStuff.photosQueue.IsEmpty)
                                 Thread.Sleep(5000); 
                             SaveUsers();                         
                             Environment.Exit(0);
@@ -948,7 +959,7 @@ namespace Schedulebot
                                     stringBuilder.Append(user.Subgroup);
                                     stringBuilder.Append(')');
 
-                                    MessageKeyboard keyboardCustom = vkStuff.MainMenuKeyboards[3];
+                                    MessageKeyboard keyboardCustom = vkStuff.MenuKeyboards[3];
                                     keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
                                     
                                     EnqueueMessageAsync(
@@ -1063,7 +1074,7 @@ namespace Schedulebot
                                                             {
                                                                 AlbumId = vkStuff.MainAlbumId,
                                                                 OwnerId = -vkStuff.GroupId,
-                                                                Id = courses[(int)userMapping.Item1].groups[userMapping.Item2].scheduleSubgroups[user.Subgroup - 1].photoId
+                                                                Id = courses[(int)userMapping.Item1].groups[userMapping.Item2].scheduleSubgroups[user.Subgroup - 1].PhotoId
                                                             }
                                                         });
                                                     return;
@@ -1089,7 +1100,7 @@ namespace Schedulebot
                                                     {
                                                         long photoId = courses[(int)userMapping.Item1].groups[userMapping.Item2]
                                                             .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                                                            .days[today].photoId;
+                                                            .days[today].PhotoId;
                                                         if (photoId == 0)
                                                         {
                                                             Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
@@ -1112,7 +1123,7 @@ namespace Schedulebot
                                                             photoUploadProperties.Message = "Расписание на сегодня";
                                                             photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
                                                         
-                                                            vkStuff.uploadPhotosQueue.Enqueue(photoUploadProperties);
+                                                            vkStuff.photosQueue.Enqueue(photoUploadProperties);
                                                             return;
                                                         }
                                                         else
@@ -1162,7 +1173,7 @@ namespace Schedulebot
                                                     }
                                                     long photoId = courses[(int)userMapping.Item1].groups[userMapping.Item2]
                                                         .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                                                        .days[day].photoId;
+                                                        .days[day].PhotoId;
                                                     if (photoId == 0)
                                                     {
                                                         Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
@@ -1185,7 +1196,7 @@ namespace Schedulebot
                                                         photoUploadProperties.Message = "Завтра воскресенье, вот расписание на ближайший учебный день";
                                                         photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
                                                     
-                                                        vkStuff.uploadPhotosQueue.Enqueue(photoUploadProperties);
+                                                        vkStuff.photosQueue.Enqueue(photoUploadProperties);
                                                         return;
                                                     }
                                                     else
@@ -1228,7 +1239,7 @@ namespace Schedulebot
                                                         messageTemp = "Расписание на завтра";
                                                     long photoId = courses[(int)userMapping.Item1].groups[userMapping.Item2]
                                                         .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                                                        .days[day].photoId;
+                                                        .days[day].PhotoId;
                                                     if (photoId == 0)
                                                     {
                                                         Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
@@ -1251,7 +1262,7 @@ namespace Schedulebot
                                                         photoUploadProperties.Message = messageTemp;
                                                         photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
                                                     
-                                                        vkStuff.uploadPhotosQueue.Enqueue(photoUploadProperties);
+                                                        vkStuff.photosQueue.Enqueue(photoUploadProperties);
                                                         return;
                                                     }
                                                     else
@@ -1285,7 +1296,7 @@ namespace Schedulebot
                                 }
                                 else
                                 {
-                                    MessageKeyboard keyboardCustom = vkStuff.MainMenuKeyboards[3];
+                                    MessageKeyboard keyboardCustom = vkStuff.MenuKeyboards[3];
 
                                     StringBuilder stringBuilder = new StringBuilder();
                                     stringBuilder.Append("Вы подписаны: ");
@@ -1369,7 +1380,7 @@ namespace Schedulebot
                                 stringBuilder.Append(')');
 
                                 MessageKeyboard keyboardCustom;
-                                keyboardCustom = vkStuff.MainMenuKeyboards[3];
+                                keyboardCustom = vkStuff.MenuKeyboards[3];
                                 keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
                             
                                 stringBuilder.Clear();
@@ -1421,7 +1432,7 @@ namespace Schedulebot
                                 stringBuilder.Append(user.Subgroup);
                                 stringBuilder.Append(')');
 
-                                MessageKeyboard keyboardCustom = vkStuff.MainMenuKeyboards[3];
+                                MessageKeyboard keyboardCustom = vkStuff.MenuKeyboards[3];
                                 keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
                                 
                                 EnqueueMessageAsync(
@@ -1569,7 +1580,7 @@ namespace Schedulebot
                         else
                         {
                             MessageKeyboard customKeyboard;
-                            customKeyboard = vkStuff.MainMenuKeyboards[5];
+                            customKeyboard = vkStuff.MenuKeyboards[5];
                             StringBuilder stringBuilder = new StringBuilder();
                             stringBuilder.Append("{\"menu\": \"5\", \"group\": \"");
                             stringBuilder.Append(message.Text);
@@ -1606,12 +1617,28 @@ namespace Schedulebot
                     Message = message,
                     RandomId = (int)DateTime.Now.Ticks
                 };
-                if (attachments != null)
-                    messageSendParams.Attachments = attachments;
                 if (userId == null)
-                    messageSendParams.UserIds = userIds;
+                {
+                    if (userIds.Count == 0)
+                        return;
+                    else if (userIds.Count > 100)
+                    {
+                        messageSendParams.UserIds = userIds.GetRange(0, 100);
+                        userIds.RemoveRange(0, 100);
+                        EnqueueMessageAsync(
+                            userIds: userIds,
+                            message: message,
+                            attachments: attachments,
+                            keyboardId: keyboardId,
+                            customKeyboard: customKeyboard);
+                    }
+                    else
+                        messageSendParams.UserIds = userIds;
+                }
                 else
                     messageSendParams.PeerId = userId;
+                if (attachments != null)
+                    messageSendParams.Attachments = attachments;
                 if (customKeyboard != null)
                 {
                     messageSendParams.Keyboard = customKeyboard;
@@ -1626,22 +1653,22 @@ namespace Schedulebot
                         }
                         case 0:
                         {
-                            messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[0];
+                            messageSendParams.Keyboard = vkStuff.MenuKeyboards[0];
                             break;
                         }
                         case 1:
                         {
-                            messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[1];
+                            messageSendParams.Keyboard = vkStuff.MenuKeyboards[1];
                             break;
                         }
                         case 2:
                         {
-                            messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[2];
+                            messageSendParams.Keyboard = vkStuff.MenuKeyboards[2];
                             break;
                         }
                         case 4:
                         {
-                            messageSendParams.Keyboard = vkStuff.MainMenuKeyboards[4];
+                            messageSendParams.Keyboard = vkStuff.MenuKeyboards[4];
                             break;
                         }
                     }
@@ -1704,7 +1731,7 @@ namespace Schedulebot
         {
             await Task.Run(async () => 
             {
-                DatesAndUrls newDatesAndUrls = await checkRelevanceStuffITMM.CheckRelevance();
+                DatesAndUrls newDatesAndUrls = await checkRelevanceStuffITMM.CheckRelevanceAsync();
                 if (newDatesAndUrls != null)
                 {
                     List<Task<List<PhotoUploadProperties>>> tasks = new List<Task<List<PhotoUploadProperties>>>();
@@ -1714,31 +1741,52 @@ namespace Schedulebot
                         {
                             courses[currentCourse].urlToFile = newDatesAndUrls.urls[currentCourse];
                             courses[currentCourse].date = newDatesAndUrls.dates[currentCourse];
-                            // todo: рассылка по курсу "Вышло новое расписание тыры пыры"
+                            
+                            StringBuilder stringBuilder = new StringBuilder();
+                            stringBuilder.Append("Вышло новое расписание ");
+                            stringBuilder.Append(newDatesAndUrls.dates[currentCourse]);
+                            stringBuilder.Append(". Ожидайте результата обработки.");
+
+                            EnqueueMessageAsync(
+                                userIds: userRepository.GetIds(currentCourse, mapper),
+                                message: stringBuilder.ToString());
+
                             UpdateProperties updateProperties = new UpdateProperties();
-                            updateProperties.drawingStandartScheduleInfo = new Drawing.DrawingStandartScheduleInfo();
                             updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
                             updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
-                            tasks.Add(courses[currentCourse].UpdateAsync(vkStuff.GroupUrl, updateProperties));
+
+                            tasks.Add(courses[currentCourse].UpdateAsync(updateProperties));
                         }
                     }
+                    SaveDatesAndUrls();
                     if (tasks.Count != 0)
                     {
                         await Task.WhenAll(tasks);
 
                         List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
                         for (int i = 0; i < tasks.Count; i++)
-                            photosUploadProperties.AddRange(tasks[i].Result);
+                        {
+                            if (tasks[i].Result != null)
+                                photosUploadProperties.AddRange(tasks[i].Result);
+                        }
 
                         for (int i = 0; i < photosUploadProperties.Count; i++)
-                            vkStuff.uploadPhotosQueue.Enqueue(photosUploadProperties[i]);
+                            vkStuff.photosQueue.Enqueue(photosUploadProperties[i]);
 
                         mapper.CreateMaps(courses);
                         ConstructKeyboards();
 
+                        List<(string, int)> newGroupSubgroupList = new List<(string, int)>();
+                        for (int currentPhoto = 0; currentPhoto < photosUploadProperties.Count; currentPhoto++)
+                            newGroupSubgroupList.Add((photosUploadProperties[currentPhoto].Group, photosUploadProperties[currentPhoto].Subgroup));
+
+                        EnqueueMessageAsync(
+                            message: "Для Вас изменений нет",
+                            userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList)));
+
                         while (true)
                         {
-                            if (vkStuff.uploadPhotosQueue.IsEmpty)
+                            if (vkStuff.photosQueue.IsEmpty)
                             {
                                 for (int currentCourse = 0; currentCourse < 4; currentCourse++)
                                     courses[currentCourse].isUpdating = false;
@@ -1746,7 +1794,25 @@ namespace Schedulebot
                             }
                             await Task.Delay(2000);
                         }
+
                         SaveUploadedSchedule();
+
+                        for (int currentCourse = 0; currentCourse < 4; currentCourse++)
+                        {
+                            if (courses[currentCourse].isBroken)
+                            {
+                                StringBuilder stringBuilder = new StringBuilder();
+                                stringBuilder.Append("Не удалось обработать расписание ");
+                                stringBuilder.Append(courses[currentCourse].date);
+                                stringBuilder.Append(". Ссылка: ");
+                                stringBuilder.Append(courses[currentCourse].urlToFile);
+
+                                EnqueueMessageAsync(
+                                    userIds: userRepository.GetIds(currentCourse, mapper),
+                                    message: stringBuilder.ToString());
+                            }
+                            courses[currentCourse].isUpdating = false;
+                        }
                     }
                 }
             });
@@ -1763,14 +1829,14 @@ namespace Schedulebot
                 List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
                 while (true)
                 {
-                    queuePhotosAmount = vkStuff.uploadPhotosQueue.Count();
+                    queuePhotosAmount = vkStuff.photosQueue.Count();
                     if (queuePhotosAmount > 5 - photosInRequestAmount)
                     {
                         queuePhotosAmount = 5 - photosInRequestAmount;
                     }
                     for (int i = 0; i < queuePhotosAmount; ++i)
                     {
-                        if (vkStuff.uploadPhotosQueue.TryDequeue(out PhotoUploadProperties photoUploadProperties))
+                        if (vkStuff.photosQueue.TryDequeue(out PhotoUploadProperties photoUploadProperties))
                         {
                             photosUploadProperties.Add(photoUploadProperties);
                             form.Add(new ByteArrayContent(photosUploadProperties[i].Photo), "file" + i.ToString(), i.ToString() + ".png");
@@ -1817,7 +1883,7 @@ namespace Schedulebot
                                                 if (photosUploadProperties[currentPhoto].Week == -1)
                                                 {
                                                     // на неделю
-                                                    courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup - 1].photoId
+                                                    courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup - 1].PhotoId
                                                         = (long)photos.ElementAt(currentPhoto).Id;
                                                     List<long> ids = userRepository.GetIds((int)CourseIndexAndGroupIndex.Item1, mapper);
                                                     EnqueueMessageAsync(
@@ -1840,7 +1906,7 @@ namespace Schedulebot
                                                         .scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup - 1]
                                                         .weeks[photosUploadProperties[currentPhoto].Week]
                                                         .days[photosUploadProperties[currentPhoto].Day]
-                                                        .photoId
+                                                        .PhotoId
                                                         = (long)photos.ElementAt(currentPhoto).Id;
                                                     if (photosUploadProperties[currentPhoto].PeerId != 0)
                                                     {
