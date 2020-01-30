@@ -46,7 +46,7 @@ namespace Schedulebot
             }
             catch
             {
-                Console.WriteLine("\nЕсли ты это видишь, то ты, наверное, на голову ебнутый.\nСтруктура такая: long id \" \" string group \" \" int subgroup \"\\n\"");
+                Console.WriteLine("\nЕсли ты это видишь, то ты, наверное, из дурки сбежал.\nСтруктура такая: long id \" \" string group \" \" int subgroup \"\\n\"");
                 user = null;
                 return false;
             }
