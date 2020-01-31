@@ -16,15 +16,6 @@ namespace Schedulebot
     {
         public const string version = "v1.0";
     }
-    public static class Glob
-    {
-
-        //! ТОЛЬКО ДЛЯ ITMM
-        // todo: подумать как пофиксить можно BibleThump
-        public static Dictionary<string, string> acronymToPhrase = new Dictionary<string, string>();
-        public static Dictionary<string, string> doubleOptionallySubject = new Dictionary<string, string>();
-        public static List<string> fullName;
-    }
     public class ScheduleBot
     {
         public static readonly HttpClient client = new HttpClient();

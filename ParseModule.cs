@@ -1,7 +1,7 @@
 using System;
 using GemBox.Spreadsheet;
 using System.IO;
-// using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -13,8 +13,201 @@ namespace Schedulebot.Parse
     {
         public static readonly string[] errors = { "¹", "²", "³" };
         public const string lectureConst = "+Л+";
+
+        public static ScheduleLecture ParseLecture(string parse, Dictionaries dictionaries)
+        {
+            ScheduleLecture lecture = new ScheduleLecture();
+            for (int i = 0; i < 3; ++i)
+            {
+                if (parse.Contains(Parsing.errors[i]))
+                {
+                    lecture.errorType += Parsing.errors[i];
+                    parse = parse.Replace(Parsing.errors[i], "");
+                }
+            }
+            if (parse.Contains(Parsing.lectureConst))
+            {
+                lecture.isLecture = true;
+                parse = parse.Replace(Parsing.lectureConst, "");
+            }
+            if (parse.Trim() != "")
+            {
+                return lecture;
+            }
+            Regex regexLectureHall = new Regex("[0-9]+([/]{1,2}[0-9]+)?( ?[(]{1}[0-9]+[)]{1})?( {1}[(]{1}[0-9]+ {1}корпус[)]{1})?");
+            Regex regexFullName = new Regex("[А-Я]{1}[а-я]+([-]{1}[А-Я]{1}[а-я]+)? {1}[А-Я]{1}[.]{1}([А-Я]{1}[.]?)?");
+            MatchCollection matches;
+            // Чистим строку
+            while (parse.Contains("  "))
+                parse = parse.Replace("  ", " ");
+            // Ищем ФИО
+            matches = regexFullName.Matches(parse);
+            if (matches.Count == 1)
+            {
+                lecture.lecturer = matches[0].ToString();
+                parse = parse.Remove(matches[0].Index, matches[0].Length);
+                while (parse.Contains("  "))
+                    parse = parse.Replace("  ", " ");
+                parse = parse.Trim();
+            }
+            else if (matches.Count == 0)
+            {
+                int indexTemp;
+                for (int i = 0; i < dictionaries.fullName.Count; ++i)
+                {
+                    indexTemp = parse.IndexOf(dictionaries.fullName[i]);
+                    if (indexTemp != -1)
+                    {
+                        lecture.lecturer = dictionaries.fullName[i];
+                        parse = parse.Remove(indexTemp, dictionaries.fullName[i].Length);
+                        while (parse.Contains("  "))
+                            parse = parse.Replace("  ", " ");
+                        parse = parse.Trim();
+                        break;
+                    }
+                }
+            }
+            else if (matches.Count >= 2)
+            {
+                if (dictionaries.doubleOptionallySubject.ContainsKey(parse))
+                {
+                    lecture.status = "F2";
+                    lecture.subject = dictionaries.doubleOptionallySubject[parse];
+                    return lecture;
+                }
+            }
+            // Ищем аудиторию
+            matches = regexLectureHall.Matches(parse);
+            if (matches.Count != 0)
+            {
+                if (matches.Count == 1)
+                {
+                    lecture.lectureHall = matches[0].ToString();
+                    parse = parse.Remove(matches[0].Index, matches[0].Length);
+                    while (parse.Contains("  "))
+                        parse = parse.Replace("  ", " ");
+                    parse = parse.Trim();
+                }
+                else
+                {
+                    for (int k = 0; k < matches.Count; ++k)
+                    {
+                        if (matches[k].Index != 0)
+                        {
+                            if (parse[matches[k].Index - 1] != ' ')
+                                continue;
+                        }
+                        if (matches[k].Index + matches[k].Length != parse.Length)
+                        {
+                            if (parse[matches[k].Index + matches[k].Length] != ' ' && parse[matches[k].Index + matches[k].Length] != ',')
+                                continue;
+                        }
+                        lecture.lectureHall = matches[k].ToString();
+                        parse = parse.Remove(matches[k].Index, matches[k].Length);
+                        while (parse.Contains("  "))
+                            parse = parse.Replace("  ", " ");
+                        parse = parse.Trim();
+                        break;
+                    }
+                }
+            }
+            // Выводы: F - полное, N - неполное, n - количество аргументов
+            if (lecture.lectureHall == null)
+            {
+                if (parse.ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА"))
+                {
+                    lecture.status = "F1";
+                    lecture.subject = "Военная подготовка";
+                    lecture.isLecture = false;
+                    return lecture;
+                }
+                else if (parse.ToUpper().Contains("ФИЗИЧЕСКАЯ КУЛЬТУРА"))
+                {
+                    lecture.status = "F1";
+                    lecture.subject = "Физическая культура";
+                    lecture.isLecture = false;
+                    return lecture;
+                }
+                else if (lecture.lecturer != null)
+                {
+                    if (parse.Contains("по выбору") || parse.Contains("согласно"))
+                    {
+                        parse = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
+                    }
+                    else
+                    {
+                        // Если все капсом и (более одного слова или больше 4 знаков), заглавной остается только первая буква
+                        if ((parse.Contains(' ') || parse.Length > 4))
+                        {
+                            for (int k = 0; k < parse.Length; ++k)
+                            {
+                                if (parse[k] != char.ToUpper(parse[k]))
+                                    break;
+                                if (k == parse.Length - 1)
+                                    parse = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
+                            }
+                        }
+                    }
+                    lecture.status = "N2";
+                    lecture.subject = parse;
+                    return lecture;
+                }
+                else
+                {
+                    lecture.status = "N0";
+                    lecture.subject = parse;
+                    return lecture;
+                }
+            }
+            else if (lecture.lecturer != null)
+            {
+                lecture.subject = parse;
+                if (dictionaries.acronymToPhrase.ContainsKey(lecture.subject))
+                {
+                    lecture.subject = dictionaries.acronymToPhrase[lecture.subject];
+                }
+                else if (parse.Contains(' ') || parse.Length > 4) // Если все капсом и более одного слова, заглавной остается только первая буква
+                {
+                    for (int k = 0; k < parse.Length; ++k)
+                    {
+                        if (parse[k] != char.ToUpper(parse[k]))
+                            break;
+                        if (k == parse.Length - 1)
+                            lecture.subject = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
+                    }
+                }
+                if (parse.Contains("по выбору") || parse.Contains("согласно"))
+                    lecture.subject = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
+                lecture.status = "F3";
+                return lecture;
+            }
+            else
+            {
+                if (parse.Contains("по выбору") || parse.Contains("согласно"))
+                {
+                    parse = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
+                }
+                else
+                {
+                    // Если все капсом и (более одного слова или больше 4 знаков), заглавной остается только первая буква
+                    if ((parse.Contains(' ') || parse.Length > 4))
+                    {
+                        for (int k = 0; k < parse.Length; ++k)
+                        {
+                            if (parse[k] != char.ToUpper(parse[k]))
+                                break;
+                            if (k == parse.Length - 1)
+                                parse = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
+                        }
+                    }
+                }
+                lecture.status = "N2";
+                lecture.subject = parse;
+                return lecture;
+            }
+        }
         
-        public static List<Group> Mapper(string pathToFile)
+        public static List<Group> Mapper(string pathToFile, Dictionaries dictionaries)
         {
             string format = pathToFile.Substring(pathToFile.LastIndexOf('.') + 1);
             string[,] schedule = null;
@@ -88,7 +281,7 @@ namespace Schedulebot.Parse
                             for (int currentLecture = 0; currentLecture < 8; ++currentLecture)
                             {
                                 groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].lectures[currentLecture]
-                                    = new ScheduleLecture(schedule[uniqueGroups[i] * 2 + currentSubgroup, 2 + currentDay * 16 + currentLecture * 2 + currentWeek]);
+                                    = ParseLecture(schedule[uniqueGroups[i] * 2 + currentSubgroup, 2 + currentDay * 16 + currentLecture * 2 + currentWeek], dictionaries);
                             }
                             groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].isStudying
                                 = !groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].IsEmpty();
@@ -99,7 +292,7 @@ namespace Schedulebot.Parse
             return groups;
         }
         
-        public static async Task<List<Group>> MapperAsync(string pathToFile) // todo: сюда передаем словари
+        public static async Task<List<Group>> MapperAsync(string pathToFile, Dictionaries dictionaries)
         {
             return await Task.Run(async () => 
             {
@@ -175,7 +368,7 @@ namespace Schedulebot.Parse
                                 for (int currentLecture = 0; currentLecture < 8; ++currentLecture)
                                 {
                                     groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].lectures[currentLecture]
-                                        = new ScheduleLecture(schedule[uniqueGroups[i] * 2 + currentSubgroup, 2 + currentDay * 16 + currentLecture * 2 + currentWeek]);
+                                        = ParseLecture(schedule[uniqueGroups[i] * 2 + currentSubgroup, 2 + currentDay * 16 + currentLecture * 2 + currentWeek], dictionaries);
                                 }
                                 groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].isStudying
                                     = !groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].IsEmpty();

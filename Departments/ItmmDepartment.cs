@@ -25,12 +25,10 @@ namespace Schedulebot
         private VkStuff vkStuff = new VkStuff();
         private Mapper mapper = new Mapper();
         private ICheckRelevanceStuff checkRelevanceStuffITMM = new CheckRelevanceStuffITMM();
-        // private Dictionary<string, string> acronymToPhrase;
-        // private Dictionary<string, string> doubleOptionallySubject;
-        // private List<string> fullName;
         private int CoursesAmount { get; } = 4;
         private Course[] courses = new Course[4]; // 4 курса
         private UserRepository userRepository = new UserRepository();
+        private Dictionaries dictionaries = new Dictionaries();
         private int startDay;
         private int startWeek;
         public ItmmDepartment(string _path)
@@ -337,7 +335,7 @@ namespace Schedulebot
             LoadDoubleOptionallySubject();
             LoadFullName();
             for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
-                courses[currentCourse] = new Course(path + @"downloads\" + currentCourse + "_course.xls");
+                courses[currentCourse] = new Course(path + @"downloads\" + currentCourse + "_course.xls", dictionaries);
             LoadDatesAndUrls();
             mapper.CreateMaps(courses);
             ConstructKeyboards();
@@ -534,35 +532,32 @@ namespace Schedulebot
         private void LoadAcronymToPhrase()
         {
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка ManualAcronymToPhrase");
-            Glob.acronymToPhrase = new Dictionary<string,string>();
             using StreamReader file = new StreamReader(
                 path + @"/manualProcessing/acronymToPhrase.txt",
                 System.Text.Encoding.Default);
             while (!file.EndOfStream)
-                Glob.acronymToPhrase.Add(file.ReadLine(), file.ReadLine());
+                dictionaries.acronymToPhrase.Add(file.ReadLine(), file.ReadLine());
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка ManualAcronymToPhrase");
         }
 
         private void LoadDoubleOptionallySubject()
         {
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка DoubleOptionallySubject");
-            Glob.doubleOptionallySubject = new Dictionary<string,string>();
             using StreamReader file = new StreamReader(
                 path + @"/manualProcessing/doubleOptionallySubject.txt",
                 System.Text.Encoding.Default);
             while (!file.EndOfStream)
-                Glob.doubleOptionallySubject.Add(file.ReadLine(), file.ReadLine());
+                dictionaries.doubleOptionallySubject.Add(file.ReadLine(), file.ReadLine());
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка DoubleOptionallySubject");
         }
 
         private void LoadFullName()
         {
-            Glob.fullName = new List<string>();
             using StreamReader file = new StreamReader(
                 path + @"/manualProcessing/fullName.txt",
                 System.Text.Encoding.Default);
             while (!file.EndOfStream)
-                Glob.fullName.Add(file.ReadLine());
+                dictionaries.fullName.Add(file.ReadLine());
         }
 
         private void LoadUploadedSchedule()
@@ -1755,7 +1750,7 @@ namespace Schedulebot
                             updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
                             updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
 
-                            tasks.Add(courses[currentCourse].UpdateAsync(updateProperties));
+                            tasks.Add(courses[currentCourse].UpdateAsync(updateProperties, dictionaries));
                         }
                     }
                     SaveDatesAndUrls();

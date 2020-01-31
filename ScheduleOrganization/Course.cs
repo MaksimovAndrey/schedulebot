@@ -22,17 +22,17 @@ namespace Schedulebot
         public bool isUpdating = false;
         public List<MessageKeyboard> keyboards;
         
-        public Course(string _pathToFile)
+        public Course(string _pathToFile, Dictionaries dictionaries)
         {
             pathToFile = _pathToFile;
-            groups = Parsing.Mapper(pathToFile);
+            groups = Parsing.Mapper(pathToFile, dictionaries);
             if (groups.Count == 0)
                 isBroken = true;
             else
                 isBroken = false;
         }
 
-        public async Task<List<PhotoUploadProperties>> UpdateAsync(UpdateProperties updateProperties) 
+        public async Task<List<PhotoUploadProperties>> UpdateAsync(UpdateProperties updateProperties, Dictionaries dictionaries) 
         {
             return await Task.Run(async () => 
             {
@@ -55,7 +55,7 @@ namespace Schedulebot
                     }
                     await Task.Delay(60000);
                 }
-                List<Group> newGroups = await Parsing.MapperAsync(pathToFile);
+                List<Group> newGroups = await Parsing.MapperAsync(pathToFile, dictionaries);
                 if (newGroups == null)
                 {
                     isBroken = true;
