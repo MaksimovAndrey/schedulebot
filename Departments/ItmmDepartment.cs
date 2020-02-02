@@ -1730,27 +1730,29 @@ namespace Schedulebot
                 if (newDatesAndUrls != null)
                 {
                     List<Task<List<PhotoUploadProperties>>> tasks = new List<Task<List<PhotoUploadProperties>>>();
-                    for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
+                    List<int> updatingCourses = new List<int>();
+                    for (int currentDateAndUrl = 0; currentDateAndUrl < newDatesAndUrls.count; ++currentDateAndUrl)
                     {
-                        if (newDatesAndUrls.dates[currentCourse] != courses[currentCourse].date)
+                        if (newDatesAndUrls.dates[currentDateAndUrl] != courses[newDatesAndUrls.courses[currentDateAndUrl]].date)
                         {
-                            courses[currentCourse].urlToFile = newDatesAndUrls.urls[currentCourse];
-                            courses[currentCourse].date = newDatesAndUrls.dates[currentCourse];
+                            courses[newDatesAndUrls.courses[currentDateAndUrl]].urlToFile = newDatesAndUrls.urls[currentDateAndUrl];
+                            courses[newDatesAndUrls.courses[currentDateAndUrl]].date = newDatesAndUrls.dates[currentDateAndUrl];
                             
                             StringBuilder stringBuilder = new StringBuilder();
                             stringBuilder.Append("Вышло новое расписание ");
-                            stringBuilder.Append(newDatesAndUrls.dates[currentCourse]);
+                            stringBuilder.Append(newDatesAndUrls.dates[currentDateAndUrl]);
                             stringBuilder.Append(". Ожидайте результата обработки.");
 
                             EnqueueMessageAsync(
-                                userIds: userRepository.GetIds(currentCourse, mapper),
+                                userIds: userRepository.GetIds(newDatesAndUrls.courses[currentDateAndUrl], mapper),
                                 message: stringBuilder.ToString());
 
                             UpdateProperties updateProperties = new UpdateProperties();
                             updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
                             updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
 
-                            tasks.Add(courses[currentCourse].UpdateAsync(updateProperties, dictionaries));
+                            tasks.Add(courses[newDatesAndUrls.courses[currentDateAndUrl]].UpdateAsync(updateProperties, dictionaries));
+                            updatingCourses.Add(newDatesAndUrls.courses[currentDateAndUrl]);
                         }
                     }
                     SaveDatesAndUrls();
@@ -1777,7 +1779,7 @@ namespace Schedulebot
 
                         EnqueueMessageAsync(
                             message: "Для Вас изменений нет",
-                            userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList)));
+                            userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList, updatingCourses)));
 
                         while (true)
                         {

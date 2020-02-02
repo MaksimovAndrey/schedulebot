@@ -1,3 +1,4 @@
+using System;
 using HtmlAgilityPack;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
@@ -40,23 +41,26 @@ namespace Schedulebot
                 }
                 else if (nodesWithDates.Count > 0 && nodesWithUrls.Count > 0 && nodesWithUrls.Count == nodesWithUrls.Count)
                 {
-                    DatesAndUrls parseResult = new DatesAndUrls() { count = nodesWithDates.Count };
+                    DatesAndUrls parseResult = new DatesAndUrls();
+                    int count = 0;
                     for (int i = 0; i < nodesWithDates.Count; ++i)
                     {
                         string nodeText = nodesWithDates[i].InnerText;
-                        if (nodeText.Contains("(от "))
+                        if (nodeText.Contains("(от ") && nodeText.IndexOf(" курс") > 0)
                         {
-                            parseResult.dates[i] = nodeText.Substring(nodeText.LastIndexOf("(от") + 1, nodeText.LastIndexOf(')') - (nodeText.LastIndexOf("(от") + 1));
+                            if (Int32.TryParse(nodeText.Substring(nodeText.IndexOf(" курс") - 1, 1), out int course))
+                            {
+                                if (nodesWithUrls[i].Attributes["href"].Value.Trim() != "")
+                                {
+                                    parseResult.dates[count] = nodeText.Substring(nodeText.LastIndexOf("(от") + 1, nodeText.LastIndexOf(')') - (nodeText.LastIndexOf("(от") + 1));
+                                    parseResult.courses[count] = course - 1;
+                                    parseResult.urls[count] = nodesWithUrls[i].Attributes["href"].Value.Trim();
+                                    count++;
+                                }
+                            }
                         }
                     }
-                    for (int i = 0; i < nodesWithUrls.Count; ++i)
-                    {
-                        parseResult.urls[i] = nodesWithUrls[i].Attributes["href"].Value.Trim();
-                        if (parseResult.urls[i] == "")
-                        {
-                            parseResult.dates[i] = "";
-                        }
-                    }
+                    parseResult.count = count;
                     return parseResult;
                 }
                 return null;
@@ -69,6 +73,7 @@ namespace Schedulebot
         public int count;
         public string[] urls = new string[5];
         public string[] dates = new string[5];
+        public int[] courses = new int[5];
     }
 
     public interface ICheckRelevanceStuff

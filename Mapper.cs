@@ -25,14 +25,14 @@ namespace Schedulebot
             }
         }
 
-        public List<(string, int)> GetOldGroupSubgroupList(List<(string, int)> newGroupNames)
+        public List<(string, int)> GetOldGroupSubgroupList(List<(string, int)> newGroupNames, List<int> updatingCourses)
         {
             List<(string, int)> groupSubgroupList = new List<(string, int)>();
 
-            for (int currentCourse = 0; currentCourse < 4; currentCourse++)
-                for (int currentGroupName = 0; currentGroupName < coursesMap[currentCourse].Count; currentGroupName++)
+            for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
+                for (int currentGroupName = 0; currentGroupName < coursesMap[updatingCourses[currentUpdatingCourse]].Count; currentGroupName++)
                     for (int currentSubgroup = 1; currentSubgroup < 3; currentSubgroup++)
-                        groupSubgroupList.Add((coursesMap[currentCourse][currentGroupName], currentSubgroup));
+                        groupSubgroupList.Add((coursesMap[updatingCourses[currentUpdatingCourse]][currentGroupName], currentSubgroup));
 
             for (int currentNewGroupName = 0; currentNewGroupName < newGroupNames.Count; currentNewGroupName++)
                 groupSubgroupList.Remove(newGroupNames[currentNewGroupName]);

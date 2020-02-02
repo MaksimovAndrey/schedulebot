@@ -35,7 +35,7 @@ namespace Schedulebot
         {
             return await Task.Run(() => 
             {
-                updateProperties.drawingStandartScheduleInfo.schedule = scheduleSubgroups[subgroup - 1];
+                updateProperties.drawingStandartScheduleInfo.schedule = scheduleSubgroups[subgroup];
                 updateProperties.drawingStandartScheduleInfo.group = name;
                 updateProperties.drawingStandartScheduleInfo.subgroup = subgroup;
                 updateProperties.photoUploadProperties.Photo
