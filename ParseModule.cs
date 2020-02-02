@@ -17,7 +17,7 @@ namespace Schedulebot.Parse
         public static ScheduleLecture ParseLecture(string parse, Dictionaries dictionaries)
         {
             ScheduleLecture lecture = new ScheduleLecture();
-            for (int i = 0; i < 3; ++i)
+            for (int i = 0; i < Parsing.errors.GetLength(0); ++i)
             {
                 if (parse.Contains(Parsing.errors[i]))
                 {
@@ -30,7 +30,7 @@ namespace Schedulebot.Parse
                 lecture.isLecture = true;
                 parse = parse.Replace(Parsing.lectureConst, "");
             }
-            if (parse.Trim() != "")
+            if (parse.Trim() == "")
             {
                 return lecture;
             }

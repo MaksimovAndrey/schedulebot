@@ -47,6 +47,8 @@ namespace Schedulebot.Schedule
                     lectureBuilder.Append(delimiter);
                 lectureBuilder.Append(lectureHall);
             }
+            if (lectureBuilder.Length == 0)
+                lectureBuilder.Append("Error");
             if (isLecture)
             {
                 lectureBuilder.Append(delimiter);

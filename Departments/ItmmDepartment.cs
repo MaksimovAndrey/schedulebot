@@ -1112,7 +1112,7 @@ namespace Schedulebot
                                                             photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
                                                             photoUploadProperties.Day = today;
                                                             photoUploadProperties.Group = user.Group;
-                                                            photoUploadProperties.Subgroup = user.Subgroup;
+                                                            photoUploadProperties.Subgroup = user.Subgroup - 1;
                                                             photoUploadProperties.Week = week;
                                                             photoUploadProperties.PeerId = (long)message.PeerId;
                                                             photoUploadProperties.Message = "Расписание на сегодня";
@@ -1185,7 +1185,7 @@ namespace Schedulebot
                                                         photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
                                                         photoUploadProperties.Day = day;
                                                         photoUploadProperties.Group = user.Group;
-                                                        photoUploadProperties.Subgroup = user.Subgroup;
+                                                        photoUploadProperties.Subgroup = user.Subgroup - 1;
                                                         photoUploadProperties.Week = week;
                                                         photoUploadProperties.PeerId = (long)message.PeerId;
                                                         photoUploadProperties.Message = "Завтра воскресенье, вот расписание на ближайший учебный день";
@@ -1251,7 +1251,7 @@ namespace Schedulebot
                                                         photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
                                                         photoUploadProperties.Day = day;
                                                         photoUploadProperties.Group = user.Group;
-                                                        photoUploadProperties.Subgroup = user.Subgroup;
+                                                        photoUploadProperties.Subgroup = user.Subgroup - 1;
                                                         photoUploadProperties.Week = week;
                                                         photoUploadProperties.PeerId = (long)message.PeerId;
                                                         photoUploadProperties.Message = messageTemp;
@@ -1682,7 +1682,7 @@ namespace Schedulebot
                 StringBuilder stringBuilder = new StringBuilder();
                 while (true)
                 {
-                    queueCommandsAmount = vkStuff.commandsQueue.Count();
+                    queueCommandsAmount = vkStuff.commandsQueue.Count;
                     // if (queueCommandsAmount > 25 - commandsInRequestAmount)
                     // {
                     //     queueCommandsAmount = 25 - commandsInRequestAmount;
@@ -1762,11 +1762,11 @@ namespace Schedulebot
                     SaveDatesAndUrls();
                     if (updatingCourses.Count != 0)
                     {
-                        for (int i = 0; i < photosUploadProperties.Count; i++)
-                            vkStuff.photosQueue.Enqueue(photosUploadProperties[i]);
-
                         mapper.CreateMaps(courses);
                         ConstructKeyboards();
+
+                        for (int i = 0; i < photosUploadProperties.Count; i++)
+                            vkStuff.photosQueue.Enqueue(photosUploadProperties[i]);
 
                         List<(string, int)> newGroupSubgroupList = new List<(string, int)>();
                         for (int currentPhoto = 0; currentPhoto < photosUploadProperties.Count; currentPhoto++)
@@ -1775,13 +1775,13 @@ namespace Schedulebot
                         EnqueueMessageAsync(
                             message: "Для Вас изменений нет",
                             userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList, updatingCourses)));
-
+                        
                         while (true)
                         {
                             if (vkStuff.photosQueue.IsEmpty)
                             {
-                                for (int currentCourse = 0; currentCourse < 4; currentCourse++)
-                                    courses[currentCourse].isUpdating = false;
+                                for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
+                                    courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
                                 break;
                             }
                             await Task.Delay(2000);
@@ -1789,21 +1789,21 @@ namespace Schedulebot
 
                         SaveUploadedSchedule();
 
-                        for (int currentCourse = 0; currentCourse < 4; currentCourse++)
+                        for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
                         {
-                            if (courses[currentCourse].isBroken)
+                            if (courses[updatingCourses[currentUpdatingCourse]].isBroken)
                             {
                                 StringBuilder stringBuilder = new StringBuilder();
                                 stringBuilder.Append("Не удалось обработать расписание ");
-                                stringBuilder.Append(courses[currentCourse].date);
+                                stringBuilder.Append(courses[updatingCourses[currentUpdatingCourse]].date);
                                 stringBuilder.Append(". Ссылка: ");
-                                stringBuilder.Append(courses[currentCourse].urlToFile);
+                                stringBuilder.Append(courses[updatingCourses[currentUpdatingCourse]].urlToFile);
 
                                 EnqueueMessageAsync(
-                                    userIds: userRepository.GetIds(currentCourse, mapper),
+                                    userIds: userRepository.GetIds(updatingCourses[currentUpdatingCourse], mapper),
                                     message: stringBuilder.ToString());
                             }
-                            courses[currentCourse].isUpdating = false;
+                            courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
                         }
                     }
                 }
@@ -1821,7 +1821,7 @@ namespace Schedulebot
                 List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
                 while (true)
                 {
-                    queuePhotosAmount = vkStuff.photosQueue.Count();
+                    queuePhotosAmount = vkStuff.photosQueue.Count;
                     if (queuePhotosAmount > 5 - photosInRequestAmount)
                     {
                         queuePhotosAmount = 5 - photosInRequestAmount;
@@ -1866,16 +1866,15 @@ namespace Schedulebot
                                             AlbumId = vkStuff.MainAlbumId,
                                             GroupId = vkStuff.GroupId
                                         });
-                                        if (photos.Count() == photosInRequestAmount)
+                                        if (photos.Count == photosInRequestAmount)
                                         {
-
                                             for (int currentPhoto = 0; currentPhoto < photosInRequestAmount; currentPhoto++)
                                             {
                                                 (int?, int) CourseIndexAndGroupIndex = mapper.GetCourseAndIndex(photosUploadProperties[currentPhoto].Group);
                                                 if (photosUploadProperties[currentPhoto].Week == -1)
                                                 {
                                                     // на неделю
-                                                    courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup - 1].PhotoId
+                                                    courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup].PhotoId
                                                         = (long)photos.ElementAt(currentPhoto).Id;
                                                     List<long> ids = userRepository.GetIds((int)CourseIndexAndGroupIndex.Item1, mapper);
                                                     EnqueueMessageAsync(
@@ -1895,7 +1894,7 @@ namespace Schedulebot
                                                 {
                                                     courses[(int)CourseIndexAndGroupIndex.Item1]
                                                         .groups[CourseIndexAndGroupIndex.Item2]
-                                                        .scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup - 1]
+                                                        .scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup]
                                                         .weeks[photosUploadProperties[currentPhoto].Week]
                                                         .days[photosUploadProperties[currentPhoto].Day]
                                                         .PhotoId

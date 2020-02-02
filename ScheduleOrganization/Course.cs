@@ -69,7 +69,7 @@ namespace Schedulebot
                     List<PhotoUploadProperties> photosToUpload = new List<PhotoUploadProperties>();
                     for (int i = 0; i < groupsSubgroupToUpdate.Count; i++)
                     {
-                        photosToUpload.Add(groups[groupsSubgroupToUpdate[i].Item1].UpdateSubgroup(groupsSubgroupToUpdate[i].Item2, updateProperties));
+                        photosToUpload.Add(new PhotoUploadProperties(groups[groupsSubgroupToUpdate[i].Item1].UpdateSubgroup(groupsSubgroupToUpdate[i].Item2, updateProperties)));
                     }
                     isBroken = false;
                     return photosToUpload;

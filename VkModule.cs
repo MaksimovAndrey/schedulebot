@@ -35,6 +35,23 @@ namespace Schedulebot.Vk
         public string Message { get; set; } = null;
         
         public long PeerId { get; set; } = 0; // когда на день, кому отправить
+
+        public PhotoUploadProperties()
+        {
+
+        }
+        
+        public PhotoUploadProperties(PhotoUploadProperties photoUploadProperties)
+        {
+            Photo = photoUploadProperties.Photo;
+            Group = photoUploadProperties.Group;
+            Subgroup = photoUploadProperties.Subgroup;
+            AlbumId = photoUploadProperties.AlbumId;
+            Week = photoUploadProperties.Week;
+            Day = photoUploadProperties.Day;
+            Message = photoUploadProperties.Message;
+            PeerId = photoUploadProperties.PeerId;
+        }
     }
     
     public class UpdateProperties

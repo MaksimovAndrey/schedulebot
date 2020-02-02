@@ -35,18 +35,22 @@ namespace Schedulebot
         {
             updateProperties.drawingStandartScheduleInfo.schedule = scheduleSubgroups[subgroup];
             updateProperties.drawingStandartScheduleInfo.group = name;
-            updateProperties.drawingStandartScheduleInfo.subgroup = subgroup;
+            updateProperties.drawingStandartScheduleInfo.subgroup = subgroup + 1;
+            
             updateProperties.photoUploadProperties.Photo
                 = DrawingSchedule.StandartSchedule.Draw(updateProperties.drawingStandartScheduleInfo);
 
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.Append("Новое расписание для ");
-            stringBuilder.Append(updateProperties.photoUploadProperties.Group);
+            stringBuilder.Append(name);
             stringBuilder.Append(" (");
-            stringBuilder.Append(updateProperties.photoUploadProperties.Subgroup);
+            stringBuilder.Append((subgroup + 1));
             stringBuilder.Append(") ");
             stringBuilder.Append(updateProperties.drawingStandartScheduleInfo.date);
+            
             updateProperties.photoUploadProperties.Message = stringBuilder.ToString();
+            updateProperties.photoUploadProperties.Group = name;
+            updateProperties.photoUploadProperties.Subgroup = subgroup;
 
             return updateProperties.photoUploadProperties;
         }
