@@ -66,19 +66,12 @@ namespace Schedulebot
                     List<(int, int)> groupsSubgroupToUpdate = CompareGroups(ref newGroups);
                     groups = newGroups;
                     updateProperties.drawingStandartScheduleInfo.date = date;
-                    List<Task<PhotoUploadProperties>> tasks = new List<Task<PhotoUploadProperties>>();
+                    List<PhotoUploadProperties> photosToUpload = new List<PhotoUploadProperties>();
                     for (int i = 0; i < groupsSubgroupToUpdate.Count; i++)
                     {
-                        tasks.Add(groups[groupsSubgroupToUpdate[i].Item1].UpdateSubgroupAsync(groupsSubgroupToUpdate[i].Item2, updateProperties));
+                        photosToUpload.Add(groups[groupsSubgroupToUpdate[i].Item1].UpdateSubgroup(groupsSubgroupToUpdate[i].Item2, updateProperties));
                     }
-                    await Task.WhenAll(tasks);
                     isBroken = false;
-                    List<PhotoUploadProperties> photosToUpload = new List<PhotoUploadProperties>();
-                    for (int i = 0; i < tasks.Count; i++)
-                    {
-                        if (tasks[i].Result != null)
-                            photosToUpload.Add(tasks[i].Result);
-                    }
                     return photosToUpload;
                 }
             });

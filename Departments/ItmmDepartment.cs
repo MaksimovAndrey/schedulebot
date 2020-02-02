@@ -1729,8 +1729,8 @@ namespace Schedulebot
                 DatesAndUrls newDatesAndUrls = await checkRelevanceStuffITMM.CheckRelevanceAsync();
                 if (newDatesAndUrls != null)
                 {
-                    List<Task<List<PhotoUploadProperties>>> tasks = new List<Task<List<PhotoUploadProperties>>>();
                     List<int> updatingCourses = new List<int>();
+                    List<Schedulebot.Vk.PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
                     for (int currentDateAndUrl = 0; currentDateAndUrl < newDatesAndUrls.count; ++currentDateAndUrl)
                     {
                         if (newDatesAndUrls.dates[currentDateAndUrl] != courses[newDatesAndUrls.courses[currentDateAndUrl]].date)
@@ -1751,22 +1751,17 @@ namespace Schedulebot
                             updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
                             updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
 
-                            tasks.Add(courses[newDatesAndUrls.courses[currentDateAndUrl]].UpdateAsync(updateProperties, dictionaries));
-                            updatingCourses.Add(newDatesAndUrls.courses[currentDateAndUrl]);
+                            var tempPhotosList = await courses[newDatesAndUrls.courses[currentDateAndUrl]].UpdateAsync(updateProperties, dictionaries);
+                            if (tempPhotosList != null)
+                            {
+                                photosUploadProperties.AddRange(tempPhotosList);
+                                updatingCourses.Add(newDatesAndUrls.courses[currentDateAndUrl]);
+                            }
                         }
                     }
                     SaveDatesAndUrls();
-                    if (tasks.Count != 0)
+                    if (updatingCourses.Count != 0)
                     {
-                        await Task.WhenAll(tasks);
-
-                        List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
-                        for (int i = 0; i < tasks.Count; i++)
-                        {
-                            if (tasks[i].Result != null)
-                                photosUploadProperties.AddRange(tasks[i].Result);
-                        }
-
                         for (int i = 0; i < photosUploadProperties.Count; i++)
                             vkStuff.photosQueue.Enqueue(photosUploadProperties[i]);
 

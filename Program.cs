@@ -52,7 +52,7 @@ namespace Schedulebot
             Console.WriteLine("1");
             var test0 = scheduleBot.departments[0].ExecuteMethodsAsync();
             Console.WriteLine("2");
-            var test = scheduleBot.departments[0].GetMessagesAsync();
+            // var test = scheduleBot.departments[0].GetMessagesAsync();
             Console.WriteLine("3");
             var test1 = scheduleBot.departments[0].UploadPhotosAsync();
             Console.WriteLine("4");

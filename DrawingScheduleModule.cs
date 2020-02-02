@@ -99,7 +99,6 @@ namespace Schedulebot.Drawing
                 graphics.DrawImage(image, new Point(0, 0));
                 graphics.Save();
                 graphics.Dispose();
-                // todo: возращаем объект класса, содержащий: ByteArray, описание фото в вк, группу + подгруппу
                 return ImageToByteArray(imageCroped);
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Обрабока расписания для рассылки " + course + " " + number);
             }
@@ -158,7 +157,7 @@ namespace Schedulebot.Drawing
                 // Двигаем координату
                 pos += stringHeight + Line.size;
                 // Проходим по парам
-                if (scheduleDays[0].lectures[0].ConstructLecture().ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА")) // todo: если только по верхним/нижним неделям неверно, бывает ли такое?
+                if (scheduleDays[0].lectures[0].ConstructLecture().ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА")) //? если только по верхним/нижним неделям неверно, бывает ли такое?
                 {
                     DrawLecture(new ScheduleLecture[] { scheduleDays[0].lectures[0], scheduleDays[1].lectures[0] }, ref pos, ref image, new string[] { "Весь", "день" });
                 }
@@ -602,7 +601,7 @@ namespace Schedulebot.Drawing
             public static LectureProperties lectureProperties = new LectureProperties()
             {
                 sameFix = 6, // сдвиг вверх и вниз при одинаковых парах по верхним и нижним неделям
-                fix = 4, // ??? todo: разобраться что это такое
+                fix = 4, // ???
                 width = Image.width - timeendPosX - Line.size - Border.size,
                 textProperties = new TextProperties
                 {
@@ -1016,7 +1015,7 @@ namespace Schedulebot.Drawing
             public static LectureProperties lectureProperties = new LectureProperties()
             {
                 sameFix = 6, // сдвиг вверх и вниз при одинаковых парах по верхним и нижним неделям
-                fix = 4, // ??? todo: разобраться что это такое
+                fix = 4, // ???
                 width = Image.width - timeendPosX - Line.size - Border.size,
                 textProperties = new TextProperties
                 {
@@ -1132,15 +1131,15 @@ namespace Schedulebot.Drawing
         }
     }
     
-    public static class Line // line1
+    public static class Line
     {
-        public static Brush brush = new SolidBrush(Color.FromArgb(255, 211, 211, 211)); // кисть
+        public static readonly Brush brush = new SolidBrush(Color.FromArgb(255, 211, 211, 211)); // кисть
         public const int size = 4; // ширина
     }
 
-    public static class Line2 // line2
+    public static class Line2
     {
-        public static Brush brush = new SolidBrush(Color.FromArgb(255, 211, 211, 211)); // кисть
+        public static readonly Brush brush = new SolidBrush(Color.FromArgb(255, 211, 211, 211)); // кисть
         public const int size = 2; // ширина
     }
 
@@ -1159,7 +1158,7 @@ namespace Schedulebot.Drawing
     public class LectureProperties
     {
         public int sameFix; // сдвиг вверх и вниз при одинаковых парах по верхним и нижним неделям
-        public int fix; // ??? todo: разобраться что это такое
+        public int fix; // ???
         public int width;
         public TextProperties textProperties;
         public TextProperties soloTextProperties;

@@ -31,27 +31,24 @@ namespace Schedulebot
             return notEqualSubgroups;
         }
 
-        public async Task<PhotoUploadProperties> UpdateSubgroupAsync(int subgroup, UpdateProperties updateProperties)
+        public PhotoUploadProperties UpdateSubgroup(int subgroup, UpdateProperties updateProperties)
         {
-            return await Task.Run(() => 
-            {
-                updateProperties.drawingStandartScheduleInfo.schedule = scheduleSubgroups[subgroup];
-                updateProperties.drawingStandartScheduleInfo.group = name;
-                updateProperties.drawingStandartScheduleInfo.subgroup = subgroup;
-                updateProperties.photoUploadProperties.Photo
-                    = DrawingSchedule.StandartSchedule.Draw(updateProperties.drawingStandartScheduleInfo);
+            updateProperties.drawingStandartScheduleInfo.schedule = scheduleSubgroups[subgroup];
+            updateProperties.drawingStandartScheduleInfo.group = name;
+            updateProperties.drawingStandartScheduleInfo.subgroup = subgroup;
+            updateProperties.photoUploadProperties.Photo
+                = DrawingSchedule.StandartSchedule.Draw(updateProperties.drawingStandartScheduleInfo);
 
-                StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.Append("Новое расписание для ");
-                stringBuilder.Append(updateProperties.photoUploadProperties.Group);
-                stringBuilder.Append(" (");
-                stringBuilder.Append(updateProperties.photoUploadProperties.Subgroup);
-                stringBuilder.Append(") ");
-                stringBuilder.Append(updateProperties.drawingStandartScheduleInfo.date);
-                updateProperties.photoUploadProperties.Message = stringBuilder.ToString();
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.Append("Новое расписание для ");
+            stringBuilder.Append(updateProperties.photoUploadProperties.Group);
+            stringBuilder.Append(" (");
+            stringBuilder.Append(updateProperties.photoUploadProperties.Subgroup);
+            stringBuilder.Append(") ");
+            stringBuilder.Append(updateProperties.drawingStandartScheduleInfo.date);
+            updateProperties.photoUploadProperties.Message = stringBuilder.ToString();
 
-                return updateProperties.photoUploadProperties;
-            });
+            return updateProperties.photoUploadProperties;
         }
     }
 }
