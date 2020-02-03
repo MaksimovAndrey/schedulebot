@@ -76,7 +76,7 @@ namespace Schedulebot.Drawing
                 }
                 // Рисуем подвал
                 graphics.DrawString(
-                    drawingScheduleInfo.vkGroupUrl + " · " + Const.version,
+                    drawingScheduleInfo.vkGroupUrl + ScheduleBot.delimiter + ScheduleBot.version,
                     headerTextProperties.font,
                     headerTextProperties.brush,
                     new RectangleF(
@@ -660,9 +660,9 @@ namespace Schedulebot.Drawing
             {
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Обрабока расписания на завтра " + course + " " + number + " " + dayOfWeek + " " + weekProperties); // 2log
                 //! кто меня из дурки выпустил? разобраться
-                string week = " · Верхняя";
+                string week = "Верхняя";
                 if (drawingScheduleInfo.weekProperties == 1)
-                    week = " · Нижняя";
+                    week = "Нижняя";
                 string day = "День недели";
                 switch (drawingScheduleInfo.dayOfWeek)
                 {
@@ -709,7 +709,7 @@ namespace Schedulebot.Drawing
                 };
                 // Рисуем шапку
                 graphics.DrawString(
-                    drawingScheduleInfo.group + " (" + drawingScheduleInfo.subgroup + ") " + drawingScheduleInfo.date + week,
+                    drawingScheduleInfo.group + " (" + drawingScheduleInfo.subgroup + ") " + drawingScheduleInfo.date + ScheduleBot.delimiter + week,
                     headerTextProperties.font,
                     headerTextProperties.brush,
                     new RectangleF(
@@ -788,7 +788,7 @@ namespace Schedulebot.Drawing
                 }
                 // Рисуем подвал
                 graphics.DrawString(
-                    drawingScheduleInfo.vkGroupUrl + " · " + Const.version,
+                    drawingScheduleInfo.vkGroupUrl + ScheduleBot.delimiter + ScheduleBot.version,
                     headerTextProperties.font,
                     headerTextProperties.brush,
                     new RectangleF(
@@ -1084,7 +1084,7 @@ namespace Schedulebot.Drawing
                 if (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                 {
                     string subject = lecture.subject; // было temp
-                    string lectureWithoutSubject = " · " + lecture.ConstructLectureWithoutSubject();
+                    string lectureWithoutSubject = ScheduleBot.delimiter + lecture.ConstructLectureWithoutSubject();
                     while (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                     {
                         subject = subject.Substring(0, subject.Length - 1);

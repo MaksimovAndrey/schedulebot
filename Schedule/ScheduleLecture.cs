@@ -8,7 +8,6 @@ namespace Schedulebot.Schedule
 {
     public class ScheduleLecture
     {
-        public const string delimiter = " · ";
         public string status = null; // статус (что спарсили?) F1, F2, F3, N0, N2 (F - нашли всё, что есть | N - нашли не всё | int - количество найденных аргументов)
         public string subject = null;
         public string lectureHall = null;
@@ -38,20 +37,20 @@ namespace Schedulebot.Schedule
             if (lecturer != null)
             {
                 if (lectureBuilder.Length != 0)
-                    lectureBuilder.Append(delimiter);
+                    lectureBuilder.Append(ScheduleBot.delimiter);
                 lectureBuilder.Append(lecturer);
             }
             if (lectureHall != null)
             {
                 if (lectureBuilder.Length != 0)
-                    lectureBuilder.Append(delimiter);
+                    lectureBuilder.Append(ScheduleBot.delimiter);
                 lectureBuilder.Append(lectureHall);
             }
             if (lectureBuilder.Length == 0)
                 lectureBuilder.Append("Error");
             if (isLecture)
             {
-                lectureBuilder.Append(delimiter);
+                lectureBuilder.Append(ScheduleBot.delimiter);
                 lectureBuilder.Append('Л');
             }
             lectureBuilder.Append(errorType);
@@ -65,12 +64,12 @@ namespace Schedulebot.Schedule
             if (lectureHall != null)
             {
                 if (lectureWithoutSubjectBuilder.Length != 0)
-                    lectureWithoutSubjectBuilder.Append(delimiter);
+                    lectureWithoutSubjectBuilder.Append(ScheduleBot.delimiter);
                 lectureWithoutSubjectBuilder.Append(lectureHall);
             }
             if (isLecture)
             {
-                lectureWithoutSubjectBuilder.Append(delimiter);
+                lectureWithoutSubjectBuilder.Append(ScheduleBot.delimiter);
                 lectureWithoutSubjectBuilder.Append('Л');
             }
             lectureWithoutSubjectBuilder.Append(errorType);

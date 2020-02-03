@@ -12,35 +12,6 @@ using System.Net.Http;
 
 namespace Schedulebot
 {
-    public static class Const
-    {
-        public const string version = "v1.0";
-    }
-    public class ScheduleBot
-    {
-        public static readonly HttpClient client = new HttpClient();
-        private const string path = @"C:\Custom\Projects\Shared\sbtest\";
-        private int departmentsAmount = 1;
-        public IDepartment[] departments;
-
-        public ScheduleBot()
-        {
-            departments = new[] { new ItmmDepartment(path) };
-        }
-
-        public async Task CheckRelevanceAsync()
-        {
-            await Task.Run(async () =>
-            {
-                while (true)
-                {
-                    for (int i = 0; i < departmentsAmount; ++i)
-                        departments[i].CheckRelevanceAsync();
-                    await Task.Delay(600000);
-                }
-            });
-        }
-    }
     class Program
     {
         static void Main(string[] args)
@@ -48,16 +19,17 @@ namespace Schedulebot
             SpreadsheetInfo.SetLicense("FREE-LIMITED-KEY");
             ScheduleBot scheduleBot = new ScheduleBot();
 
+            Test.Test.Schedule(0, new int[4,101,101], false);
 
-            Console.WriteLine("1");
-            var test0 = scheduleBot.departments[0].ExecuteMethodsAsync();
-            Console.WriteLine("2");
-            // var test = scheduleBot.departments[0].GetMessagesAsync();
-            Console.WriteLine("3");
-            var test1 = scheduleBot.departments[0].UploadPhotosAsync();
-            Console.WriteLine("4");
-            var checkRelevanceTask = scheduleBot.CheckRelevanceAsync(); // active
-            Console.WriteLine("5");
+            // Console.WriteLine("1");
+            // var test0 = scheduleBot.departments[0].ExecuteMethodsAsync();
+            // Console.WriteLine("2");
+            // // var test = scheduleBot.departments[0].GetMessagesAsync();
+            // Console.WriteLine("3");
+            // var test1 = scheduleBot.departments[0].UploadPhotosAsync();
+            // Console.WriteLine("4");
+            // var checkRelevanceTask = scheduleBot.CheckRelevanceAsync(); // active
+            // Console.WriteLine("5");
 
             while (true)
             {
@@ -71,7 +43,6 @@ namespace Schedulebot
         }
     }
 }
-// todo: создать карту людей и расписания
 
 /*
 check : https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md
