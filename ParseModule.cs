@@ -446,36 +446,50 @@ namespace Schedulebot.Parse
                         {
                             if (worksheet.Cells[current.y, current.x].Value != null)
                             {
-                                if (worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ФИЗИЧЕСКАЯ КУЛЬТУРА"))
+                                if (!worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА"))
                                 {
                                     CellRange mergedRange = worksheet.Cells[current.y + j, current.x + k].MergedRange;
                                     if (mergedRange != null)
+                                    {
+                                        var fillPattern = worksheet.Cells.GetSubrangeAbsolute(
+                                            mergedRange.FirstRowIndex,
+                                            mergedRange.FirstColumnIndex,
+                                            mergedRange.LastRowIndex,
+                                            mergedRange.LastColumnIndex).Style.FillPattern;
                                         worksheet.Cells.GetSubrangeAbsolute(
                                             mergedRange.FirstRowIndex,
                                             mergedRange.FirstColumnIndex,
                                             mergedRange.LastRowIndex,
                                             mergedRange.LastColumnIndex).Merged = false;
-                                }
-                                else if (!worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА"))
-                                {
-                                    CellRange mergedRange = worksheet.Cells[current.y + j, current.x + k].MergedRange;
-                                    if (mergedRange != null)
                                         worksheet.Cells.GetSubrangeAbsolute(
                                             mergedRange.FirstRowIndex,
                                             mergedRange.FirstColumnIndex,
                                             mergedRange.LastRowIndex,
-                                            mergedRange.LastColumnIndex).Merged = false;
+                                            mergedRange.LastColumnIndex).Style.FillPattern = fillPattern;
+                                    }
                                 }
                             }
                             else
                             {
                                 CellRange mergedRange = worksheet.Cells[current.y + j, current.x + k].MergedRange;
                                 if (mergedRange != null)
+                                {
+                                    var fillPattern = worksheet.Cells.GetSubrangeAbsolute(
+                                        mergedRange.FirstRowIndex,
+                                        mergedRange.FirstColumnIndex,
+                                        mergedRange.LastRowIndex,
+                                        mergedRange.LastColumnIndex).Style.FillPattern;
                                     worksheet.Cells.GetSubrangeAbsolute(
                                         mergedRange.FirstRowIndex,
                                         mergedRange.FirstColumnIndex,
                                         mergedRange.LastRowIndex,
                                         mergedRange.LastColumnIndex).Merged = false;
+                                    worksheet.Cells.GetSubrangeAbsolute(
+                                        mergedRange.FirstRowIndex,
+                                        mergedRange.FirstColumnIndex,
+                                        mergedRange.LastRowIndex,
+                                        mergedRange.LastColumnIndex).Style.FillPattern = fillPattern;
+                                }
                             }
                         }
                     }
@@ -1783,7 +1797,7 @@ namespace Schedulebot.Parse
             temp[0] = temp[0].TrimEnd();
             if (temp[0] != "")
             {
-                if (worksheet.Cells[current.y + y, current.x].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None)
+                if (worksheet.Cells[current.y + y, current.x + 1].Style.Borders[IndividualBorder.Right].LineStyle == LineStyle.None)
                     temp[0] += lectureConst;
             }
             x = current.x - 1; // + 1 переносим внутрь цикла
