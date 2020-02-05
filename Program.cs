@@ -1,14 +1,5 @@
 ﻿using System;
-using HtmlAgilityPack;
-using System.Collections.Generic;
-using System.Net;
-using System.IO;
-// using VkNet.Model.RequestParams;
-using Newtonsoft.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using GemBox.Spreadsheet;
-using System.Net.Http;
 
 namespace Schedulebot
 {
@@ -19,27 +10,18 @@ namespace Schedulebot
             SpreadsheetInfo.SetLicense("FREE-LIMITED-KEY");
             ScheduleBot scheduleBot = new ScheduleBot();
 
-            Test.Test.Schedule(0, new int[4,101,101], false);
+            // Test.Test.Schedule(0, new int[4,101,101], false); // тест алгоритма parse
 
-            // Console.WriteLine("1");
-            // var test0 = scheduleBot.departments[0].ExecuteMethodsAsync();
-            // Console.WriteLine("2");
-            // // var test = scheduleBot.departments[0].GetMessagesAsync();
-            // Console.WriteLine("3");
-            // var test1 = scheduleBot.departments[0].UploadPhotosAsync();
-            // Console.WriteLine("4");
-            // var checkRelevanceTask = scheduleBot.CheckRelevanceAsync(); // active
-            // Console.WriteLine("5");
+            var executeMethodsTask = scheduleBot.departments[0].ExecuteMethodsAsync();
+            var getMessagesTask = scheduleBot.departments[0].GetMessagesAsync();
+            var uploadPhotosTask = scheduleBot.departments[0].UploadPhotosAsync();
+            var checkRelevanceTask = scheduleBot.CheckRelevanceAsync(); // active
 
             while (true)
             {
                 Console.Read();
                 Console.WriteLine("000000000000000000000000000");
             }
-            
-            
-            
-            // Parsing.Mapper(@"C:\Custom\Projects\Shared\schedulebot\downloads\1_course_schedule.xls");
         }
     }
 }

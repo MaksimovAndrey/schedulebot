@@ -229,6 +229,27 @@ namespace Schedulebot.Parse
                 }
             }
             int groupsAmount = schedule.GetLength(0);
+
+            //! test
+            if (pathToFile.Contains("0_course.xls"))
+            {
+                StreamWriter file = new StreamWriter(@"D:\test2.txt", false);
+                for (int i = 0; i < schedule.GetLength(0); i++)
+                {
+                    for (int j = 0; j < schedule.GetLength(1); j++)
+                    {
+                        var str0 = schedule[14, 95];
+                        var str = schedule[14, 96];
+                        var str1 = schedule[14, 0];
+                        var str2 = schedule[14, 1];
+                        file.WriteLine(schedule[i, j].Trim().Length + "-" + schedule[i, j]);
+                    }
+                }
+                file.Close();
+            }
+            //! test
+
+
             // Проверяем группы на наличие одинаковых
             List<string> groupsNames = new List<string>();
             List<int> uniqueGroups = new List<int>();
@@ -997,15 +1018,24 @@ namespace Schedulebot.Parse
                             }
                         }
                     }
-                    else // в случае ошибки
+                    else // в случае неограниченности сверху или снизу
                     {
+                        // todo: изменить это временное решение
+
                         for (int i = 0; i < 2; ++i)
                         {
                             for (int j = 0; j < 2; ++j)
-                                if (schedule[current.schedule.x + i, current.schedule.y + j] == null)
-                                    schedule[current.schedule.x + i, current.schedule.y + j] = "ERROR";
+                                if (worksheet.Cells[current.y + i, current.x + j].Value != null)
+                                    if (worksheet.Cells[current.y + i, current.x + j].ValueType == CellValueType.String)
+                                        worksheet.Cells[current.y + i, current.x + j].Value = worksheet.Cells[current.y + i, current.x + j].StringValue + '⚠';
                         }
-                        // todo: в случае неограниченности сверху или снизу
+
+                        worksheet.Cells[current.y, current.x].Style.Borders[IndividualBorder.Top].LineStyle = LineStyle.Thin;
+                        worksheet.Cells[current.y, current.x + 1].Style.Borders[IndividualBorder.Top].LineStyle = LineStyle.Thin;
+                        worksheet.Cells[current.y + 1, current.x].Style.Borders[IndividualBorder.Bottom].LineStyle = LineStyle.Thin;
+                        worksheet.Cells[current.y + 1, current.x + 1].Style.Borders[IndividualBorder.Bottom].LineStyle = LineStyle.Thin;
+                        current.schedule.y -= 2;
+                        current.y -= 2;
                     }
                     current.schedule.y += 2;
                 }

@@ -1770,7 +1770,7 @@ namespace Schedulebot
 
                         List<(string, int)> newGroupSubgroupList = new List<(string, int)>();
                         for (int currentPhoto = 0; currentPhoto < photosUploadProperties.Count; currentPhoto++)
-                            newGroupSubgroupList.Add((photosUploadProperties[currentPhoto].Group, photosUploadProperties[currentPhoto].Subgroup));
+                            newGroupSubgroupList.Add((photosUploadProperties[currentPhoto].Group, photosUploadProperties[currentPhoto].Subgroup + 1));
 
                         EnqueueMessageAsync(
                             message: "Для Вас изменений нет",
@@ -1876,7 +1876,7 @@ namespace Schedulebot
                                                     // на неделю
                                                     courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup].PhotoId
                                                         = (long)photos.ElementAt(currentPhoto).Id;
-                                                    List<long> ids = userRepository.GetIds((int)CourseIndexAndGroupIndex.Item1, mapper);
+                                                    List<long> ids = userRepository.GetIds(photosUploadProperties[currentPhoto].Group, photosUploadProperties[currentPhoto].Subgroup + 1);
                                                     EnqueueMessageAsync(
                                                         userIds: ids,
                                                         message: photosUploadProperties[currentPhoto].Message,

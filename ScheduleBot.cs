@@ -8,7 +8,8 @@ namespace Schedulebot
         public const string version = "v2.2";
         public const string delimiter = " · ";
         public static readonly HttpClient client = new HttpClient();
-        private const string path = @"C:\Custom\Projects\Shared\sbtest\";
+        // private const string path = @"C:\Custom\Projects\Shared\sbtest\";
+        private const string path = @"/media/projects/sbtest/";
         private int departmentsAmount = 1;
         public IDepartment[] departments;
 
