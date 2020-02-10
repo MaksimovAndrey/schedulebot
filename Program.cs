@@ -1,27 +1,27 @@
 ﻿using System;
 using GemBox.Spreadsheet;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Schedulebot
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             SpreadsheetInfo.SetLicense("FREE-LIMITED-KEY");
             ScheduleBot scheduleBot = new ScheduleBot();
 
             // Test.Test.Schedule(0, new int[4,101,101], false); // тест алгоритма parse
 
-            var executeMethodsTask = scheduleBot.departments[0].ExecuteMethodsAsync();
-            var getMessagesTask = scheduleBot.departments[0].GetMessagesAsync();
-            var uploadPhotosTask = scheduleBot.departments[0].UploadPhotosAsync();
-            var checkRelevanceTask = scheduleBot.CheckRelevanceAsync(); // active
+            List<Task> tasks = new List<Task>();
+            tasks.Add(scheduleBot.departments[0].ExecuteMethodsAsync());
+            tasks.Add(scheduleBot.departments[0].GetMessagesAsync());
+            tasks.Add(scheduleBot.departments[0].UploadPhotosAsync());
+            tasks.Add(scheduleBot.CheckRelevanceAsync());
+            tasks.Add(scheduleBot.departments[0].SaveUsersAsync());
 
-            while (true)
-            {
-                Console.Read();
-                Console.WriteLine("000000000000000000000000000");
-            }
+            await Task.WhenAny(tasks);
         }
     }
 }

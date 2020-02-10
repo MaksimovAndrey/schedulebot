@@ -33,7 +33,8 @@ namespace Schedulebot
         private int startWeek;
         public ItmmDepartment(string _path)
         {
-            path = _path + @"itmm\";
+            path = _path + @"itmm/";
+            vkStuff.api.RequestsPerSecond = 20;
             vkStuff.MenuKeyboards = new MessageKeyboard[6]
             {
                 // main
@@ -335,7 +336,7 @@ namespace Schedulebot
             LoadDoubleOptionallySubject();
             LoadFullName();
             for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
-                courses[currentCourse] = new Course(path + @"downloads\" + currentCourse + "_course.xls", dictionaries);
+                courses[currentCourse] = new Course(path + @"downloads/" + currentCourse + "_course.xls", dictionaries);
             LoadDatesAndUrls();
             mapper.CreateMaps(courses);
             ConstructKeyboards();
@@ -348,6 +349,18 @@ namespace Schedulebot
             public const int linesInKeyboard = 4; // 1..9 
         }
 
+        public async Task SaveUsersAsync()
+        {
+            await Task.Run(async () => 
+            {
+                while (true)
+                {
+                    await Task.Delay(3600000);
+                    SaveUsers();
+                }
+            });
+        }
+        
         private void ConstructKeyboards()
         {
             for (int currentCourse = 0; currentCourse < CoursesAmount; ++currentCourse)
@@ -533,7 +546,7 @@ namespace Schedulebot
         {
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка ManualAcronymToPhrase");
             using StreamReader file = new StreamReader(
-                path + @"/manualProcessing/acronymToPhrase.txt",
+                path + @"manualProcessing/acronymToPhrase.txt",
                 System.Text.Encoding.Default);
             while (!file.EndOfStream)
                 dictionaries.acronymToPhrase.Add(file.ReadLine(), file.ReadLine());
@@ -544,7 +557,7 @@ namespace Schedulebot
         {
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка DoubleOptionallySubject");
             using StreamReader file = new StreamReader(
-                path + @"/manualProcessing/doubleOptionallySubject.txt",
+                path + @"manualProcessing/doubleOptionallySubject.txt",
                 System.Text.Encoding.Default);
             while (!file.EndOfStream)
                 dictionaries.doubleOptionallySubject.Add(file.ReadLine(), file.ReadLine());
@@ -554,7 +567,7 @@ namespace Schedulebot
         private void LoadFullName()
         {
             using StreamReader file = new StreamReader(
-                path + @"/manualProcessing/fullName.txt",
+                path + @"manualProcessing/fullName.txt",
                 System.Text.Encoding.Default);
             while (!file.EndOfStream)
                 dictionaries.fullName.Add(file.ReadLine());
@@ -637,10 +650,12 @@ namespace Schedulebot
             // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка подписанных");
         }
 
-        private async void SaveUsers()
+        private void SaveUsers()
         {
             using (StreamWriter file = new StreamWriter(path + "users.txt"))
-            await file.WriteLineAsync(userRepository.ToString());
+            {
+                file.WriteLine(userRepository.ToString());
+            }
         }
         
         public async Task GetMessagesAsync()
@@ -658,9 +673,9 @@ namespace Schedulebot
                 };
                 while (true)
                 {
-                    Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " Получаю сообщения");
                     try
                     {
+                        Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " Получаю сообщения");
                         historyResponse = vkStuff.api.Groups.GetBotsLongPollHistory(botsLongPollHistoryParams);
                         if (historyResponse == null)
                             continue;
@@ -706,7 +721,7 @@ namespace Schedulebot
             {
                 if (message.Payload == null)
                 {
-                    // todo: UPdate переписать
+                    // todo: Update переписать
                     if (message.PeerId == vkStuff.AdminId)
                     {
                         if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
@@ -1333,20 +1348,28 @@ namespace Schedulebot
                             case "Отписаться":
                             {
                                 User user = userRepository.GetUser(message.PeerId);
+                                if (user == null)
+                                {
+                                    EnqueueMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Вы не можете отписаться, так как Вы не подписаны");
+                                }
+                                else
+                                {
+                                    StringBuilder stringBuilder = new StringBuilder();
+                                    stringBuilder.Append("Отменена подписка на ");
+                                    stringBuilder.Append(user.Group);
+                                    stringBuilder.Append(" (");
+                                    stringBuilder.Append(user.Subgroup);
+                                    stringBuilder.Append(')');
 
-                                StringBuilder stringBuilder = new StringBuilder();
-                                stringBuilder.Append("Отменена подписка на ");
-                                stringBuilder.Append(user.Group);
-                                stringBuilder.Append(" (");
-                                stringBuilder.Append(user.Subgroup);
-                                stringBuilder.Append(')');
+                                    userRepository.DeleteUser((long)message.PeerId);
 
-                                userRepository.DeleteUser((long)message.PeerId);
-
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    message: stringBuilder.ToString(),
-                                    keyboardId: 2);
+                                    EnqueueMessageAsync(
+                                        userId: message.PeerId,
+                                        message: stringBuilder.ToString(),
+                                        keyboardId: 2);
+                                }
                                 return;
                             }
                             case "Подписаться":
@@ -1366,26 +1389,35 @@ namespace Schedulebot
                             case "Изменить подгруппу":
                             {
                                 User user = userRepository.ChangeSubgroup(message.PeerId);
+                                if (user == null)
+                                {
+                                    EnqueueMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
+                                        keyboardId: 2);
+                                }
+                                else
+                                {
+                                    StringBuilder stringBuilder = new StringBuilder();
+                                    stringBuilder.Append("Вы подписаны: ");
+                                    stringBuilder.Append(user.Group);
+                                    stringBuilder.Append(" (");
+                                    stringBuilder.Append(user.Subgroup);
+                                    stringBuilder.Append(')');
 
-                                StringBuilder stringBuilder = new StringBuilder();
-                                stringBuilder.Append("Вы подписаны: ");
-                                stringBuilder.Append(user.Group);
-                                stringBuilder.Append(" (");
-                                stringBuilder.Append(user.Subgroup);
-                                stringBuilder.Append(')');
+                                    MessageKeyboard keyboardCustom;
+                                    keyboardCustom = vkStuff.MenuKeyboards[3];
+                                    keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
+                                
+                                    stringBuilder.Clear();
+                                    stringBuilder.Append("Ваша подгруппа: ");
+                                    stringBuilder.Append(user.Subgroup);
 
-                                MessageKeyboard keyboardCustom;
-                                keyboardCustom = vkStuff.MenuKeyboards[3];
-                                keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
-                            
-                                stringBuilder.Clear();
-                                stringBuilder.Append("Ваша подгруппа: ");
-                                stringBuilder.Append(user.Subgroup);
-
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    message: stringBuilder.ToString(),
-                                    customKeyboard: keyboardCustom);
+                                    EnqueueMessageAsync(
+                                        userId: message.PeerId,
+                                        message: stringBuilder.ToString(),
+                                        customKeyboard: keyboardCustom);
+                                }
                                 return;
                             }
                             case "Назад":
@@ -1594,7 +1626,6 @@ namespace Schedulebot
                     }
                 }
             });
-            return;
         }
 
         public async void EnqueueMessageAsync(
@@ -1780,6 +1811,7 @@ namespace Schedulebot
                         {
                             if (vkStuff.photosQueue.IsEmpty)
                             {
+                                await Task.Delay(5000);
                                 for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
                                     courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
                                 break;

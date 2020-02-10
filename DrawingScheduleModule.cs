@@ -333,7 +333,7 @@ namespace Schedulebot.Drawing
                         Image.width - Border.size * 2,
                         Line.size);
                 }
-                else if (lectures[1].IsEmpty())
+                else if (lectures[0].IsEmpty())
                 {
                     // квадрат между индикаторами
                     graphics.FillRectangle(
@@ -393,7 +393,7 @@ namespace Schedulebot.Drawing
                         stringFormat);
                     // пара нижняя
                     graphics.DrawString(
-                        LectureShortening(lectures[0], lectureProperties),
+                        LectureShortening(lectures[1], lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
@@ -417,7 +417,7 @@ namespace Schedulebot.Drawing
                         Image.width - Border.size * 2,
                         Line.size);
                 }
-                else if (lectures[0].IsEmpty())
+                else if (lectures[1].IsEmpty())
                 {
                     // верхний индикатор
                     graphics.FillRectangle(
@@ -464,7 +464,7 @@ namespace Schedulebot.Drawing
                         stringHeight * 2 + Line2.size);
                     // пара верхняя
                     graphics.DrawString(
-                        LectureShortening(lectures[1], lectureProperties),
+                        LectureShortening(lectures[0], lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
@@ -556,7 +556,7 @@ namespace Schedulebot.Drawing
                         stringHeight * 2 + Line2.size);
                     // пара верхняя
                     graphics.DrawString(
-                        LectureShortening(lectures[1], lectureProperties),
+                        LectureShortening(lectures[0], lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
@@ -567,7 +567,7 @@ namespace Schedulebot.Drawing
                         stringFormat);
                     // пара нижняя
                     graphics.DrawString(
-                        LectureShortening(lectures[0], lectureProperties),
+                        LectureShortening(lectures[1], lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
@@ -1083,7 +1083,7 @@ namespace Schedulebot.Drawing
                 SizeF lectureSize = graphics.MeasureString(lectureStr, lectureProperties.textProperties.font);
                 if (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                 {
-                    string subject = lecture.subject; // было temp
+                    string subject = lecture.subject;
                     string lectureWithoutSubject = ScheduleBot.delimiter + lecture.ConstructLectureWithoutSubject();
                     while (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                     {

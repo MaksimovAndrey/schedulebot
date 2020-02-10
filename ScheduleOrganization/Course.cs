@@ -26,7 +26,9 @@ namespace Schedulebot
         {
             pathToFile = _pathToFile;
             groups = Parsing.Mapper(pathToFile, dictionaries);
-            if (groups.Count == 0)
+            if (groups == null)
+                isBroken = true;
+            else if (groups.Count == 0)
                 isBroken = true;
             else
                 isBroken = false;

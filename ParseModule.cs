@@ -229,27 +229,6 @@ namespace Schedulebot.Parse
                 }
             }
             int groupsAmount = schedule.GetLength(0);
-
-            //! test
-            if (pathToFile.Contains("0_course.xls"))
-            {
-                StreamWriter file = new StreamWriter(@"D:\test2.txt", false);
-                for (int i = 0; i < schedule.GetLength(0); i++)
-                {
-                    for (int j = 0; j < schedule.GetLength(1); j++)
-                    {
-                        var str0 = schedule[14, 95];
-                        var str = schedule[14, 96];
-                        var str1 = schedule[14, 0];
-                        var str2 = schedule[14, 1];
-                        file.WriteLine(schedule[i, j].Trim().Length + "-" + schedule[i, j]);
-                    }
-                }
-                file.Close();
-            }
-            //! test
-
-
             // Проверяем группы на наличие одинаковых
             List<string> groupsNames = new List<string>();
             List<int> uniqueGroups = new List<int>();
@@ -427,15 +406,23 @@ namespace Schedulebot.Parse
             int indent = 2; // отступ от времени (начало ячеек)
             CurrentInfo current = new CurrentInfo(indent, 0);
             // Определяем где группа и начало пар
-            int groupNameY = 10; // линия, в которой содержатся имена групп
-            for (int i = 0; i < 10; ++i)
+            int groupNameY = 4; // линия, в которой содержатся имена групп
+            for (int i = 0; i < 16; ++i)
             {
-                if (worksheet.Cells[groupNameY, current.x].Value != null && worksheet.Cells[groupNameY, current.x].ValueType == CellValueType.String)
+                if (worksheet.Cells[groupNameY, current.x].Value != null
+                    && (worksheet.Cells[groupNameY, current.x].ValueType == CellValueType.String
+                        || worksheet.Cells[groupNameY, current.x].ValueType == CellValueType.Int))
+                {
                     if (worksheet.Cells[groupNameY, current.x].StringValue.Trim() != "")
+                    {
                         if (worksheet.Cells[groupNameY, current.x].StringValue.Trim().IndexOf("38") == 0)
                             break;
+                    }
+                }
                 ++groupNameY;
             }
+            if (groupNameY == 20)
+                throw new ArgumentOutOfRangeException("groupNameY");
             // Определяем где начало расписания
             int scheduleStartY = 1;
             while (true)
@@ -531,15 +518,28 @@ namespace Schedulebot.Parse
                 // Проход по ячейкам
                 for (current.y = scheduleStartY; current.y < scheduleStartY + 96; current.y += 2)
                 {
+                    // Уже заполнена
+                    if (schedule[current.schedule.x, current.schedule.y] != null
+                        && schedule[current.schedule.x, current.schedule.y + 1] != null
+                        && schedule[current.schedule.x + 1, current.schedule.y] != null
+                        && schedule[current.schedule.x + 1, current.schedule.y + 1] != null)
+                    {
+                        current.schedule.y += 2;
+                        continue; // переход к следующей группе ячеек
+                    }
                     // Пустая ячейка
-                    if (worksheet.Cells[current.y, current.x].Value == null
+                    else if (worksheet.Cells[current.y, current.x].Value == null
                         && worksheet.Cells[current.y, current.x + 1].Value == null
                         && worksheet.Cells[current.y + 1, current.x].Value == null
                         && worksheet.Cells[current.y + 1, current.x + 1].Value == null
                         && worksheet.Cells[current.y, current.x].Style.FillPattern.PatternStyle == FillPatternStyle.None
                         && worksheet.Cells[current.y, current.x + 1].Style.FillPattern.PatternStyle == FillPatternStyle.None
                         && worksheet.Cells[current.y + 1, current.x].Style.FillPattern.PatternStyle == FillPatternStyle.None
-                        && worksheet.Cells[current.y + 1, current.x + 1].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+                        && worksheet.Cells[current.y + 1, current.x + 1].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                        && schedule[current.schedule.x, current.schedule.y] == null
+                        && schedule[current.schedule.x, current.schedule.y + 1] == null
+                        && schedule[current.schedule.x + 1, current.schedule.y] == null
+                        && schedule[current.schedule.x + 1, current.schedule.y + 1] == null)
                     {
                         for (int i = 0; i < 2; i++)
                         {
@@ -548,15 +548,6 @@ namespace Schedulebot.Parse
                                 schedule[current.schedule.x + i, current.schedule.y + j] = "";
                             }
                         }
-                        current.schedule.y += 2;
-                        continue; // переход к следующей группе ячеек
-                    }
-                    // Уже заполнена
-                    else if (schedule[current.schedule.x, current.schedule.y] != null
-                        && schedule[current.schedule.x, current.schedule.y + 1] != null
-                        && schedule[current.schedule.x + 1, current.schedule.y] != null
-                        && schedule[current.schedule.x + 1, current.schedule.y + 1] != null)
-                    {
                         current.schedule.y += 2;
                         continue; // переход к следующей группе ячеек
                     }
@@ -1055,15 +1046,23 @@ namespace Schedulebot.Parse
                 int indent = 2; // отступ от времени (начало ячеек)
                 CurrentInfo current = new CurrentInfo(indent, 0);
                 // Определяем где группа и начало пар
-                int groupNameY = 10; // линия, в которой содержатся имена групп
-                for (int i = 0; i < 10; ++i)
+                int groupNameY = 4; // линия, в которой содержатся имена групп
+                for (int i = 0; i < 16; ++i)
                 {
-                    if (worksheet.Cells[groupNameY, current.x].Value != null && worksheet.Cells[groupNameY, current.x].ValueType == CellValueType.String)
+                    if (worksheet.Cells[groupNameY, current.x].Value != null
+                        && (worksheet.Cells[groupNameY, current.x].ValueType == CellValueType.String
+                            || worksheet.Cells[groupNameY, current.x].ValueType == CellValueType.Int))
+                    {
                         if (worksheet.Cells[groupNameY, current.x].StringValue.Trim() != "")
+                        {
                             if (worksheet.Cells[groupNameY, current.x].StringValue.Trim().IndexOf("38") == 0)
                                 break;
+                        }
+                    }
                     ++groupNameY;
                 }
+                if (groupNameY == 20)
+                    throw new ArgumentOutOfRangeException("groupNameY");
                 // Определяем где начало расписания
                 int scheduleStartY = 1;
                 while (true)
@@ -1095,36 +1094,50 @@ namespace Schedulebot.Parse
                             {
                                 if (worksheet.Cells[current.y, current.x].Value != null)
                                 {
-                                    if (worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ФИЗИЧЕСКАЯ КУЛЬТУРА"))
+                                    if (!worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА"))
                                     {
                                         CellRange mergedRange = worksheet.Cells[current.y + j, current.x + k].MergedRange;
                                         if (mergedRange != null)
+                                        {
+                                            var fillPattern = worksheet.Cells.GetSubrangeAbsolute(
+                                                mergedRange.FirstRowIndex,
+                                                mergedRange.FirstColumnIndex,
+                                                mergedRange.LastRowIndex,
+                                                mergedRange.LastColumnIndex).Style.FillPattern;
                                             worksheet.Cells.GetSubrangeAbsolute(
                                                 mergedRange.FirstRowIndex,
                                                 mergedRange.FirstColumnIndex,
                                                 mergedRange.LastRowIndex,
                                                 mergedRange.LastColumnIndex).Merged = false;
-                                    }
-                                    else if (!worksheet.Cells[current.y, current.x].Value.ToString().Trim().ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА"))
-                                    {
-                                        CellRange mergedRange = worksheet.Cells[current.y + j, current.x + k].MergedRange;
-                                        if (mergedRange != null)
                                             worksheet.Cells.GetSubrangeAbsolute(
                                                 mergedRange.FirstRowIndex,
                                                 mergedRange.FirstColumnIndex,
                                                 mergedRange.LastRowIndex,
-                                                mergedRange.LastColumnIndex).Merged = false;
+                                                mergedRange.LastColumnIndex).Style.FillPattern = fillPattern;
+                                        }
                                     }
                                 }
                                 else
                                 {
                                     CellRange mergedRange = worksheet.Cells[current.y + j, current.x + k].MergedRange;
                                     if (mergedRange != null)
+                                    {
+                                        var fillPattern = worksheet.Cells.GetSubrangeAbsolute(
+                                            mergedRange.FirstRowIndex,
+                                            mergedRange.FirstColumnIndex,
+                                            mergedRange.LastRowIndex,
+                                            mergedRange.LastColumnIndex).Style.FillPattern;
                                         worksheet.Cells.GetSubrangeAbsolute(
                                             mergedRange.FirstRowIndex,
                                             mergedRange.FirstColumnIndex,
                                             mergedRange.LastRowIndex,
                                             mergedRange.LastColumnIndex).Merged = false;
+                                        worksheet.Cells.GetSubrangeAbsolute(
+                                            mergedRange.FirstRowIndex,
+                                            mergedRange.FirstColumnIndex,
+                                            mergedRange.LastRowIndex,
+                                            mergedRange.LastColumnIndex).Style.FillPattern = fillPattern;
+                                    }
                                 }
                             }
                         }
@@ -1145,15 +1158,28 @@ namespace Schedulebot.Parse
                     // Проход по ячейкам
                     for (current.y = scheduleStartY; current.y < scheduleStartY + 96; current.y += 2)
                     {
+                        // Уже заполнена
+                        if (schedule[current.schedule.x, current.schedule.y] != null
+                            && schedule[current.schedule.x, current.schedule.y + 1] != null
+                            && schedule[current.schedule.x + 1, current.schedule.y] != null
+                            && schedule[current.schedule.x + 1, current.schedule.y + 1] != null)
+                        {
+                            current.schedule.y += 2;
+                            continue; // переход к следующей группе ячеек
+                        }
                         // Пустая ячейка
-                        if (worksheet.Cells[current.y, current.x].Value == null
+                        else if (worksheet.Cells[current.y, current.x].Value == null
                             && worksheet.Cells[current.y, current.x + 1].Value == null
                             && worksheet.Cells[current.y + 1, current.x].Value == null
                             && worksheet.Cells[current.y + 1, current.x + 1].Value == null
                             && worksheet.Cells[current.y, current.x].Style.FillPattern.PatternStyle == FillPatternStyle.None
                             && worksheet.Cells[current.y, current.x + 1].Style.FillPattern.PatternStyle == FillPatternStyle.None
                             && worksheet.Cells[current.y + 1, current.x].Style.FillPattern.PatternStyle == FillPatternStyle.None
-                            && worksheet.Cells[current.y + 1, current.x + 1].Style.FillPattern.PatternStyle == FillPatternStyle.None)
+                            && worksheet.Cells[current.y + 1, current.x + 1].Style.FillPattern.PatternStyle == FillPatternStyle.None
+                            && schedule[current.schedule.x, current.schedule.y] == null
+                            && schedule[current.schedule.x, current.schedule.y + 1] == null
+                            && schedule[current.schedule.x + 1, current.schedule.y] == null
+                            && schedule[current.schedule.x + 1, current.schedule.y + 1] == null)
                         {
                             for (int i = 0; i < 2; i++)
                             {
@@ -1162,15 +1188,6 @@ namespace Schedulebot.Parse
                                     schedule[current.schedule.x + i, current.schedule.y + j] = "";
                                 }
                             }
-                            current.schedule.y += 2;
-                            continue; // переход к следующей группе ячеек
-                        }
-                        // Уже заполнена
-                        else if (schedule[current.schedule.x, current.schedule.y] != null
-                            && schedule[current.schedule.x, current.schedule.y + 1] != null
-                            && schedule[current.schedule.x + 1, current.schedule.y] != null
-                            && schedule[current.schedule.x + 1, current.schedule.y + 1] != null)
-                        {
                             current.schedule.y += 2;
                             continue; // переход к следующей группе ячеек
                         }

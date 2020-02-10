@@ -14,6 +14,8 @@
 
 /__trash__
 .vscode
+.vs
+*.sln
 __*
 
 # End of https://www.gitignore.io/api/dotnetcore

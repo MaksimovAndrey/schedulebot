@@ -16,5 +16,7 @@ namespace Schedulebot
         Task UploadPhotosAsync();
 
         Task ExecuteMethodsAsync();
+
+        Task SaveUsersAsync();
     }
 }
