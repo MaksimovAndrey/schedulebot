@@ -171,10 +171,20 @@ namespace Schedulebot.Drawing
                                           new string[] { "16:20", "17:50" },
                                           new string[] { "18:00", "19:30" },
                                           new string[] { "19:40", "21:10" } };
-                    for (int i = 0; i < 8; ++i)
+                    int start = -1;
+                    int end = -1;
+                    for (int i = 0; i < 8; i++)
                     {
                         if (!(scheduleDays[0].lectures[i].IsEmpty() && scheduleDays[1].lectures[i].IsEmpty()))
-                            DrawLecture(new ScheduleLecture[] { scheduleDays[0].lectures[i], scheduleDays[1].lectures[i] }, ref pos, ref image, times[i]);
+                        {
+                            if (start == -1)
+                                start = i;
+                            end = i;
+                        }
+                    }
+                    for (int i = start; i <= end; ++i)
+                    {
+                        DrawLecture(new ScheduleLecture[] { scheduleDays[0].lectures[i], scheduleDays[1].lectures[i] }, ref pos, ref image, times[i]);
                     }
                 }
             }
