@@ -149,6 +149,11 @@ namespace Schedulebot
             users.Add(user);
         }
 
+        public void AddUser(long id, string group, int subgroup)
+        {
+            users.Add(new User(id, group, subgroup));
+        }
+
         public void DeleteUser(long id)
         {
             for (int i = 0; i < users.Count; i++)
@@ -167,7 +172,7 @@ namespace Schedulebot
             {
                 if (users[i].Id == id)
                 {
-                     users[i].Subgroup = newSubgroup;
+                    users[i].Subgroup = newSubgroup;
                     if (newGroup != null)
                         users[i].Group = newGroup;
                     return;
