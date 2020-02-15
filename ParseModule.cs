@@ -16,6 +16,8 @@ namespace Schedulebot.Parse
 
         public static ScheduleLecture ParseLecture(string parse, Dictionaries dictionaries)
         {
+            if (parse == null)
+                parse = "";
             ScheduleLecture lecture = new ScheduleLecture();
             for (int i = 0; i < Parsing.errors.GetLength(0); ++i)
             {
