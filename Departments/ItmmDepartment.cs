@@ -721,7 +721,6 @@ namespace Schedulebot
             {
                 if (message.Payload == null)
                 {
-                    // todo: Update переписать
                     if (message.PeerId == vkStuff.AdminId)
                     {
                         if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
@@ -776,115 +775,7 @@ namespace Schedulebot
                         }
                         else if (message.Text.IndexOf("Обновить") == 0 || message.Text.IndexOf("Update") == 0)
                         {
-                            /*
-                            string temp = message.Text.Substring(message.Text.IndexOf(' ') + 1);
-                            bool sendUpdates = true;
-                            string course = temp.Substring(0, temp.IndexOf(' '));
-                            temp = temp.Substring(temp.IndexOf(' ') + 1);
-                            if (temp == "нет" || temp == "false")
-                                sendUpdates = false;
-                            if (course == "все" || course == "all")
-                            {
-                                int[,,] sendScheduleUpdateGroups = new int[4, 2, 101];
-                                lock (Glob.lockerIsUpdating)
-                                {
-                                    Glob.isUpdating = true;
-                                }
-                                for (int i = 0; i < 4; ++i)
-                                {
-                                    int[,,] tempM = new int[4, 2, 101];
-                                    tempM = Schedule.UpdateCourse(i, sendScheduleUpdateGroups, sendUpdates);
-                                    if (tempM == null)
-                                    {
-                                        sendScheduleUpdateGroups[i, 0, 100] = 0;
-                                    }
-                                    else
-                                    {
-                                        sendScheduleUpdateGroups = tempM;
-                                    }
-                                }
-                                if (sendScheduleUpdateGroups[0, 0, 100] == 0 && sendScheduleUpdateGroups[1, 0, 100] == 0
-                                    && sendScheduleUpdateGroups[2, 0, 100] == 0 && sendScheduleUpdateGroups[3, 0, 100] == 0)
-                                {
-                                    lock (Glob.lockerIsUpdating)
-                                    {
-                                        Glob.isUpdating = false;
-                                    }
-                                }
-                                else
-                                {
-                                    lock (Glob.locker)
-                                        Glob.tomorrow_uploaded = new ulong[4, 40, 6, 2];
-                                    Utils.ScheduleMapping();
-                                    Utils.TomorrowStudying();
-                                    Utils.СonstructingKeyboards();
-                                    IO.SaveUploadedSchedule();
-                                    if (sendUpdates)
-                                    {
-                                        for (int l = 0; l < 4; ++l)
-                                        {
-                                            for (int j = 0; j < sendScheduleUpdateGroups[l, 0, 100]; ++j)
-                                            {
-                                                Distribution.ScheduleUpdate(sendScheduleUpdateGroups[l, 0, j], sendScheduleUpdateGroups[l, 1, j]);
-                                            }
-                                        }
-                                    }
-                                    lock (Glob.lockerIsUpdating)
-                                    {
-                                        Glob.isUpdating = false;
-                                    }
-                                }
-                            }
-                            else if (course.Length == 1)
-                            {
-                                int courseI = -1;
-                                int.TryParse(course, out courseI);
-                                if (courseI >= 0 && courseI <= 3)
-                                {
-                                    int[,,] sendScheduleUpdateGroups = new int[4, 2, 101];
-                                    lock (Glob.lockerIsUpdating)
-                                    {
-                                        Glob.isUpdating = true;
-                                    }
-                                    sendScheduleUpdateGroups = Schedule.UpdateCourse(courseI, sendScheduleUpdateGroups, sendUpdates);
-                                    if (sendScheduleUpdateGroups == null)
-                                    {
-                                        lock (Glob.lockerIsUpdating)
-                                        {
-                                            Glob.isUpdating = false;
-                                        }
-                                    }
-                                    else if (sendScheduleUpdateGroups[courseI, 0, 100] != 0)
-                                    {
-                                        lock (Glob.locker)
-                                            Glob.tomorrow_uploaded = new ulong[4, 40, 6, 2];
-                                        Utils.ScheduleMapping();
-                                        Utils.TomorrowStudying();
-                                        Utils.СonstructingKeyboards();
-                                        IO.SaveUploadedSchedule();
-                                        if (sendUpdates)
-                                        {
-                                            for (int j = 0; j < sendScheduleUpdateGroups[courseI, 0, 100]; ++j)
-                                            {
-                                                Distribution.ScheduleUpdate(sendScheduleUpdateGroups[courseI, 0, j], sendScheduleUpdateGroups[courseI, 1, j]);
-                                            }
-                                        }
-                                        lock (Glob.lockerIsUpdating)
-                                        {
-                                            Glob.isUpdating = false;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        lock (Glob.lockerIsUpdating)
-                                        {
-                                            Glob.isUpdating = false;
-                                        }
-                                    }
-                                }
-                            }
-                            SendMessageAsync(userId: message.PeerId, message: "Выполнено");
-                            */
+                            // todo
                         }
                         else if (message.Text.IndexOf("Перезагрузка") == 0 || message.Text.IndexOf("Reboot") == 0)
                         {
@@ -910,11 +801,162 @@ namespace Schedulebot
                     }
                     else
                     {
-                        EnqueueMessageAsync(
-                            userId: message.PeerId,
-                            message: "Нажмите на кнопку",
-                            keyboardId: 0);
-                        return;
+                        string messageTemp = message.Text;
+                        if (messageTemp.Contains("Подписаться "))
+                        {
+                            string group = messageTemp.Substring(messageTemp.IndexOf(' ') + 1);
+                            int subgroup;
+                            if (group.Contains(' ') && group.Length > group.IndexOf(' ') + 1)
+                            {
+                                if (!Int32.TryParse(group.Substring(group.IndexOf(' ') + 1, 1), out subgroup)
+                                    || (subgroup != 1 && subgroup != 2))
+                                {
+                                    EnqueueMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Некорректный ввод настроек. Примеры корректного ввода:\nПодписаться 381808-1 2\nПодписаться 381808-2 1\nПодписаться 381808-3 (Подгруппа будет 1)"
+                                    );
+                                    return;
+                                }
+                                group = group.Substring(0, group.IndexOf(' '));
+                            }
+                            else
+                            {
+                                subgroup = 1;
+                            }
+                            string messageText;
+                            if (userRepository.ContainsUser(message.PeerId))
+                            {
+                                userRepository.EditUser(
+                                    id: (long)message.PeerId,
+                                    newGroup: group,
+                                    newSubgroup: subgroup);
+                                messageText = "Вы изменили настройки на " + group + " (" + subgroup + ")";
+                            }
+                            else
+                            {
+                                userRepository.AddUser((long)message.PeerId, group, subgroup);
+                                messageText = "Вы изменили настройки на " + group + " (" + subgroup + ")";
+                            }
+                            EnqueueMessageAsync(
+                                userId: message.PeerId,
+                                message: messageText
+                            );
+                            return;
+                        }
+                        switch (message.Text)
+                        {
+                            case "На неделю":
+                            {
+                                User user = null;
+                                (int?, int) userMapping = default((int?, int));
+                                if (userRepository.ContainsUser(message.PeerId))
+                                {
+                                    user = userRepository.GetUser(message.PeerId);
+                                    userMapping = mapper.GetCourseAndIndex(user.Group);
+                                }
+                                if (user != null)
+                                {
+                                    if (userMapping.Item1 != null)
+                                    {
+                                        if (courses[(int)userMapping.Item1].isUpdating)
+                                        {
+                                            EnqueueMessageAsync(
+                                                userId: message.PeerId,
+                                                message: "Происходит обновление расписания, повторите попытку через несколько минут");
+                                            return;
+                                        }
+                                        else if (courses[(int)userMapping.Item1].isBroken)
+                                        {
+                                            EnqueueMessageAsync(
+                                                userId: message.PeerId,
+                                                message: "Расписание Вашего курса не обработано");
+                                            return;
+                                        }
+                                        else
+                                        {
+                                            StringBuilder stringBuilder = new StringBuilder();
+                                            stringBuilder.Append("Расписание для ");
+                                            stringBuilder.Append(user.Group);
+                                            stringBuilder.Append(" (");
+                                            stringBuilder.Append(user.Subgroup);
+                                            stringBuilder.Append(')');    
+
+                                            EnqueueMessageAsync(
+                                                userId: message.PeerId,
+                                                message: stringBuilder.ToString(),
+                                                attachments: new List<MediaAttachment>
+                                                {
+                                                    new Photo()
+                                                    {
+                                                        AlbumId = vkStuff.MainAlbumId,
+                                                        OwnerId = -vkStuff.GroupId,
+                                                        Id = courses[(int)userMapping.Item1].groups[userMapping.Item2].scheduleSubgroups[user.Subgroup - 1].PhotoId
+                                                    }
+                                                });
+                                            return;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        EnqueueMessageAsync(
+                                            userId: message.PeerId,
+                                            message: "Ваша группа не существует, настройте заново.\nПодписаться *группа* [подгруппа]"
+                                            );
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    EnqueueMessageAsync(
+                                        userId: message.PeerId,
+                                        message: "Вы не настроили свою группу\nПодписаться *группа* [подгруппа]");
+                                    return;
+                                }                  
+                            }
+                            // case "На сегодня":
+                            // {
+                            //     break;
+                            // }
+                            // case "На завтра":
+                            // {
+                            //     break;
+                            // }
+                            case "Отписаться":
+                            {
+                                string messageText;
+                                if (userRepository.ContainsUser(message.PeerId))
+                                {
+                                    userRepository.DeleteUser((long)message.PeerId);
+                                    messageText = "Вы отписались";
+                                }
+                                else
+                                {
+                                    messageText = "Вы не подписаны";
+                                }
+                                EnqueueMessageAsync(
+                                    userId: message.PeerId,
+                                    message: messageText
+                                );
+                                break;
+                            }
+                            case "Неделя":
+                            {
+                                EnqueueMessageAsync(
+                                    userId: message.PeerId,
+                                    message: CurrentWeekStr()
+                                );
+                                break;
+                            }
+                            default:
+                            {
+                                EnqueueMessageAsync(
+                                    userId: message.PeerId,
+                                    message: "Команды: \nПодписаться *группа* [подгруппа] (если есть)\nОтписаться\nНа неделю\nНеделя\n\nБольше возможностей при использовании кнопок",
+                                    keyboardId: 0
+                                );
+                                break;
+                            }
+                        }
                     }
                     return;
                 }
@@ -1520,7 +1562,7 @@ namespace Schedulebot
                             }
                             else
                             {
-                                userRepository.AddUser(new User((long)message.PeerId, payloadStuff.Group, subgroup));
+                                userRepository.AddUser((long)message.PeerId, payloadStuff.Group, subgroup);
 
                                 stringBuilder.Append("Вы подписались на ");
                             }

@@ -17,25 +17,37 @@ namespace Schedulebot.Parse
         public static ScheduleLecture ParseLecture(string parse, Dictionaries dictionaries)
         {
             if (parse == null)
-                parse = "";
-            ScheduleLecture lecture = new ScheduleLecture();
+                return new ScheduleLecture();
+            if (parse == "")
+                return new ScheduleLecture();
+
+            string errorType = null;
+            bool isLecture = false;
+
+            // ScheduleLecture lecture = new ScheduleLecture();
+
             for (int i = 0; i < Parsing.errors.GetLength(0); ++i)
             {
                 if (parse.Contains(Parsing.errors[i]))
                 {
-                    lecture.errorType += Parsing.errors[i];
+                    errorType += Parsing.errors[i];
                     parse = parse.Replace(Parsing.errors[i], "");
                 }
             }
             if (parse.Contains(Parsing.lectureConst))
             {
-                lecture.isLecture = true;
+                isLecture = true;
                 parse = parse.Replace(Parsing.lectureConst, "");
             }
-            if (parse.Trim() == "")
+            parse.Trim();
+            if (parse == "")
             {
-                return lecture;
+                // Возможно есть errorType и isLecture, но нет subject/lecturer/lectureHall
+                return new ScheduleLecture();
             }
+
+            string lecturer = null;
+
             Regex regexLectureHall = new Regex("[0-9]+([/]{1,2}[0-9]+)?( ?[(]{1}[0-9]+[)]{1})?( {1}[(]{1}[0-9]+ {1}корпус[)]{1})?");
             Regex regexFullName = new Regex("[А-Я]{1}[а-я]+([-]{1}[А-Я]{1}[а-я]+)? {1}[А-Я]{1}[.]{1}([А-Я]{1}[.]?)?");
             MatchCollection matches;
@@ -46,7 +58,7 @@ namespace Schedulebot.Parse
             matches = regexFullName.Matches(parse);
             if (matches.Count == 1)
             {
-                lecture.lecturer = matches[0].ToString();
+                lecturer = matches[0].ToString();
                 parse = parse.Remove(matches[0].Index, matches[0].Length);
                 while (parse.Contains("  "))
                     parse = parse.Replace("  ", " ");
@@ -60,7 +72,7 @@ namespace Schedulebot.Parse
                     indexTemp = parse.IndexOf(dictionaries.fullName[i]);
                     if (indexTemp != -1)
                     {
-                        lecture.lecturer = dictionaries.fullName[i];
+                        lecturer = dictionaries.fullName[i];
                         parse = parse.Remove(indexTemp, dictionaries.fullName[i].Length);
                         while (parse.Contains("  "))
                             parse = parse.Replace("  ", " ");
@@ -73,18 +85,24 @@ namespace Schedulebot.Parse
             {
                 if (dictionaries.doubleOptionallySubject.ContainsKey(parse))
                 {
-                    lecture.status = "F2";
-                    lecture.subject = dictionaries.doubleOptionallySubject[parse];
-                    return lecture;
+                    return new ScheduleLecture(
+                        status: "F2",
+                        subject: dictionaries.doubleOptionallySubject[parse],
+                        isLecture: isLecture,
+                        errorType: errorType
+                    );
                 }
             }
+
+            string lectureHall = null;
+
             // Ищем аудиторию
             matches = regexLectureHall.Matches(parse);
             if (matches.Count != 0)
             {
                 if (matches.Count == 1)
                 {
-                    lecture.lectureHall = matches[0].ToString();
+                    lectureHall = matches[0].ToString();
                     parse = parse.Remove(matches[0].Index, matches[0].Length);
                     while (parse.Contains("  "))
                         parse = parse.Replace("  ", " ");
@@ -104,7 +122,7 @@ namespace Schedulebot.Parse
                             if (parse[matches[k].Index + matches[k].Length] != ' ' && parse[matches[k].Index + matches[k].Length] != ',')
                                 continue;
                         }
-                        lecture.lectureHall = matches[k].ToString();
+                        lectureHall = matches[k].ToString();
                         parse = parse.Remove(matches[k].Index, matches[k].Length);
                         while (parse.Contains("  "))
                             parse = parse.Replace("  ", " ");
@@ -113,24 +131,29 @@ namespace Schedulebot.Parse
                     }
                 }
             }
+
             // Выводы: F - полное, N - неполное, n - количество аргументов
-            if (lecture.lectureHall == null)
+            if (lectureHall == null)
             {
                 if (parse.ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА"))
                 {
-                    lecture.status = "F1";
-                    lecture.subject = "Военная подготовка";
-                    lecture.isLecture = false;
-                    return lecture;
+                    return new ScheduleLecture(
+                        status: "F1",
+                        subject: "Военная подготовка",
+                        isLecture: false,
+                        errorType: errorType
+                    );
                 }
                 else if (parse.ToUpper().Contains("ФИЗИЧЕСКАЯ КУЛЬТУРА"))
                 {
-                    lecture.status = "F1";
-                    lecture.subject = "Физическая культура";
-                    lecture.isLecture = false;
-                    return lecture;
+                    return new ScheduleLecture(
+                        status: "F1",
+                        subject: "Физическая культура",
+                        isLecture: false,
+                        errorType: errorType
+                    );
                 }
-                else if (lecture.lecturer != null)
+                else if (lecturer != null)
                 {
                     if (parse.Contains("по выбору") || parse.Contains("согласно"))
                     {
@@ -150,23 +173,30 @@ namespace Schedulebot.Parse
                             }
                         }
                     }
-                    lecture.status = "N2";
-                    lecture.subject = parse;
-                    return lecture;
+                    return new ScheduleLecture(
+                        status: "N2",
+                        subject: parse,
+                        lecturer: lecturer,
+                        isLecture: isLecture,
+                        errorType: errorType
+                    );
                 }
                 else
                 {
-                    lecture.status = "N0";
-                    lecture.subject = parse;
-                    return lecture;
+                    return new ScheduleLecture(
+                        status: "N0",
+                        subject: parse,
+                        isLecture: isLecture,
+                        errorType: errorType
+                    );
                 }
             }
-            else if (lecture.lecturer != null)
+            else if (lecturer != null)
             {
-                lecture.subject = parse;
-                if (dictionaries.acronymToPhrase.ContainsKey(lecture.subject))
+                string subject = parse;
+                if (dictionaries.acronymToPhrase.ContainsKey(subject))
                 {
-                    lecture.subject = dictionaries.acronymToPhrase[lecture.subject];
+                    subject = dictionaries.acronymToPhrase[subject];
                 }
                 else if (parse.Contains(' ') || parse.Length > 4) // Если все капсом и более одного слова, заглавной остается только первая буква
                 {
@@ -175,13 +205,19 @@ namespace Schedulebot.Parse
                         if (parse[k] != char.ToUpper(parse[k]))
                             break;
                         if (k == parse.Length - 1)
-                            lecture.subject = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
+                            subject = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
                     }
                 }
                 if (parse.Contains("по выбору") || parse.Contains("согласно"))
-                    lecture.subject = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
-                lecture.status = "F3";
-                return lecture;
+                    subject = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
+                return new ScheduleLecture(
+                    status: "F3",
+                    subject: subject,
+                    lecturer: lecturer,
+                    lectureHall: lectureHall,
+                    isLecture: isLecture,
+                    errorType: errorType
+                );
             }
             else
             {
@@ -203,9 +239,13 @@ namespace Schedulebot.Parse
                         }
                     }
                 }
-                lecture.status = "N2";
-                lecture.subject = parse;
-                return lecture;
+                return new ScheduleLecture(
+                    status: "N2",
+                    subject: parse,
+                    lectureHall: lectureHall,
+                    isLecture: isLecture,
+                    errorType: errorType
+                );
             }
         }
         
