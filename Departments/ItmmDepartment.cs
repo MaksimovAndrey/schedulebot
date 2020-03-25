@@ -1,3 +1,5 @@
+// #define SOME_MESSAGES_TEST
+
 using System;
 using System.IO;
 using System.Linq;
@@ -13,341 +15,145 @@ using VkNet.Enums.SafetyEnums;
 using Newtonsoft.Json;
 using System.Text;
 using System.Net.Http;
-
+using System.Collections.Concurrent;
 
 using Schedulebot.Vk;
+using Schedulebot.Users;
+using Schedulebot.Schedule.Relevance;
 
 namespace Schedulebot
 {
-    public class ItmmDepartment : IDepartment
+    public class DepartmentItmm : IDepartment
     {
         private readonly string path;
-        private VkStuff vkStuff = new VkStuff();
-        private Mapper mapper = new Mapper();
-        private ICheckRelevanceStuff checkRelevanceStuffITMM = new CheckRelevanceStuffITMM();
+
+        private readonly ConcurrentQueue<string> commandsQueue = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<PhotoUploadProperties> photosQueue = new ConcurrentQueue<PhotoUploadProperties>();
+    
         private int CoursesAmount { get; } = 4;
-        private Course[] courses = new Course[4]; // 4 курса
-        private UserRepository userRepository = new UserRepository();
-        private Dictionaries dictionaries = new Dictionaries();
+        private readonly Course[] courses = new Course[4]; // 4 курса
+        
+        private readonly VkStuff vkStuff;
+        private readonly Mapper mapper;
+        private readonly ICheckingRelevance checkingRelevance;
+        private readonly UserRepository userRepository;
+        private readonly Dictionaries dictionaries;
+        
         private int startDay;
         private int startWeek;
-        public ItmmDepartment(string _path)
-        {
-            path = _path + @"itmm\";
-            vkStuff.MenuKeyboards = new MessageKeyboard[6]
-            {
-                // main
-                new MessageKeyboard
-                {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Расписание",
-                                    Payload = "{\"menu\": \"0\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Неделя",
-                                    Payload = "{\"menu\": \"0\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Настройки",
-                                    Payload = "{\"menu\": \"0\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Информация",
-                                    Payload = "{\"menu\": \"0\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                // schedule
-                new MessageKeyboard
-                {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "На неделю",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "На сегодня",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "На завтра",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Ссылка",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                // настройки когда НЕ подписан
-                new MessageKeyboard
-                {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Вы не подписаны",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Positive,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Подписаться",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                 // настройки когда подписан
-                new MessageKeyboard
-                {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Negative,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Отписаться",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Positive,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Переподписаться",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Изменить подгруппу",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                // выбор курса
-                new MessageKeyboard
-                {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Выберите курс",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "1",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "2",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "3",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "4",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                // выбор подгруппы
-                new MessageKeyboard
-                {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "1",
-                                    Payload = "{\"menu\": \"5\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "2",
-                                    Payload = "{\"menu\": \"5\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"5\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                }
-            };
-            LoadSettings();
-            LoadUsers();
-            LoadAcronymToPhrase();
-            LoadDoubleOptionallySubject();
-            LoadFullName();
-            for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
-                courses[currentCourse] = new Course(path + @"downloads\" + currentCourse + "_course.xls", dictionaries);
-            LoadDatesAndUrls();
-            mapper.CreateMaps(courses);
-            ConstructKeyboards();
-            LoadUploadedSchedule();
-        }
         
-        private static class ConstructKeyboardsProperties
+        public DepartmentItmm(string _path, ref List<Task> tasks)
         {
-            public const int buttonsInLine = 2; // 1..4
-            public const int linesInKeyboard = 4; // 1..9 
+            path = _path + @"itmm/";
+
+            #if DEBUG
+                vkStuff = new VkStuff(path + "settings-.txt");
+            #else
+                vkStuff = new VkStuff(path + "settings.txt");
+            #endif
+            
+            userRepository = new UserRepository(path + "users.txt");
+            dictionaries = new Dictionaries(path + @"manualProcessing/");
+            for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
+                courses[currentCourse] = new Course(path + @"downloads/" + currentCourse + "_course.xls", dictionaries);
+            mapper = new Mapper(courses);
+            checkingRelevance = new CheckingRelevanceItmm(path);
+            
+            LoadSettings();
+            
+            ConstructKeyboards();
+
+            LoadUploadedSchedule();
+
+            #if DEBUG
+                tasks.Add(ExecuteMethodsAsync());
+                tasks.Add(GetMessagesAsync());
+                tasks.Add(UploadPhotosAsync());
+                tasks.Add(SaveUsersAsync());
+            #else
+                tasks.Add(ExecuteMethodsAsync());
+                tasks.Add(GetMessagesAsync());
+                tasks.Add(UploadPhotosAsync());
+                tasks.Add(SaveUsersAsync());
+            #endif
+
+            EnqueueMessage(
+                userId: vkStuff.adminId,
+                message: DateTime.Now.ToString() + " | Запустился"
+            );
+
+            bool changes = UploadWeekSchedule();
+            while (!commandsQueue.IsEmpty || !photosQueue.IsEmpty)
+                Thread.Sleep(5000);
+            if (changes)
+                SaveUploadedSchedule();
+
+            #if DEBUG
+                tasks.Add(CheckRelevanceAsync());
+            #else
+                tasks.Add(CheckRelevanceAsync());
+            #endif
+
+            EnqueueMessage(
+                userId: vkStuff.adminId,
+                message: DateTime.Now.ToString() + " | Запустил CheckRelevance"
+            );
         }
 
+        private bool UploadWeekSchedule()
+        {
+            bool result = false;
+            for (int currentCourse = 0; currentCourse < CoursesAmount; currentCourse++)
+            {
+                for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.Count; currentGroup++)
+                {
+                    for (int currentSubgroup = 0; currentSubgroup < 2; currentSubgroup++)
+                    {
+                        if (courses[currentCourse].groups[currentGroup].scheduleSubgroups[currentSubgroup].PhotoId == 0)
+                        {
+                            UpdateProperties updateProperties = new UpdateProperties();
+
+                            updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.groupUrl;
+                            updateProperties.drawingStandartScheduleInfo.date
+                                = checkingRelevance.DatesAndUrls.dates[currentCourse];
+                            updateProperties.drawingStandartScheduleInfo.weeks
+                                = courses[currentCourse].groups[currentGroup].scheduleSubgroups[currentSubgroup].weeks;
+                            updateProperties.drawingStandartScheduleInfo.group
+                                = courses[currentCourse].groups[currentGroup].name;
+            
+                            PhotoUploadProperties photoUploadProperties
+                                = courses[currentCourse].groups[currentGroup].UpdateSubgroup(currentSubgroup, updateProperties);
+
+                            photoUploadProperties.GroupName = courses[currentCourse].groups[currentGroup].name;
+                            photoUploadProperties.AlbumId = vkStuff.mainAlbumId;
+                            photoUploadProperties.Course = currentCourse;
+                            photoUploadProperties.GroupIndex = currentGroup;
+                            photoUploadProperties.ToSend = false;
+                            
+                            photosQueue.Enqueue(new PhotoUploadProperties(photoUploadProperties));
+                            result = true;
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
+        private async Task SaveUsersAsync()
+        {
+            while (true)
+            {
+                await Task.Delay(3600000);
+                userRepository.SaveUsers(path);
+            }
+        }
+
+        private static class ConstructKeyboardsProperties
+        {
+            public const int buttonsInLine = 2; // 1..4 ограничения vk
+            public const int linesInKeyboard = 4; // 1..9 ограничения vk
+        }
+        
         private void ConstructKeyboards()
         {
             for (int currentCourse = 0; currentCourse < CoursesAmount; ++currentCourse)
@@ -429,9 +235,7 @@ namespace Schedulebot
         private string CurrentWeekStr() // Определение недели (верхняя или нижняя)
         {
             if (CurrentWeek() == 0)
-            {
                 return "Верхняя";
-            }
             return "Нижняя";
         }
 
@@ -442,9 +246,12 @@ namespace Schedulebot
         
         private void LoadSettings()
         {
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка настроек");
             using (StreamReader file = new StreamReader(
-                path + "settings.txt",
+                #if DEBUG
+                    path + "settings-.txt",
+                #else
+                    path + "settings.txt",
+                #endif
                 System.Text.Encoding.Default))
             {
                 string str, value;
@@ -456,26 +263,6 @@ namespace Schedulebot
                         str = str.Substring(0, str.IndexOf(':'));
                         switch (str)
                         {
-                            case "key":
-                            {
-                                vkStuff.api.Authorize(new ApiAuthParams() { AccessToken = value });
-                                break;
-                            }
-                            case "keyPhotos":
-                            {
-                                vkStuff.apiPhotos.Authorize(new ApiAuthParams() { AccessToken = value });
-                                break;
-                            }
-                            case "groupId":
-                            {
-                                vkStuff.GroupId = long.Parse(value);
-                                break;
-                            }
-                            case "mainAlbumId":
-                            {
-                                vkStuff.MainAlbumId = Int64.Parse(value);
-                                break;
-                            }
                             case "startDay":
                             {
                                 startDay = Int32.Parse(value);
@@ -486,78 +273,10 @@ namespace Schedulebot
                                 startWeek = Int32.Parse(value);
                                 break;
                             }
-                            case "groupUrl":
-                            {
-                                vkStuff.GroupUrl = value;
-                                break;
-                            }
-                            case "adminId":
-                            {
-                                vkStuff.AdminId = Int64.Parse(value);
-                                break;
-                            }
                         }
                     }
                 }
             }
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка настроек");
-        }
-
-        private void LoadDatesAndUrls()
-        {
-            using (StreamReader file = new StreamReader(
-                path + "datesAndUrls.txt",
-                System.Text.Encoding.Default))
-            {
-                for (int currentCourse = 0; currentCourse < 4; currentCourse++)
-                {
-                    string str = file.ReadLine();
-                    courses[currentCourse].urlToFile = str.Substring(0, str.IndexOf(' '));
-                    courses[currentCourse].date = str.Substring(str.IndexOf(' ') + 1);
-                }
-            }
-        }
-
-        private void SaveDatesAndUrls()
-        {
-            using (StreamWriter file = new StreamWriter(path + "datesAndUrls.txt"))
-            {
-                for (int currentCourse = 0; currentCourse < 4; currentCourse++)
-                {
-                    file.WriteLine(courses[currentCourse].urlToFile + " " + courses[currentCourse].date);
-                }
-            }
-        }
-
-        private void LoadAcronymToPhrase()
-        {
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка ManualAcronymToPhrase");
-            using StreamReader file = new StreamReader(
-                path + @"/manualProcessing/acronymToPhrase.txt",
-                System.Text.Encoding.Default);
-            while (!file.EndOfStream)
-                dictionaries.acronymToPhrase.Add(file.ReadLine(), file.ReadLine());
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка ManualAcronymToPhrase");
-        }
-
-        private void LoadDoubleOptionallySubject()
-        {
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка DoubleOptionallySubject");
-            using StreamReader file = new StreamReader(
-                path + @"/manualProcessing/doubleOptionallySubject.txt",
-                System.Text.Encoding.Default);
-            while (!file.EndOfStream)
-                dictionaries.doubleOptionallySubject.Add(file.ReadLine(), file.ReadLine());
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка DoubleOptionallySubject");
-        }
-
-        private void LoadFullName()
-        {
-            using StreamReader file = new StreamReader(
-                path + @"/manualProcessing/fullName.txt",
-                System.Text.Encoding.Default);
-            while (!file.EndOfStream)
-                dictionaries.fullName.Add(file.ReadLine());
         }
 
         private void LoadUploadedSchedule()
@@ -579,19 +298,9 @@ namespace Schedulebot
                     string group = rawSpan.Slice(spaceIndex + 1, lastSpaceIndex - spaceIndex - 1).ToString();
                     int subgroup = int.Parse(rawSpan.Slice(lastSpaceIndex + 1, 1));
 
-                    for (int currentCourse = 0; currentCourse < CoursesAmount; currentCourse++)
-                    {
-                        int groupsAmount = courses[currentCourse].groups.Count;
-                        for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup++)
-                        {
-                            if (courses[currentCourse].groups[currentGroup].name == group)
-                            {
-                                courses[currentCourse].groups[currentGroup].scheduleSubgroups[subgroup - 1].PhotoId = id;
-                                currentCourse = CoursesAmount;
-                                break;
-                            }
-                        }
-                    }
+                    var indexes = mapper.GetCourseAndIndex(group);
+                    if (indexes.Item1 != null)
+                        courses[(int)indexes.Item1].groups[indexes.Item2].scheduleSubgroups[subgroup - 1].PhotoId = id;
                 }
             }
         }
@@ -620,34 +329,12 @@ namespace Schedulebot
                 file.WriteLine(stringBuilder.ToString());
             }
         }
-
-        private void LoadUsers()
-        {
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка подписанных");
-            using (StreamReader file = new StreamReader(
-                path + "users.txt",
-                System.Text.Encoding.Default))
-            {
-                while (!file.EndOfStream)
-                {
-                    if (User.TryParseUser(file.ReadLine(), out var user))
-                        userRepository.AddUser(user);
-                }
-            }
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка подписанных");
-        }
-
-        private async void SaveUsers()
-        {
-            using (StreamWriter file = new StreamWriter(path + "users.txt"))
-            await file.WriteLineAsync(userRepository.ToString());
-        }
         
         public async Task GetMessagesAsync()
         {
             await Task.Run(() =>
             {
-                LongPollServerResponse serverResponse = vkStuff.api.Groups.GetLongPollServer((ulong)vkStuff.GroupId);
+                LongPollServerResponse serverResponse = vkStuff.api.Groups.GetLongPollServer((ulong)vkStuff.groupId);
                 BotsLongPollHistoryResponse historyResponse = null;
                 BotsLongPollHistoryParams botsLongPollHistoryParams = new BotsLongPollHistoryParams()
                 {
@@ -656,11 +343,30 @@ namespace Schedulebot
                     Key = serverResponse.Key,
                     Wait = 25
                 };
+                #if (DEBUG && SOME_MESSAGES_TEST)
+                    Message[] messages = new Message[11];
+                    List<Attachment> attachments = new List<Attachment>();
+                    System.Collections.ObjectModel.ReadOnlyCollection<VkNet.Model.Attachments.Attachment> test = new System.Collections.ObjectModel.ReadOnlyCollection<Attachment>(attachments);
+                    for (int i = 0; i < 11; ++i)
+                    {
+                        long l = i + 1;
+                        messages[i] = new Message();
+                        messages[i].Text = "На завтра";
+                        messages[i].PeerId = l;
+                        messages[i].Attachments = test;
+                    }
+                    for (int i = 0; i < 10; i++)
+                    {
+                        int t = i;
+                        Task.Run(() => MessageResponse(messages[t]));
+                        Console.WriteLine(t);
+                    }
+                #endif
                 while (true)
                 {
-                    Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " Получаю сообщения");
                     try
                     {
+                        Console.WriteLine( DateTime.Now.ToString() + " Получаю сообщения");
                         historyResponse = vkStuff.api.Groups.GetBotsLongPollHistory(botsLongPollHistoryParams);
                         if (historyResponse == null)
                             continue;
@@ -672,7 +378,7 @@ namespace Schedulebot
                             Console.WriteLine(update.Message.Text);
                             if (update.Type == GroupUpdateType.MessageNew)
                             {
-                                MessageResponseAsync(update.Message);
+                                Task.Run(() => MessageResponse(update.Message));
                             }
                         }
                         historyResponse = null;
@@ -683,7 +389,7 @@ namespace Schedulebot
                             botsLongPollHistoryParams.Ts = outdateException.Ts;
                         else
                         {
-                            LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer((ulong)vkStuff.GroupId);
+                            LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer((ulong)vkStuff.groupId);
                             botsLongPollHistoryParams.Ts = server.Ts;
                             botsLongPollHistoryParams.Key = server.Key;
                             botsLongPollHistoryParams.Server = server.Server;
@@ -691,7 +397,7 @@ namespace Schedulebot
                     }
                     catch
                     {
-                        LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer((ulong)vkStuff.GroupId);
+                        LongPollServerResponse server = vkStuff.api.Groups.GetLongPollServer((ulong)vkStuff.groupId);
                         botsLongPollHistoryParams.Ts = server.Ts;
                         botsLongPollHistoryParams.Key = server.Key;
                         botsLongPollHistoryParams.Server = server.Server;
@@ -700,673 +406,534 @@ namespace Schedulebot
             });
         }
 
-        public async void MessageResponseAsync(Message message)
+        public void MessageResponse(Message message)
         {
-            await Task.Run(() =>
+            if (message.Payload == null)
             {
-                if (message.Payload == null)
+                if (message.PeerId == vkStuff.adminId)
                 {
-                    // todo: UPdate переписать
-                    if (message.PeerId == vkStuff.AdminId)
+                    if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
                     {
-                        if (message.Text.IndexOf("Помощь") == 0 || message.Text.IndexOf("Help") == 0)
+                        string help = "Команды:\n\nРассылка <всем,*КУРС*,*ГРУППА*>\n--отправляет расписание на неделю выбранным юзерам\nОбновить <все,*КУРС*> [нет]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nПерезагрузка\n--перезагружает бота(для применения обновления версии бота)\n\nCommands:\n\nDistribution <all,*COURSE*,*GROUP*>\n--отправляет расписание на неделю выбранным юзерам\nUpdate <all,*COURSE*> [false]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nReboot\n--перезагружает бота(для применения обновления версии бота)\n";
+                        EnqueueMessage(userId: message.PeerId, message: help);
+                    }
+                    else if (message.Text.IndexOf("Рассылка") == 0 || message.Text.IndexOf("Distribution") == 0)
+                    {
+                        string temp = message.Text.Substring(message.Text.IndexOf(' ') + 1);
+                        string toWhom = temp.Substring(0, temp.IndexOf(' '));
+                        string messageStr = temp.Substring(temp.IndexOf(' ') + 1); // сообщение
+                        if (toWhom == "всем" || toWhom == "all")
                         {
-                            string help = "Команды:\n\nРассылка <всем,*КУРС*,*ГРУППА*>\n--отправляет расписание на неделю выбранным юзерам\nОбновить <все,*КУРС*> [нет]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nПерезагрузка\n--перезагружает бота(для применения обновления версии бота)\n\nCommands:\n\nDistribution <all,*COURSE*,*GROUP*>\n--отправляет расписание на неделю выбранным юзерам\nUpdate <all,*COURSE*> [false]\n--обновляет расписание для выбранных курсов, отправлять ли обновление юзерам (по умолчанию - да)\nReboot\n--перезагружает бота(для применения обновления версии бота)\n";
-                            EnqueueMessageAsync(userId: message.PeerId, message: help);
+                            EnqueueMessage(
+                                userIds: userRepository.GetIds(),
+                                message: messageStr);
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: "Выполнено");
                         }
-                        else if (message.Text.IndexOf("Рассылка") == 0 || message.Text.IndexOf("Distribution") == 0)
+                        else if (toWhom.Length == 1)
                         {
-                            string temp = message.Text.Substring(message.Text.IndexOf(' ') + 1);
-                            string toWhom = temp.Substring(0, temp.IndexOf(' '));
-                            string messageStr = temp.Substring(temp.IndexOf(' ') + 1); // сообщение
-                            if (toWhom == "всем" || toWhom == "all")
+                            int toCourse = 0;
+                            int.TryParse(toWhom, out toCourse);
+                            --toCourse;
+                            if (toCourse != -1 && toCourse >= 0 && toCourse < 4)
                             {
-                                EnqueueMessageAsync(
-                                    userIds: userRepository.GetIds(),
+                                EnqueueMessage(
+                                    userIds: userRepository.GetIds(toCourse, mapper),
                                     message: messageStr);
-                                EnqueueMessageAsync(
+                                EnqueueMessage(
                                     userId: message.PeerId,
                                     message: "Выполнено");
-                            }
-                            else if (toWhom.Length == 1)
-                            {
-                                int toCourse = 0;
-                                int.TryParse(toWhom, out toCourse);
-                                --toCourse;
-                                if (toCourse != -1 && toCourse >= 0 && toCourse < 4)
-                                {
-                                    EnqueueMessageAsync(
-                                        userIds: userRepository.GetIds(toCourse, mapper),
-                                        message: messageStr);
-                                    EnqueueMessageAsync(
-                                        userId: message.PeerId,
-                                        message: "Выполнено");
-                                }
-                                else
-                                {
-                                    EnqueueMessageAsync(
-                                        userId: message.PeerId,
-                                        message: "Ошибка рассылки:\nневерный курс: " + toWhom + "\nВведите значение от 1 до 4");
-                                }
                             }
                             else
                             {
-                                EnqueueMessageAsync(
-                                    userIds: userRepository.GetIds(toWhom),
-                                    message: messageStr);
-                                EnqueueMessageAsync(
+                                EnqueueMessage(
                                     userId: message.PeerId,
-                                    message: "Выполнено");
+                                    message: "Ошибка рассылки:\nневерный курс: " + toWhom + "\nВведите значение от 1 до 4");
                             }
-                        }
-                        else if (message.Text.IndexOf("Обновить") == 0 || message.Text.IndexOf("Update") == 0)
-                        {
-                            /*
-                            string temp = message.Text.Substring(message.Text.IndexOf(' ') + 1);
-                            bool sendUpdates = true;
-                            string course = temp.Substring(0, temp.IndexOf(' '));
-                            temp = temp.Substring(temp.IndexOf(' ') + 1);
-                            if (temp == "нет" || temp == "false")
-                                sendUpdates = false;
-                            if (course == "все" || course == "all")
-                            {
-                                int[,,] sendScheduleUpdateGroups = new int[4, 2, 101];
-                                lock (Glob.lockerIsUpdating)
-                                {
-                                    Glob.isUpdating = true;
-                                }
-                                for (int i = 0; i < 4; ++i)
-                                {
-                                    int[,,] tempM = new int[4, 2, 101];
-                                    tempM = Schedule.UpdateCourse(i, sendScheduleUpdateGroups, sendUpdates);
-                                    if (tempM == null)
-                                    {
-                                        sendScheduleUpdateGroups[i, 0, 100] = 0;
-                                    }
-                                    else
-                                    {
-                                        sendScheduleUpdateGroups = tempM;
-                                    }
-                                }
-                                if (sendScheduleUpdateGroups[0, 0, 100] == 0 && sendScheduleUpdateGroups[1, 0, 100] == 0
-                                    && sendScheduleUpdateGroups[2, 0, 100] == 0 && sendScheduleUpdateGroups[3, 0, 100] == 0)
-                                {
-                                    lock (Glob.lockerIsUpdating)
-                                    {
-                                        Glob.isUpdating = false;
-                                    }
-                                }
-                                else
-                                {
-                                    lock (Glob.locker)
-                                        Glob.tomorrow_uploaded = new ulong[4, 40, 6, 2];
-                                    Utils.ScheduleMapping();
-                                    Utils.TomorrowStudying();
-                                    Utils.СonstructingKeyboards();
-                                    IO.SaveUploadedSchedule();
-                                    if (sendUpdates)
-                                    {
-                                        for (int l = 0; l < 4; ++l)
-                                        {
-                                            for (int j = 0; j < sendScheduleUpdateGroups[l, 0, 100]; ++j)
-                                            {
-                                                Distribution.ScheduleUpdate(sendScheduleUpdateGroups[l, 0, j], sendScheduleUpdateGroups[l, 1, j]);
-                                            }
-                                        }
-                                    }
-                                    lock (Glob.lockerIsUpdating)
-                                    {
-                                        Glob.isUpdating = false;
-                                    }
-                                }
-                            }
-                            else if (course.Length == 1)
-                            {
-                                int courseI = -1;
-                                int.TryParse(course, out courseI);
-                                if (courseI >= 0 && courseI <= 3)
-                                {
-                                    int[,,] sendScheduleUpdateGroups = new int[4, 2, 101];
-                                    lock (Glob.lockerIsUpdating)
-                                    {
-                                        Glob.isUpdating = true;
-                                    }
-                                    sendScheduleUpdateGroups = Schedule.UpdateCourse(courseI, sendScheduleUpdateGroups, sendUpdates);
-                                    if (sendScheduleUpdateGroups == null)
-                                    {
-                                        lock (Glob.lockerIsUpdating)
-                                        {
-                                            Glob.isUpdating = false;
-                                        }
-                                    }
-                                    else if (sendScheduleUpdateGroups[courseI, 0, 100] != 0)
-                                    {
-                                        lock (Glob.locker)
-                                            Glob.tomorrow_uploaded = new ulong[4, 40, 6, 2];
-                                        Utils.ScheduleMapping();
-                                        Utils.TomorrowStudying();
-                                        Utils.СonstructingKeyboards();
-                                        IO.SaveUploadedSchedule();
-                                        if (sendUpdates)
-                                        {
-                                            for (int j = 0; j < sendScheduleUpdateGroups[courseI, 0, 100]; ++j)
-                                            {
-                                                Distribution.ScheduleUpdate(sendScheduleUpdateGroups[courseI, 0, j], sendScheduleUpdateGroups[courseI, 1, j]);
-                                            }
-                                        }
-                                        lock (Glob.lockerIsUpdating)
-                                        {
-                                            Glob.isUpdating = false;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        lock (Glob.lockerIsUpdating)
-                                        {
-                                            Glob.isUpdating = false;
-                                        }
-                                    }
-                                }
-                            }
-                            SendMessageAsync(userId: message.PeerId, message: "Выполнено");
-                            */
-                        }
-                        else if (message.Text.IndexOf("Перезагрузка") == 0 || message.Text.IndexOf("Reboot") == 0)
-                        {
-                            while (courses[0].isUpdating || courses[1].isUpdating || courses[2].isUpdating || courses[3].isUpdating)
-                                Thread.Sleep(60000);
-                            while (!vkStuff.commandsQueue.IsEmpty && !vkStuff.photosQueue.IsEmpty)
-                                Thread.Sleep(5000); 
-                            SaveUsers();                         
-                            Environment.Exit(0);
-                        }
-                    }
-                    else if (message.Attachments.Count != 0)
-                    {
-                        // todo: fix
-                        if (message.Attachments.Single().ToString() == "Sticker")
-                        {
-                            
-                            EnqueueMessageAsync(
-                                userId: message.PeerId,
-                                message: "🤡");
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        EnqueueMessageAsync(
-                            userId: message.PeerId,
-                            message: "Нажмите на кнопку",
-                            keyboardId: 0);
-                        return;
-                    }
-                    return;
-                }
-                PayloadStuff payloadStuff = Newtonsoft.Json.JsonConvert.DeserializeObject<PayloadStuff>(message.Payload);
-                if (payloadStuff.Command == "start")
-                {
-                    EnqueueMessageAsync(
-                        userId: message.PeerId,
-                        message: "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.\nКнопка \"Информация\" для получения подробностей",
-                        keyboardId: 0);
-                    return;
-                }
-                // По idшникам меню сортируем сообщения
-                switch (payloadStuff.Menu)
-                {
-                    case null:
-                    {
-                        EnqueueMessageAsync(
-                            userId: message.PeerId,
-                            message: "Что-то пошло не так",
-                            keyboardId: 0);
-                        return;
-                    }
-                    case 0:
-                    {
-                        switch (message.Text)
-                        {
-                            case "Расписание":
-                            {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    keyboardId: 1);
-                                return;
-                            }
-                            case "Неделя":
-                            {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    message: CurrentWeekStr());
-                                return;
-                            }
-                            case "Настройки":
-                            {
-                                if (userRepository.ContainsUser(message.PeerId))
-                                {
-                                    User user = userRepository.GetUser(message.PeerId);
-
-                                    StringBuilder stringBuilder = new StringBuilder();
-                                    stringBuilder.Append("Вы подписаны: ");
-                                    stringBuilder.Append(user.Group);
-                                    stringBuilder.Append(" (");
-                                    stringBuilder.Append(user.Subgroup);
-                                    stringBuilder.Append(')');
-
-                                    MessageKeyboard keyboardCustom = vkStuff.MenuKeyboards[3];
-                                    keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
-                                    
-                                    EnqueueMessageAsync(
-                                        userId: message.PeerId,
-                                        message: "Отправляю клавиатуру",
-                                        customKeyboard: keyboardCustom);
-                                }
-                                else
-                                {
-                                    EnqueueMessageAsync(
-                                        userId: message.PeerId,
-                                        message: "Отправляю клавиатуру",
-                                        keyboardId: 2);
-                                }
-                                return;
-                            }
-                            case "Информация":
-                            {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    message: "Текущая версия - v2.2\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie");
-                                return;
-                            }
-                            default:
-                            {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    message: "Произошла ошибка в меню 0, что-то с message.Text",
-                                    keyboardId: 0);
-                                return;
-                            }
-                        }
-                    }
-                    case 1:
-                    {
-                        if (message.Text == "Назад")
-                        {
-                            EnqueueMessageAsync(
-                                userId: message.PeerId,
-                                keyboardId: 0);
-                            return;
                         }
                         else
                         {
-                            User user = null;
-                            (int?, int) userMapping = default((int?, int));
-                            if (userRepository.ContainsUser(message.PeerId))
-                            {
-                                user = userRepository.GetUser(message.PeerId);
-                                userMapping = mapper.GetCourseAndIndex(user.Group);
-                            }
-                            if (user != null)
-                            {
-                                if (userMapping.Item1 != null)
-                                {
-                                    if (courses[(int)userMapping.Item1].isUpdating)
-                                    {
-                                        EnqueueMessageAsync(
-                                            userId: message.PeerId,
-                                            message: "Происходит обновление расписания, повторите попытку через несколько минут");
-                                        return;
-                                    }
-                                    else if (message.Text == "Ссылка")
-                                    {
-                                        StringBuilder stringBuilder = new StringBuilder();
-                                        stringBuilder.Append("Расписание для ");
-                                        stringBuilder.Append(userMapping.Item1 + 1);
-                                        stringBuilder.Append(" курса: ");
-                                        stringBuilder.Append(courses[(int)userMapping.Item1].urlToFile);
-
-                                        EnqueueMessageAsync(
-                                            userId: message.PeerId,
-                                            message: stringBuilder.ToString());
-                                        return;
-                                    }
-                                    else if (courses[(int)userMapping.Item1].isBroken)
-                                    {
-                                        EnqueueMessageAsync(
-                                            userId: message.PeerId,
-                                            message: "Расписание Вашего курса не обработано");
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        switch (message.Text)
-                                        {
-                                            case "На неделю":
-                                            {
-                                                if (courses[(int)userMapping.Item1].isBroken)
-                                                {
-                                                    EnqueueMessageAsync(
-                                                        userId: message.PeerId,
-                                                        message: "Расписание Вашего курса не обработано",
-                                                        keyboardId: 1);
-                                                    return;
-                                                }
-                                                else
-                                                {
-                                                    StringBuilder stringBuilder = new StringBuilder();
-                                                    stringBuilder.Append("Расписание для ");
-                                                    stringBuilder.Append(user.Group);
-                                                    stringBuilder.Append(" (");
-                                                    stringBuilder.Append(user.Subgroup);
-                                                    stringBuilder.Append(')');    
-
-                                                    EnqueueMessageAsync(
-                                                        userId: message.PeerId,
-                                                        message: stringBuilder.ToString(),
-                                                        attachments: new List<MediaAttachment>
-                                                        {
-                                                            new Photo()
-                                                            {
-                                                                AlbumId = vkStuff.MainAlbumId,
-                                                                OwnerId = -vkStuff.GroupId,
-                                                                Id = courses[(int)userMapping.Item1].groups[userMapping.Item2].scheduleSubgroups[user.Subgroup - 1].PhotoId
-                                                            }
-                                                        });
-                                                    return;
-                                                }
-                                            }
-                                            case "На сегодня":
-                                            {
-                                                int week = CurrentWeek();
-                                                int today = (int)DateTime.Now.DayOfWeek;
-                                                if (today == 0)
-                                                {
-                                                    EnqueueMessageAsync(
-                                                        userId: message.PeerId,
-                                                        message: "Сегодня воскресенье");
-                                                    return;
-                                                }
-                                                else
-                                                {
-                                                    --today;
-                                                    if (courses[(int)userMapping.Item1].groups[userMapping.Item2]
-                                                        .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                                                        .days[today].isStudying)
-                                                    {
-                                                        long photoId = courses[(int)userMapping.Item1].groups[userMapping.Item2]
-                                                            .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                                                            .days[today].PhotoId;
-                                                        if (photoId == 0)
-                                                        {
-                                                            Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
-                                                            drawingDayScheduleInfo.date = courses[(int)userMapping.Item1].date;
-                                                            drawingDayScheduleInfo.day = courses[(int)userMapping.Item1].groups[userMapping.Item2]
-                                                                .scheduleSubgroups[user.Subgroup - 1].weeks[week].days[today];
-                                                            drawingDayScheduleInfo.dayOfWeek = today;
-                                                            drawingDayScheduleInfo.group = user.Group;
-                                                            drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
-                                                            drawingDayScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
-                                                            drawingDayScheduleInfo.weekProperties = week;
-
-                                                            PhotoUploadProperties photoUploadProperties = new PhotoUploadProperties();
-                                                            photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
-                                                            photoUploadProperties.Day = today;
-                                                            photoUploadProperties.Group = user.Group;
-                                                            photoUploadProperties.Subgroup = user.Subgroup - 1;
-                                                            photoUploadProperties.Week = week;
-                                                            photoUploadProperties.PeerId = (long)message.PeerId;
-                                                            photoUploadProperties.Message = "Расписание на сегодня";
-                                                            photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
-                                                        
-                                                            vkStuff.photosQueue.Enqueue(photoUploadProperties);
-                                                            return;
-                                                        }
-                                                        else
-                                                        {
-                                                            EnqueueMessageAsync(
-                                                                userId: message.PeerId,
-                                                                message: "Расписание на сегодня",
-                                                                attachments: new List<MediaAttachment>
-                                                                {
-                                                                    new Photo()
-                                                                    {
-                                                                        AlbumId = vkStuff.MainAlbumId,
-                                                                        OwnerId = -vkStuff.GroupId,
-                                                                        Id = photoId
-                                                                    }
-                                                                });
-                                                            return;
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        EnqueueMessageAsync(
-                                                            userId: message.PeerId,
-                                                            message: "Сегодня Вы не учитесь");
-                                                        return;
-                                                    }
-                                                }
-                                            }
-                                            case "На завтра":
-                                            {
-                                                int week = CurrentWeek();
-                                                int today = (int)DateTime.Now.DayOfWeek;
-                                                if (today == 6)
-                                                {
-                                                    week = (week + 1) % 2;
-                                                    int day = 0;
-                                                    while (!courses[(int)userMapping.Item1].groups[userMapping.Item2]
-                                                        .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                                                        .days[day].isStudying)
-                                                    {
-                                                        ++day;
-                                                        if (day == 6)
-                                                        {
-                                                            day = 0;
-                                                            week = (week + 1) % 2;
-                                                        }
-                                                    }
-                                                    long photoId = courses[(int)userMapping.Item1].groups[userMapping.Item2]
-                                                        .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                                                        .days[day].PhotoId;
-                                                    if (photoId == 0)
-                                                    {
-                                                        Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
-                                                        drawingDayScheduleInfo.date = courses[(int)userMapping.Item1].date;
-                                                        drawingDayScheduleInfo.day = courses[(int)userMapping.Item1].groups[userMapping.Item2]
-                                                            .scheduleSubgroups[user.Subgroup - 1].weeks[week].days[day];
-                                                        drawingDayScheduleInfo.dayOfWeek = day;
-                                                        drawingDayScheduleInfo.group = user.Group;
-                                                        drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
-                                                        drawingDayScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
-                                                        drawingDayScheduleInfo.weekProperties = week;
-
-                                                        PhotoUploadProperties photoUploadProperties = new PhotoUploadProperties();
-                                                        photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
-                                                        photoUploadProperties.Day = day;
-                                                        photoUploadProperties.Group = user.Group;
-                                                        photoUploadProperties.Subgroup = user.Subgroup - 1;
-                                                        photoUploadProperties.Week = week;
-                                                        photoUploadProperties.PeerId = (long)message.PeerId;
-                                                        photoUploadProperties.Message = "Завтра воскресенье, вот расписание на ближайший учебный день";
-                                                        photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
-                                                    
-                                                        vkStuff.photosQueue.Enqueue(photoUploadProperties);
-                                                        return;
-                                                    }
-                                                    else
-                                                    {
-                                                        EnqueueMessageAsync(
-                                                            userId: message.PeerId,
-                                                            message: "Завтра воскресенье, вот расписание на ближайший учебный день",
-                                                            attachments: new List<MediaAttachment>
-                                                            {
-                                                                new Photo()
-                                                                {
-                                                                    AlbumId = vkStuff.MainAlbumId,
-                                                                    OwnerId = -vkStuff.GroupId,
-                                                                    Id = photoId
-                                                                }
-                                                            });
-                                                        return;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    // в связи с тем, что DateTime.Now.DayOfWeek == 0 это воскресенье
-                                                    int day = today;
-                                                    if (today == 0)
-                                                        week = (week + 1) % 2;
-                                                    int weekTemp = week;
-                                                    while (!courses[(int)userMapping.Item1].groups[userMapping.Item2]
-                                                        .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                                                        .days[day].isStudying)
-                                                    {
-                                                        ++day;
-                                                        if (day == 6)
-                                                        {
-                                                            day = 0;
-                                                            week = (week + 1) % 2;
-                                                        }
-                                                    }
-                                                    string messageTemp = "Завтра Вы не учитесь, вот расписание на ближайший учебный день";
-                                                    if (day == today && week == weekTemp)
-                                                        messageTemp = "Расписание на завтра";
-                                                    long photoId = courses[(int)userMapping.Item1].groups[userMapping.Item2]
-                                                        .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                                                        .days[day].PhotoId;
-                                                    if (photoId == 0)
-                                                    {
-                                                        Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
-                                                        drawingDayScheduleInfo.date = courses[(int)userMapping.Item1].date;
-                                                        drawingDayScheduleInfo.day = courses[(int)userMapping.Item1].groups[userMapping.Item2]
-                                                            .scheduleSubgroups[user.Subgroup - 1].weeks[week].days[day];
-                                                        drawingDayScheduleInfo.dayOfWeek = day;
-                                                        drawingDayScheduleInfo.group = user.Group;
-                                                        drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
-                                                        drawingDayScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
-                                                        drawingDayScheduleInfo.weekProperties = week;
-
-                                                        PhotoUploadProperties photoUploadProperties = new PhotoUploadProperties();
-                                                        photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
-                                                        photoUploadProperties.Day = day;
-                                                        photoUploadProperties.Group = user.Group;
-                                                        photoUploadProperties.Subgroup = user.Subgroup - 1;
-                                                        photoUploadProperties.Week = week;
-                                                        photoUploadProperties.PeerId = (long)message.PeerId;
-                                                        photoUploadProperties.Message = messageTemp;
-                                                        photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
-                                                    
-                                                        vkStuff.photosQueue.Enqueue(photoUploadProperties);
-                                                        return;
-                                                    }
-                                                    else
-                                                    {
-                                                        EnqueueMessageAsync(
-                                                            userId: message.PeerId,
-                                                            message: messageTemp,
-                                                            attachments: new List<MediaAttachment>
-                                                            {
-                                                                new Photo()
-                                                                {
-                                                                    AlbumId = vkStuff.MainAlbumId,
-                                                                    OwnerId = -vkStuff.GroupId,
-                                                                    Id = photoId
-                                                                }
-                                                            });
-                                                        return;
-                                                    }
-                                                }
-                                            }
-                                            default:
-                                            {
-                                                EnqueueMessageAsync(
-                                                    userId: message.PeerId,
-                                                    message: "Произошла ошибка в меню 1, что-то с message.Text",
-                                                    keyboardId: 0);
-                                                return;
-                                            }
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    MessageKeyboard keyboardCustom = vkStuff.MenuKeyboards[3];
-
-                                    StringBuilder stringBuilder = new StringBuilder();
-                                    stringBuilder.Append("Вы подписаны: ");
-                                    stringBuilder.Append(user.Group);
-                                    stringBuilder.Append(" (");
-                                    stringBuilder.Append(user.Subgroup);
-                                    stringBuilder.Append(")");
-
-                                    keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
-
-                                    EnqueueMessageAsync(
-                                        userId: message.PeerId,
-                                        message: "Ваша группа не существует, настройте заново",
-                                        customKeyboard: keyboardCustom);
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
-                                    keyboardId: 2);
-                                return;
-                            }
+                            EnqueueMessage(
+                                userIds: userRepository.GetIds(toWhom),
+                                message: messageStr);
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: "Выполнено");
                         }
                     }
-                    case 2: // 2 и 3 тут
+                    else if (message.Text.IndexOf("Обновить") == 0 || message.Text.IndexOf("Update") == 0)
                     {
-                        if (message.Text.Contains("Вы подписаны") || message.Text.Contains("Вы не подписаны"))
+                        // todo
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "todo");
+                        return;
+                    }
+                    else if (message.Text.IndexOf("Перезагрузка") == 0 || message.Text.IndexOf("Reboot") == 0)
+                    {
+                        while (courses[0].isUpdating || courses[1].isUpdating || courses[2].isUpdating || courses[3].isUpdating)
+                            Thread.Sleep(60000);
+                        while (!commandsQueue.IsEmpty || !photosQueue.IsEmpty)
+                            Thread.Sleep(5000); 
+                        userRepository.SaveUsers(path);                   
+                        Environment.Exit(0);
+                    }
+                }
+                else if (message.Attachments.Count != 0)
+                {
+                    if (message.Attachments.Single().ToString() == "Sticker")
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "🤡");
+                        return;
+                    }
+                    else
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Я не умею читать файлы");
+                        return;
+                    }
+                }
+
+                string messageTemp = message.Text;
+                if (messageTemp.ToUpper().Contains("ПОДПИСАТЬСЯ "))
+                {
+                    messageTemp = messageTemp.Substring(messageTemp.IndexOf(' ') + 1);
+                    string group;
+                    int subgroup;
+                    if (messageTemp.Contains(' ') && messageTemp.Length > messageTemp.IndexOf(' ') + 1)
+                    {
+                        if (messageTemp.Length != messageTemp.IndexOf(' ') + 2
+                            || !Int32.TryParse(messageTemp.Substring(messageTemp.IndexOf(' ') + 1, 1), out subgroup)
+                            || (subgroup != 1 && subgroup != 2))
                         {
-                            EnqueueMessageAsync(
+                            EnqueueMessage(
                                 userId: message.PeerId,
-                                message: "Попробуйте нажать на другую кнопку");
+                                attachments: new List<MediaAttachment>()
+                                {
+                                    vkStuff.subscribeInfo
+                                },
+                                message: "Некорректный ввод настроек"
+                            );
                             return;
                         }
-                        switch (message.Text)
-                        {
-                            case "Отписаться":
+                        group = messageTemp.Substring(0, messageTemp.IndexOf(' '));
+                    }
+                    else
+                    {
+                        group = messageTemp;
+                        subgroup = 1;
+                    }
+                    StringBuilder messageBuilder = new StringBuilder();
+                    if (userRepository.ContainsUser(message.PeerId))
+                    {
+                        userRepository.EditUser(
+                            id: (long)message.PeerId,
+                            newGroup: group,
+                            newSubgroup: subgroup);
+                        messageBuilder.Append("Вы изменили настройки на ");
+                    }
+                    else
+                    {
+                        userRepository.AddUser((long)message.PeerId, group, subgroup);
+                        messageBuilder.Append("Вы подписались на ");
+                    }
+                    messageBuilder.Append(group);
+                    messageBuilder.Append(" (");
+                    messageBuilder.Append(subgroup);
+                    messageBuilder.Append(')');
+                    EnqueueMessage(
+                        userId: message.PeerId,
+                        message: messageBuilder.ToString()
+                    );
+                    return;
+                }
+                message.Text = message.Text.ToUpper();
+                if (message.Text == "НА НЕДЕЛЮ"
+                    || message.Text == "НА ЗАВТРА"
+                    || message.Text == "НА СЕГОДНЯ"
+                    || message.Text == "ССЫЛКА")
+                {
+                    if (!userRepository.GetUser(message.PeerId, out Users.User user))
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            attachments: new List<MediaAttachment>()
                             {
-                                User user = userRepository.GetUser(message.PeerId);
+                                vkStuff.subscribeInfo
+                            },
+                            message: "Вы не настроили свою группу");
+                        return;
+                    }
+                    (int?, int) userMapping = mapper.GetCourseAndIndex(user.Group);
+                    if (userMapping.Item1 == null)
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            attachments: new List<MediaAttachment>()
+                            {
+                                vkStuff.subscribeInfo
+                            },
+                            message: "Ваша группа не существует, настройте заново."
+                        );
+                        return;
+                    }
+                    if (courses[(int)userMapping.Item1].isUpdating)
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Происходит обновление расписания, повторите попытку через несколько минут");
+                        return;
+                    }
+                    else if (message.Text == "ССЫЛКА")
+                    {
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.Append("Расписание для ");
+                        stringBuilder.Append(userMapping.Item1 + 1);
+                        stringBuilder.Append(" курса: ");
+                        stringBuilder.Append(checkingRelevance.DatesAndUrls.urls[(int)userMapping.Item1]);
 
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: stringBuilder.ToString());
+                        return;
+                    }
+                    else if (courses[(int)userMapping.Item1].isBroken)
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Расписание Вашего курса не обработано");
+                        return;
+                    }
+                    switch (message.Text)
+                    {
+                        case "НА НЕДЕЛЮ":
+                        {
+                            ForWeek((int)userMapping.Item1, userMapping.Item2, user);
+                            return;
+                        }
+                        case "НА ЗАВТРА":
+                        {
+                            ForTomorrow((int)userMapping.Item1, userMapping.Item2, user);
+                            return;
+                        }
+                        case "НА СЕГОДНЯ":
+                        {
+                            ForToday((int)userMapping.Item1, userMapping.Item2, user);
+                            return;
+                        }
+                    }
+                    return;
+                }
+                switch (message.Text)
+                {
+                    case "ОТПИСАТЬСЯ":
+                    {
+                        string messageText;
+                        if (userRepository.ContainsUser(message.PeerId))
+                        {
+                            userRepository.DeleteUser((long)message.PeerId);
+                            messageText = "Вы отписались";
+                        }
+                        else
+                        {
+                            messageText = "Вы не подписаны";
+                        }
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: messageText
+                        );
+                        return;
+                    }
+                    case "ПОДПИСАТЬСЯ":
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            attachments: new List<MediaAttachment>()
+                            {
+                                vkStuff.subscribeInfo
+                            },
+                            message: null
+                        );
+                        return;
+                    }
+                    case "НЕДЕЛЯ":
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: CurrentWeekStr()
+                        );
+                        return;
+                    }
+                    default:
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            attachments: new List<MediaAttachment>()
+                            {
+                                vkStuff.textCommandsInfo
+                            },
+                            message: null,
+                            keyboardId: 0
+                        );
+                        return;
+                    }
+                }
+            }
+
+            PayloadStuff payloadStuff = null;
+            try
+            {
+                payloadStuff = Newtonsoft.Json.JsonConvert.DeserializeObject<PayloadStuff>(message.Payload);
+            }
+            catch
+            {
+                EnqueueMessage(
+                    userId: message.PeerId,
+                    message: "У Вас устаревшая клавиатура, отправляю новую",
+                    keyboardId: 0);
+                return;
+            }
+            if (payloadStuff.Command == "start")
+            {
+                EnqueueMessage(
+                    userId: message.PeerId,
+                    message: "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.\nКнопка \"Информация\" для получения подробностей",
+                    keyboardId: 0);
+                return;
+            }
+            // По idшникам меню сортируем сообщения
+            switch (payloadStuff.Menu)
+            {
+                case null:
+                {
+                    EnqueueMessage(
+                        userId: message.PeerId,
+                        message: "Что-то пошло не так",
+                        keyboardId: 0);
+                    return;
+                }
+                case 0:
+                {
+                    switch (message.Text)
+                    {
+                        case "Расписание":
+                        {
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                keyboardId: 1);
+                            return;
+                        }
+                        case "Неделя":
+                        {
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: CurrentWeekStr());
+                            return;
+                        }
+                        case "Настройки":
+                        {
+                            if (userRepository.GetUser(message.PeerId, out Users.User user))
+                            {
                                 StringBuilder stringBuilder = new StringBuilder();
-                                stringBuilder.Append("Отменена подписка на ");
+                                stringBuilder.Append("Вы подписаны: ");
                                 stringBuilder.Append(user.Group);
                                 stringBuilder.Append(" (");
                                 stringBuilder.Append(user.Subgroup);
                                 stringBuilder.Append(')');
 
-                                userRepository.DeleteUser((long)message.PeerId);
-
-                                EnqueueMessageAsync(
+                                MessageKeyboard keyboardCustom = vkStuff.menuKeyboards[3];
+                                keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
+                                
+                                EnqueueMessage(
                                     userId: message.PeerId,
-                                    message: stringBuilder.ToString(),
+                                    message: "Отправляю клавиатуру",
+                                    customKeyboard: keyboardCustom
+                                );
+                                return;
+                            }
+                            else
+                            {
+                                EnqueueMessage(
+                                    userId: message.PeerId,
+                                    message: "Отправляю клавиатуру",
+                                    keyboardId: 2
+                                );
+                                return;
+                            }
+                        }
+                        case "Информация":
+                        {
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: "Текущая версия - v2.3\n\nПри обновлении расписания на сайте Вам придёт сообщение. Далее Вы получите одно из трех сообщений:\n 1) Новое расписание *картинка*\n 2) Для Вас изменений нет\n 3) Не удалось скачать/обработать расписание *ссылка*\n Если не придёт никакого сообщения, Ваша группа скорее всего изменилась/не найдена. Настройте заново.\n\nВ расписании могут встретиться верхние индексы, предупреждающие о возможных ошибках. Советую ознакомиться со статьёй: vk.com/@itmmschedulebot-raspisanie");
+                            return;
+                        }
+                        default:
+                        {
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: "Произошла ошибка в меню 0, что-то с message.Text",
+                                keyboardId: 0);
+                            return;
+                        }
+                    }
+                }
+                case 1:
+                {
+                    if (message.Text == "Назад")
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            keyboardId: 0);
+                        return;
+                    }
+                    if (!userRepository.GetUser(message.PeerId, out Users.User user))
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
+                            keyboardId: 2);
+                        return;
+                    }
+                    (int?, int) userMapping = mapper.GetCourseAndIndex(user.Group);
+                    if (userMapping.Item1 == null)
+                    {
+                        MessageKeyboard keyboardCustom = vkStuff.menuKeyboards[3];
+
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.Append("Вы подписаны: ");
+                        stringBuilder.Append(user.Group);
+                        stringBuilder.Append(" (");
+                        stringBuilder.Append(user.Subgroup);
+                        stringBuilder.Append(")");
+
+                        keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
+
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Ваша группа не существует, настройте заново",
+                            customKeyboard: keyboardCustom);
+                        return;
+                    }
+                    if (courses[(int)userMapping.Item1].isUpdating)
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Происходит обновление расписания, повторите попытку через несколько минут");
+                        return;
+                    }
+                    else if (message.Text == "Ссылка")
+                    {
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.Append("Расписание для ");
+                        stringBuilder.Append(userMapping.Item1 + 1);
+                        stringBuilder.Append(" курса: ");
+                        stringBuilder.Append(checkingRelevance.DatesAndUrls.urls[(int)userMapping.Item1]);
+
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: stringBuilder.ToString());
+                        return;
+                    }
+                    else if (courses[(int)userMapping.Item1].isBroken)
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Расписание Вашего курса не обработано");
+                        return;
+                    }
+                    switch (message.Text)
+                    {
+                        case "На неделю":
+                        {
+                            ForWeek((int)userMapping.Item1, userMapping.Item2, user);
+                            return;
+                        }
+                        case "На сегодня":
+                        {
+                            ForToday((int)userMapping.Item1, userMapping.Item2, user);
+                            return;
+                        }
+                        case "На завтра":
+                        {
+                            ForTomorrow((int)userMapping.Item1, userMapping.Item2, user);
+                            return;
+                        }
+                        default:
+                        {
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: "Произошла ошибка в меню 1, что-то с message.Text",
+                                keyboardId: 0);
+                            return;
+                        }
+                    }
+                }
+                case 2: // 2 и 3 тут
+                {
+                    if (message.Text == "Вы не подписаны" || message.Text.Contains("Вы подписаны"))
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Попробуйте нажать на другую кнопку");
+                        return;
+                    }
+                    switch (message.Text)
+                    {
+                        case "Отписаться":
+                        {
+                            if (!userRepository.GetUser(message.PeerId, out Users.User user))
+                            {
+                                EnqueueMessage(
+                                    userId: message.PeerId,
+                                    message: "Вы не можете отписаться, так как Вы не подписаны");
+                                return;
+                            }
+                            StringBuilder messageBuilder = new StringBuilder();
+                            messageBuilder.Append("Отменена подписка на ");
+                            messageBuilder.Append(user.Group);
+                            messageBuilder.Append(" (");
+                            messageBuilder.Append(user.Subgroup);
+                            messageBuilder.Append(')');
+
+                            userRepository.DeleteUser((long)message.PeerId);
+
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: messageBuilder.ToString(),
+                                keyboardId: 2);
+                            return;
+                        }
+                        case "Подписаться":
+                        {
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                keyboardId: 4);
+                            return;
+                        }
+                        case "Переподписаться":
+                        {
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                keyboardId: 4);
+                            return;
+                        }
+                        case "Изменить подгруппу":
+                        {
+                            Users.User user = userRepository.ChangeSubgroup(message.PeerId);
+                            if (user == null)
+                            {
+                                EnqueueMessage(
+                                    userId: message.PeerId,
+                                    message: "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться",
                                     keyboardId: 2);
-                                return;
                             }
-                            case "Подписаться":
+                            else
                             {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    keyboardId: 4);
-                                return;
-                            }
-                            case "Переподписаться":
-                            {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    keyboardId: 4);
-                                return;
-                            }
-                            case "Изменить подгруппу":
-                            {
-                                User user = userRepository.ChangeSubgroup(message.PeerId);
-
                                 StringBuilder stringBuilder = new StringBuilder();
                                 stringBuilder.Append("Вы подписаны: ");
                                 stringBuilder.Append(user.Group);
@@ -1375,229 +942,485 @@ namespace Schedulebot
                                 stringBuilder.Append(')');
 
                                 MessageKeyboard keyboardCustom;
-                                keyboardCustom = vkStuff.MenuKeyboards[3];
+                                keyboardCustom = vkStuff.menuKeyboards[3];
                                 keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
                             
                                 stringBuilder.Clear();
                                 stringBuilder.Append("Ваша подгруппа: ");
                                 stringBuilder.Append(user.Subgroup);
 
-                                EnqueueMessageAsync(
+                                EnqueueMessage(
                                     userId: message.PeerId,
                                     message: stringBuilder.ToString(),
                                     customKeyboard: keyboardCustom);
-                                return;
-                            }
-                            case "Назад":
-                            {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    keyboardId: 0);
-                                return;
-                            }
-                            default:
-                            {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    message: "Произошла ошибка в меню 2, что-то с message.Text",
-                                    keyboardId: 0);
-                                return;
-                            }
-                        }
-                    }
-                    case 4:
-                    {
-                        if (message.Text == "Выберите курс")
-                        {
-                            EnqueueMessageAsync(
-                                userId: message.PeerId,
-                                message: "Попробуйте нажать на другую кнопку");
-                            return;
-                        }
-                        else if (message.Text == "Назад")
-                        {
-                            if (userRepository.ContainsUser(message.PeerId))
-                            {
-                                User user = userRepository.GetUser(message.PeerId);
-
-                                StringBuilder stringBuilder = new StringBuilder();
-                                stringBuilder.Append("Вы подписаны: ");
-                                stringBuilder.Append(user.Group);
-                                stringBuilder.Append(" (");
-                                stringBuilder.Append(user.Subgroup);
-                                stringBuilder.Append(')');
-
-                                MessageKeyboard keyboardCustom = vkStuff.MenuKeyboards[3];
-                                keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
-                                
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    message: "Отправляю клавиатуру",
-                                    customKeyboard: keyboardCustom);
-                            }
-                            else
-                            {
-                                EnqueueMessageAsync(
-                                    userId: message.PeerId,
-                                    message: "Отправляю клавиатуру",
-                                    keyboardId: 2);
                             }
                             return;
                         }
-                        else if (message.Text.Length == 1)
+                        case "Назад":
                         {
-                            Int32.TryParse(message.Text, out int course);
-                            course--;
-                            EnqueueMessageAsync(
+                            EnqueueMessage(
                                 userId: message.PeerId,
-                                message: "Выберите группу",
-                                customKeyboard: courses[course].keyboards[0]);
-                            return;
-                        }
-                        else
-                        {
-                            EnqueueMessageAsync(
-                                userId: message.PeerId,
-                                message: "Произошла ошибка в меню 4, что-то с message.Text", 
                                 keyboardId: 0);
                             return;
                         }
-                    }
-                    case 5:
-                    {
-                        if (message.Text == "Назад")
+                        default:
                         {
-                            EnqueueMessageAsync(
+                            EnqueueMessage(
                                 userId: message.PeerId,
-                                customKeyboard: courses[payloadStuff.Course].keyboards[0]);
-                            return;
-                        }
-                        else if (message.Text.Length == 1)
-                        {
-                            StringBuilder stringBuilder = new StringBuilder();
-
-                            Int32.TryParse(message.Text, out int subgroup);
-                            if (userRepository.ContainsUser(message.PeerId))
-                            {
-                                userRepository.EditUser(
-                                    id: (long)message.PeerId,
-                                    newGroup: payloadStuff.Group,
-                                    newSubgroup: subgroup);
-
-                                stringBuilder.Append("Вы изменили настройки на ");
-                            }
-                            else
-                            {
-                                userRepository.AddUser(new User((long)message.PeerId, payloadStuff.Group, subgroup));
-
-                                stringBuilder.Append("Вы подписались на ");
-                            }
-
-                            stringBuilder.Append(payloadStuff.Group);
-                            stringBuilder.Append(" (");
-                            stringBuilder.Append(message.Text);
-                            stringBuilder.Append(')');
-
-                            EnqueueMessageAsync(
-                                userId: message.PeerId,
-                                message: stringBuilder.ToString(),
+                                message: "Произошла ошибка в меню 2, что-то с message.Text",
                                 keyboardId: 0);
-                            return;
-                        }
-                        else
-                        {
-                            EnqueueMessageAsync(
-                                userId: message.PeerId,
-                                message: "Произошла ошибка в меню 5, что-то с message.Text",
-                                keyboardId: 0);
-                            return;
-                        }
-                    }
-                    case 40:
-                    {
-                        if (payloadStuff.Page != -1)
-                        {
-                            switch (message.Text)
-                            {
-                                case "Назад":
-                                {
-                                    if (payloadStuff.Page == 0)
-                                    {
-                                        EnqueueMessageAsync(
-                                            userId: message.PeerId,
-                                            message: "Отправляю клавиатуру",
-                                            keyboardId: 4);
-                                        return;
-                                    }
-                                    else
-                                    {
-                                        EnqueueMessageAsync(
-                                            userId: message.PeerId,
-                                            message: "Отправляю клавиатуру",
-                                            customKeyboard: courses[payloadStuff.Course].keyboards[payloadStuff.Page - 1]);
-                                        return;
-                                    }
-                                }
-                                case "Вперед":
-                                {
-                                    MessageKeyboard keyboardCustom;
-                                    if (payloadStuff.Page == courses[payloadStuff.Course].keyboards.Count - 1)
-                                    {
-                                        keyboardCustom = courses[payloadStuff.Course].keyboards[0];
-                                    }
-                                    else
-                                    {
-                                        keyboardCustom = courses[payloadStuff.Course].keyboards[payloadStuff.Page + 1];
-                                    }
-                                    EnqueueMessageAsync(
-                                        userId: message.PeerId,
-                                        message: "Отправляю клавиатуру",
-                                        customKeyboard: keyboardCustom);
-                                    return;
-                                }
-                                default:
-                                {
-                                    if (message.Text.Contains(" из "))
-                                    {
-                                        EnqueueMessageAsync(
-                                            userId: message.PeerId,
-                                            message: "Меню страниц не реализовано");
-                                        return;
-                                    }
-                                    EnqueueMessageAsync(
-                                        userId: message.PeerId,
-                                        message: "Произошла ошибка в меню 40, что-то с message.Text",
-                                        keyboardId: 0);
-                                    return;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            MessageKeyboard customKeyboard;
-                            customKeyboard = vkStuff.MenuKeyboards[5];
-                            StringBuilder stringBuilder = new StringBuilder();
-                            stringBuilder.Append("{\"menu\": \"5\", \"group\": \"");
-                            stringBuilder.Append(message.Text);
-                            stringBuilder.Append("\", \"course\": \"");
-                            stringBuilder.Append(payloadStuff.Course);
-                            stringBuilder.Append("\"}");
-                            customKeyboard.Buttons.First().First().Action.Payload = stringBuilder.ToString();
-                            customKeyboard.Buttons.First().ElementAt(1).Action.Payload = customKeyboard.Buttons.First().First().Action.Payload;
-                            customKeyboard.Buttons.ElementAt(1).First().Action.Payload = customKeyboard.Buttons.First().First().Action.Payload;
-                            EnqueueMessageAsync(
-                                userId: message.PeerId,
-                                message: "Выберите подгруппу, если нет - 1",
-                                customKeyboard: customKeyboard);
                             return;
                         }
                     }
                 }
-            });
+                case 4:
+                {
+                    if (message.Text == "Выберите курс")
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Попробуйте нажать на другую кнопку");
+                        return;
+                    }
+                    else if (message.Text == "Назад")
+                    {
+                        if (!userRepository.GetUser(message.PeerId, out Users.User user))
+                        {
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: "Отправляю клавиатуру",
+                                keyboardId: 2);
+                            return;
+                        }
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.Append("Вы подписаны: ");
+                        stringBuilder.Append(user.Group);
+                        stringBuilder.Append(" (");
+                        stringBuilder.Append(user.Subgroup);
+                        stringBuilder.Append(')');
+
+                        MessageKeyboard keyboardCustom = vkStuff.menuKeyboards[3];
+                        keyboardCustom.Buttons.First().First().Action.Label = stringBuilder.ToString();
+                        
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Отправляю клавиатуру",
+                            customKeyboard: keyboardCustom);
+                        return;
+                    }
+                    else if (message.Text.Length == 1)
+                    {
+                        Int32.TryParse(message.Text, out int course);
+                        course--;
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Выберите группу",
+                            customKeyboard: courses[course].keyboards[0]);
+                        return;
+                    }
+                    else
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Произошла ошибка в меню 4, что-то с message.Text", 
+                            keyboardId: 0);
+                        return;
+                    }
+                }
+                case 5:
+                {
+                    if (message.Text == "Назад")
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            customKeyboard: courses[payloadStuff.Course].keyboards[0]);
+                        return;
+                    }
+                    else if (message.Text.Length == 1)
+                    {
+                        StringBuilder stringBuilder = new StringBuilder();
+
+                        Int32.TryParse(message.Text, out int subgroup);
+                        if (userRepository.ContainsUser(message.PeerId))
+                        {
+                            userRepository.EditUser(
+                                id: (long)message.PeerId,
+                                newGroup: payloadStuff.Group,
+                                newSubgroup: subgroup);
+                            stringBuilder.Append("Вы изменили настройки на ");
+                        }
+                        else
+                        {
+                            userRepository.AddUser(new Users.User((long)message.PeerId, payloadStuff.Group, subgroup));
+                            stringBuilder.Append("Вы подписались на ");
+                        }
+
+                        stringBuilder.Append(payloadStuff.Group);
+                        stringBuilder.Append(" (");
+                        stringBuilder.Append(message.Text);
+                        stringBuilder.Append(')');
+
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: stringBuilder.ToString(),
+                            keyboardId: 0);
+                        return;
+                    }
+                    else
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Произошла ошибка в меню 5, что-то с message.Text",
+                            keyboardId: 0);
+                        return;
+                    }
+                }
+                case 40:
+                {
+                    if (payloadStuff.Page == -1)
+                    {
+                        MessageKeyboard customKeyboard;
+                        customKeyboard = vkStuff.menuKeyboards[5];
+                        StringBuilder stringBuilder = new StringBuilder();
+                        stringBuilder.Append("{\"menu\": \"5\", \"group\": \"");
+                        stringBuilder.Append(message.Text);
+                        stringBuilder.Append("\", \"course\": \"");
+                        stringBuilder.Append(payloadStuff.Course);
+                        stringBuilder.Append("\"}");
+                        customKeyboard.Buttons.First().First().Action.Payload = stringBuilder.ToString();
+                        customKeyboard.Buttons.First().ElementAt(1).Action.Payload = customKeyboard.Buttons.First().First().Action.Payload;
+                        customKeyboard.Buttons.ElementAt(1).First().Action.Payload = customKeyboard.Buttons.First().First().Action.Payload;
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: "Выберите подгруппу, если нет - 1",
+                            customKeyboard: customKeyboard);
+                        return;
+                    }
+                    switch (message.Text)
+                    {
+                        case "Назад":
+                        {
+                            if (payloadStuff.Page == 0)
+                            {
+                                EnqueueMessage(
+                                    userId: message.PeerId,
+                                    message: "Отправляю клавиатуру",
+                                    keyboardId: 4);
+                                return;
+                            }
+                            else
+                            {
+                                EnqueueMessage(
+                                    userId: message.PeerId,
+                                    message: "Отправляю клавиатуру",
+                                    customKeyboard: courses[payloadStuff.Course].keyboards[payloadStuff.Page - 1]);
+                                return;
+                            }
+                        }
+                        case "Вперед":
+                        {
+                            MessageKeyboard keyboardCustom;
+                            if (payloadStuff.Page == courses[payloadStuff.Course].keyboards.Count - 1)
+                                keyboardCustom = courses[payloadStuff.Course].keyboards[0];
+                            else
+                                keyboardCustom = courses[payloadStuff.Course].keyboards[payloadStuff.Page + 1];
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: "Отправляю клавиатуру",
+                                customKeyboard: keyboardCustom);
+                            return;
+                        }
+                        default:
+                        {
+                            if (message.Text.Contains(" из "))
+                            {
+                                EnqueueMessage(
+                                    userId: message.PeerId,
+                                    message: "Меню страниц не реализовано");
+                                return;
+                            }
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: "Произошла ошибка в меню 40, что-то с message.Text",
+                                keyboardId: 0);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void ForWeek(int course, int groupIndex, Users.User user)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.Append("Расписание для ");
+            stringBuilder.Append(user.Group);
+            stringBuilder.Append(" (");
+            stringBuilder.Append(user.Subgroup);
+            stringBuilder.Append(')');    
+
+            EnqueueMessage(
+                userId: user.Id,
+                message: stringBuilder.ToString(),
+                attachments: new List<MediaAttachment>
+                {
+                    new Photo()
+                    {
+                        AlbumId = vkStuff.mainAlbumId,
+                        OwnerId = -vkStuff.groupId,
+                        Id = courses[course].groups[groupIndex].scheduleSubgroups[user.Subgroup - 1].PhotoId
+                    }
+                });
             return;
         }
 
-        public async void EnqueueMessageAsync(
+        private void ForTomorrow(int course, int groupIndex, Users.User user)
+        {
+            int week = CurrentWeek();
+            int today = (int)DateTime.Now.DayOfWeek;
+            if (today == 6)
+            {
+                week = (week + 1) % 2;
+                int day = 0;
+                while (!courses[course].groups[groupIndex]
+                    .scheduleSubgroups[user.Subgroup - 1].weeks[week]
+                    .days[day].isStudying)
+                {
+                    ++day;
+                    if (day == 6)
+                    {
+                        day = 0;
+                        week = (week + 1) % 2;
+                    }
+                }
+                long photoId = courses[course].groups[groupIndex]
+                    .scheduleSubgroups[user.Subgroup - 1].weeks[week]
+                    .days[day].PhotoId;
+                if (photoId == 0)
+                {
+                    Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
+                    drawingDayScheduleInfo.date = checkingRelevance.DatesAndUrls.dates[course];
+                    drawingDayScheduleInfo.day = courses[course].groups[groupIndex]
+                        .scheduleSubgroups[user.Subgroup - 1].weeks[week].days[day];
+                    drawingDayScheduleInfo.dayOfWeek = day;
+                    drawingDayScheduleInfo.group = user.Group;
+                    drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
+                    drawingDayScheduleInfo.vkGroupUrl = vkStuff.groupUrl;
+                    drawingDayScheduleInfo.weekProperties = week;
+
+                    PhotoUploadProperties photoUploadProperties = new PhotoUploadProperties();
+                    photoUploadProperties.UploadingSchedule = UploadingSchedule.Day;
+                    photoUploadProperties.ToSend = true;
+                    photoUploadProperties.AlbumId = vkStuff.mainAlbumId;
+                    photoUploadProperties.Course = course;
+                    photoUploadProperties.GroupIndex = groupIndex;
+                    photoUploadProperties.Day = day;
+                    photoUploadProperties.GroupName = user.Group;
+                    photoUploadProperties.Subgroup = user.Subgroup - 1;
+                    photoUploadProperties.Week = week;
+                    photoUploadProperties.PeerId = user.Id;
+                    photoUploadProperties.Message = "Завтра воскресенье, вот расписание на ближайший учебный день";
+                    try
+                    {
+                        photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
+                    }
+                    catch
+                    {
+                        EnqueueMessage(
+                            userId: user.Id,
+                            message: "Не удалось нарисовать картинку, попробуйте позже"
+                        );
+                        return;
+                    }
+                    photosQueue.Enqueue(photoUploadProperties);
+                    return;
+                }
+                else
+                {
+                    EnqueueMessage(
+                        userId: user.Id,
+                        message: "Завтра воскресенье, вот расписание на ближайший учебный день",
+                        attachments: new List<MediaAttachment>
+                        {
+                            new Photo()
+                            {
+                                AlbumId = vkStuff.mainAlbumId,
+                                OwnerId = -vkStuff.groupId,
+                                Id = photoId
+                            }
+                        });
+                    return;
+                }
+            }
+            else
+            {
+                // в связи с тем, что DateTime.Now.DayOfWeek == 0 это воскресенье
+                int day = today;
+                if (today == 0)
+                    week = (week + 1) % 2;
+                int weekTemp = week;
+                while (!courses[course].groups[groupIndex]
+                    .scheduleSubgroups[user.Subgroup - 1].weeks[week]
+                    .days[day].isStudying)
+                {
+                    ++day;
+                    if (day == 6)
+                    {
+                        day = 0;
+                        week = (week + 1) % 2;
+                    }
+                }
+                string messageTemp = "Завтра Вы не учитесь, вот расписание на ближайший учебный день";
+                if (day == today && week == weekTemp)
+                    messageTemp = "Расписание на завтра";
+                long photoId
+                    = courses[course].groups[groupIndex].scheduleSubgroups[user.Subgroup - 1].weeks[week].days[day].PhotoId;
+                if (photoId == 0)
+                {
+                    Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
+                    drawingDayScheduleInfo.date = checkingRelevance.DatesAndUrls.dates[course];
+                    drawingDayScheduleInfo.day = courses[course].groups[groupIndex]
+                        .scheduleSubgroups[user.Subgroup - 1].weeks[week].days[day];
+                    drawingDayScheduleInfo.dayOfWeek = day;
+                    drawingDayScheduleInfo.group = user.Group;
+                    drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
+                    drawingDayScheduleInfo.vkGroupUrl = vkStuff.groupUrl;
+                    drawingDayScheduleInfo.weekProperties = week;
+
+                    PhotoUploadProperties photoUploadProperties = new PhotoUploadProperties();
+                    photoUploadProperties.UploadingSchedule = UploadingSchedule.Day;
+                    photoUploadProperties.ToSend = true;
+                    photoUploadProperties.AlbumId = vkStuff.mainAlbumId;
+                    photoUploadProperties.Course = course;
+                    photoUploadProperties.GroupIndex = groupIndex;
+                    photoUploadProperties.Day = day;
+                    photoUploadProperties.GroupName = user.Group;
+                    photoUploadProperties.Subgroup = user.Subgroup - 1;
+                    photoUploadProperties.Week = week;
+                    photoUploadProperties.PeerId = user.Id;
+                    photoUploadProperties.Message = messageTemp;
+                    try
+                    {
+                        photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
+                    }
+                    catch
+                    {
+                        EnqueueMessage(
+                            userId: user.Id,
+                            message: "Не удалось нарисовать картинку, попробуйте позже"
+                        );
+                        return;
+                    }
+                    photosQueue.Enqueue(photoUploadProperties);
+                    return;
+                }
+                else
+                {   
+                    EnqueueMessage(
+                        userId: user.Id,
+                        message: messageTemp,
+                        attachments: new List<MediaAttachment>
+                        {
+                            new Photo()
+                            {
+                                AlbumId = vkStuff.mainAlbumId,
+                                OwnerId = -vkStuff.groupId,
+                                Id = photoId
+                            }
+                        });
+                    return;
+                }
+            }
+        }
+
+        private void ForToday(int course, int groupIndex, Users.User user)
+        {
+            int week = CurrentWeek();
+            int today = (int)DateTime.Now.DayOfWeek;
+            if (today == 0)
+            {
+                EnqueueMessage(
+                    userId: user.Id,
+                    message: "Сегодня воскресенье");
+                return;
+            }
+            else
+            {
+                --today;
+                if (courses[course].groups[groupIndex]
+                    .scheduleSubgroups[user.Subgroup - 1].weeks[week]
+                    .days[today].isStudying)
+                {
+                    long photoId = courses[course].groups[groupIndex]
+                        .scheduleSubgroups[user.Subgroup - 1].weeks[week]
+                        .days[today].PhotoId;
+                    if (photoId == 0)
+                    {
+                        Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
+                        drawingDayScheduleInfo.date = checkingRelevance.DatesAndUrls.dates[course];
+                        drawingDayScheduleInfo.day = courses[course].groups[groupIndex]
+                            .scheduleSubgroups[user.Subgroup - 1].weeks[week].days[today];
+                        drawingDayScheduleInfo.dayOfWeek = today;
+                        drawingDayScheduleInfo.group = user.Group;
+                        drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
+                        drawingDayScheduleInfo.vkGroupUrl = vkStuff.groupUrl;
+                        drawingDayScheduleInfo.weekProperties = week;
+
+                        PhotoUploadProperties photoUploadProperties = new PhotoUploadProperties();
+                        photoUploadProperties.UploadingSchedule = UploadingSchedule.Day;
+                        photoUploadProperties.ToSend = true;
+                        photoUploadProperties.AlbumId = vkStuff.mainAlbumId;
+                        photoUploadProperties.Course = course;
+                        photoUploadProperties.GroupIndex = groupIndex;
+                        photoUploadProperties.Day = today;
+                        photoUploadProperties.GroupName = user.Group;
+                        photoUploadProperties.Subgroup = user.Subgroup - 1;
+                        photoUploadProperties.Week = week;
+                        photoUploadProperties.PeerId = user.Id;
+                        photoUploadProperties.Message = "Расписание на сегодня";
+                        try
+                        {
+                            photoUploadProperties.Photo = Drawing.DrawingSchedule.DaySchedule.Draw(drawingDayScheduleInfo);
+                        }
+                        catch
+                        {
+                            EnqueueMessage(
+                                userId: user.Id,
+                                message: "Не удалось нарисовать картинку, попробуйте позже"
+                            );
+                            return;
+                        }
+                        photosQueue.Enqueue(photoUploadProperties);
+                        return;
+                    }
+                    else
+                    {
+                        EnqueueMessage(
+                            userId: user.Id,
+                            message: "Расписание на сегодня",
+                            attachments: new List<MediaAttachment>
+                            {
+                                new Photo()
+                                {
+                                    AlbumId = vkStuff.mainAlbumId,
+                                    OwnerId = -vkStuff.groupId,
+                                    Id = photoId
+                                }
+                            });
+                        return;
+                    }
+                }
+                else
+                {
+                    EnqueueMessage(
+                        userId: user.Id,
+                        message: "Сегодня Вы не учитесь");
+                    return;
+                }
+            }
+        }
+
+        public void EnqueueMessage(
             long? userId = null,
             List<long> userIds = null,
             string message = "Отправляю клавиатуру",
@@ -1605,341 +1428,348 @@ namespace Schedulebot
             int? keyboardId = null,
             MessageKeyboard customKeyboard = null)
         {
-            await Task.Run(() => 
+            MessagesSendParams messageSendParams = new MessagesSendParams()
             {
-                MessagesSendParams messageSendParams = new MessagesSendParams()
+                Message = message,
+                RandomId = (int)DateTime.Now.Ticks
+            };
+            if (userIds != null)
+            {
+                if (userIds.Count == 0)
+                    return;
+                else if (userIds.Count > 100)
                 {
-                    Message = message,
-                    RandomId = (int)DateTime.Now.Ticks
-                };
-                if (userId == null)
-                {
-                    if (userIds.Count == 0)
-                        return;
-                    else if (userIds.Count > 100)
-                    {
-                        messageSendParams.UserIds = userIds.GetRange(0, 100);
-                        userIds.RemoveRange(0, 100);
-                        EnqueueMessageAsync(
-                            userIds: userIds,
-                            message: message,
-                            attachments: attachments,
-                            keyboardId: keyboardId,
-                            customKeyboard: customKeyboard);
-                    }
-                    else
-                        messageSendParams.UserIds = userIds;
+                    messageSendParams.UserIds = userIds.GetRange(0, 100);
+                    userIds.RemoveRange(0, 100);
+                    EnqueueMessage(
+                        userIds: userIds,
+                        message: message,
+                        attachments: attachments,
+                        keyboardId: keyboardId,
+                        customKeyboard: customKeyboard);
                 }
                 else
-                    messageSendParams.PeerId = userId;
-                if (attachments != null)
-                    messageSendParams.Attachments = attachments;
-                if (customKeyboard != null)
+                    messageSendParams.UserIds = userIds;
+            }
+            
+            messageSendParams.PeerId = userId;
+
+            messageSendParams.Attachments = attachments;
+
+            messageSendParams.Keyboard = customKeyboard;
+            switch (keyboardId)
+            {
+                case null:
                 {
-                    messageSendParams.Keyboard = customKeyboard;
+                    break;
                 }
-                else
+                case 0:
                 {
-                    switch (keyboardId)
-                    {
-                        case null:
-                        {
-                            break;
-                        }
-                        case 0:
-                        {
-                            messageSendParams.Keyboard = vkStuff.MenuKeyboards[0];
-                            break;
-                        }
-                        case 1:
-                        {
-                            messageSendParams.Keyboard = vkStuff.MenuKeyboards[1];
-                            break;
-                        }
-                        case 2:
-                        {
-                            messageSendParams.Keyboard = vkStuff.MenuKeyboards[2];
-                            break;
-                        }
-                        case 4:
-                        {
-                            messageSendParams.Keyboard = vkStuff.MenuKeyboards[4];
-                            break;
-                        }
-                    }
+                    messageSendParams.Keyboard = vkStuff.menuKeyboards[0];
+                    break;
                 }
-                vkStuff.commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messageSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
-            });
+                case 1:
+                {
+                    messageSendParams.Keyboard = vkStuff.menuKeyboards[1];
+                    break;
+                }
+                case 2:
+                {
+                    messageSendParams.Keyboard = vkStuff.menuKeyboards[2];
+                    break;
+                }
+                case 4:
+                {
+                    messageSendParams.Keyboard = vkStuff.menuKeyboards[4];
+                    break;
+                }
+            }
+            commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messageSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
         }
 
         public async Task ExecuteMethodsAsync()
         {
-            await Task.Run(async () => 
+            int queueCommandsAmount;
+            int commandsInRequestAmount = 0;
+            int timer = 0;
+            StringBuilder stringBuilder = new StringBuilder();
+            while (true)
             {
-                int queueCommandsAmount;
-                int commandsInRequestAmount = 0;
-                int timer = 0;
-                StringBuilder stringBuilder = new StringBuilder();
-                while (true)
+                queueCommandsAmount
+                    = commandsQueue.Count <= 25 - commandsInRequestAmount
+                    ? commandsQueue.Count : 25 - commandsInRequestAmount;
+                for (int i = 0; i < queueCommandsAmount; ++i)
                 {
-                    queueCommandsAmount = vkStuff.commandsQueue.Count;
-                    // if (queueCommandsAmount > 25 - commandsInRequestAmount)
-                    // {
-                    //     queueCommandsAmount = 25 - commandsInRequestAmount;
-                    // }
-                    for (int i = 0; i < queueCommandsAmount; ++i)
+                    if (commandsQueue.TryDequeue(out string command))
                     {
-                        if (vkStuff.commandsQueue.TryDequeue(out string command))
-                        {
-                            stringBuilder.Append(command);
-                            ++commandsInRequestAmount;
-                        }
-                        else
-                        {
-                            --i;
-                            timer += 1;
-                            await Task.Delay(1);
-                        }
+                        stringBuilder.Append(command);
+                        ++commandsInRequestAmount;
                     }
-                    if ((commandsInRequestAmount == 25 && timer >= 56) || timer >= 200)
+                    else
                     {
-                        if (commandsInRequestAmount == 0)
-                        {
-                            timer = 0;
-                        }
-                        else
-                        {
-                            Console.WriteLine(stringBuilder.ToString());
-                            var response = vkStuff.api.Execute.Execute(stringBuilder.ToString());
-                            timer = 0;
-                            commandsInRequestAmount = 0;
-                            stringBuilder = stringBuilder.Clear();
-                        }
+                        --i;
+                        timer += 1;
+                        await Task.Delay(1);
                     }
-                    timer += 8;
-                    await Task.Delay(8);
                 }
-            });
+                if ((commandsInRequestAmount == 25 && timer >= 60) || timer >= 200)
+                {
+                    if (commandsInRequestAmount == 0)
+                    {
+                        timer = 0;
+                    }
+                    else
+                    {
+                        #if DEBUG
+                            Console.WriteLine(stringBuilder.ToString());
+                        #endif
+
+                        var response = vkStuff.api.Execute.Execute(stringBuilder.ToString());
+                        timer = 0;
+                        commandsInRequestAmount = 0;
+                        stringBuilder.Clear();
+                    }
+                }
+                timer += 20;
+                await Task.Delay(20);
+            }
         }
 
-        public async void CheckRelevanceAsync()
+        public async Task CheckRelevanceAsync()
         {
-            await Task.Run(async () => 
+            List<int> coursesToUpdate;
+            while (true)
             {
-                DatesAndUrls newDatesAndUrls = await checkRelevanceStuffITMM.CheckRelevanceAsync();
-                if (newDatesAndUrls != null)
+                coursesToUpdate = await checkingRelevance.CheckRelevanceAsync();
+                if (coursesToUpdate != null)
                 {
-                    List<int> updatingCourses = new List<int>();
-                    List<Schedulebot.Vk.PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
-                    for (int currentDateAndUrl = 0; currentDateAndUrl < newDatesAndUrls.count; ++currentDateAndUrl)
+                    if (coursesToUpdate.Count != 0)
                     {
-                        if (newDatesAndUrls.dates[currentDateAndUrl] != courses[newDatesAndUrls.courses[currentDateAndUrl]].date)
+                        List<Schedulebot.Vk.PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
+                        List<int> updatingCourses = new List<int>();
+                        for (int i = 0; i < coursesToUpdate.Count; ++i)
                         {
-                            courses[newDatesAndUrls.courses[currentDateAndUrl]].urlToFile = newDatesAndUrls.urls[currentDateAndUrl];
-                            courses[newDatesAndUrls.courses[currentDateAndUrl]].date = newDatesAndUrls.dates[currentDateAndUrl];
-                            
                             StringBuilder stringBuilder = new StringBuilder();
                             stringBuilder.Append("Вышло новое расписание ");
-                            stringBuilder.Append(newDatesAndUrls.dates[currentDateAndUrl]);
+                            stringBuilder.Append(checkingRelevance.DatesAndUrls.dates[coursesToUpdate[i]]);
                             stringBuilder.Append(". Ожидайте результата обработки.");
 
-                            EnqueueMessageAsync(
-                                userIds: userRepository.GetIds(newDatesAndUrls.courses[currentDateAndUrl], mapper),
-                                message: stringBuilder.ToString());
+                            Task enqueueMessageTask = Task.Run(() => EnqueueMessage(
+                                userIds: userRepository.GetIds(coursesToUpdate[i], mapper),
+                                message: stringBuilder.ToString()));
 
                             UpdateProperties updateProperties = new UpdateProperties();
-                            updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
-                            updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
+                            updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.groupUrl;
+                            updateProperties.photoUploadProperties.AlbumId = vkStuff.mainAlbumId;
+                            updateProperties.photoUploadProperties.ToSend = true;
+                            updateProperties.photoUploadProperties.UploadingSchedule = UploadingSchedule.Week;
 
-                            var tempPhotosList = await courses[newDatesAndUrls.courses[currentDateAndUrl]].UpdateAsync(updateProperties, dictionaries);
+                            var tempPhotosList
+                                = await courses[coursesToUpdate[i]]
+                                    .UpdateAsync(
+                                        checkingRelevance.DatesAndUrls.urls[coursesToUpdate[i]],
+                                        checkingRelevance.DatesAndUrls.dates[coursesToUpdate[i]],
+                                        updateProperties,
+                                        dictionaries);
+
                             if (tempPhotosList != null)
                             {
                                 photosUploadProperties.AddRange(tempPhotosList);
-                                updatingCourses.Add(newDatesAndUrls.courses[currentDateAndUrl]);
+                                updatingCourses.Add(coursesToUpdate[i]);
                             }
+                        }
+                        if (updatingCourses.Count != 0)
+                        {
+                            mapper.CreateMaps(courses);
+                            ConstructKeyboards();
+
+                            for (int i = 0; i < photosUploadProperties.Count; i++)
+                                photosQueue.Enqueue(photosUploadProperties[i]);
+
+                            List<(string, int)> newGroupSubgroupList = new List<(string, int)>();
+                            for (int currentPhoto = 0; currentPhoto < photosUploadProperties.Count; currentPhoto++)
+                                newGroupSubgroupList.Add((photosUploadProperties[currentPhoto].GroupName, photosUploadProperties[currentPhoto].Subgroup + 1));
+
+                            Task enqueueMessageTask = Task.Run(() => EnqueueMessage(
+                                message: "Для Вас изменений нет",
+                                userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList, updatingCourses))));
+                            
+                            while (true)
+                            {
+                                if (photosQueue.IsEmpty)
+                                {
+                                    await Task.Delay(5000);
+                                    for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
+                                        courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
+                                    break;
+                                }
+                                await Task.Delay(2000);
+                            }
+
+                            SaveUploadedSchedule();
+
+                            for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
+                            {
+                                if (courses[updatingCourses[currentUpdatingCourse]].isBroken)
+                                {
+                                    StringBuilder stringBuilder = new StringBuilder();
+                                    stringBuilder.Append("Не удалось обработать расписание ");
+                                    stringBuilder.Append(checkingRelevance.DatesAndUrls.dates[currentUpdatingCourse]);
+                                    stringBuilder.Append(". Ссылка: ");
+                                    stringBuilder.Append(checkingRelevance.DatesAndUrls.urls[currentUpdatingCourse]);
+
+                                    Task enqueueMessageTask2 = Task.Run(() => EnqueueMessage(
+                                        userIds: userRepository.GetIds(updatingCourses[currentUpdatingCourse], mapper),
+                                        message: stringBuilder.ToString()));
+                                }
+                                courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
+                            }
+                            checkingRelevance.DatesAndUrls.Save();
                         }
                     }
-                    SaveDatesAndUrls();
-                    if (updatingCourses.Count != 0)
+                }
+                await Task.Delay(600000);
+            }
+        }
+        
+        public async void UploadedPhotoResponse(PhotoUploadProperties photo)
+        {
+            await Task.Run(() => 
+            {
+                switch (photo.UploadingSchedule)
+                {
+                    case UploadingSchedule.Day:
                     {
-                        mapper.CreateMaps(courses);
-                        ConstructKeyboards();
-
-                        for (int i = 0; i < photosUploadProperties.Count; i++)
-                            vkStuff.photosQueue.Enqueue(photosUploadProperties[i]);
-
-                        List<(string, int)> newGroupSubgroupList = new List<(string, int)>();
-                        for (int currentPhoto = 0; currentPhoto < photosUploadProperties.Count; currentPhoto++)
-                            newGroupSubgroupList.Add((photosUploadProperties[currentPhoto].Group, photosUploadProperties[currentPhoto].Subgroup + 1));
-
-                        EnqueueMessageAsync(
-                            message: "Для Вас изменений нет",
-                            userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList, updatingCourses)));
-                        
-                        while (true)
+                        courses[photo.Course].groups[photo.GroupIndex].scheduleSubgroups[photo.Subgroup]
+                        .weeks[photo.Week].days[photo.Day].PhotoId
+                            = photo.Id;
+                        if (photo.ToSend && photo.PeerId != 0)
                         {
-                            if (vkStuff.photosQueue.IsEmpty)
-                            {
-                                for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
-                                    courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
-                                break;
-                            }
-                            await Task.Delay(2000);
+                            EnqueueMessage(
+                                userId: photo.PeerId,
+                                message: photo.Message,
+                                attachments: new List<MediaAttachment>
+                                {
+                                    new Photo()
+                                    {
+                                        AlbumId = photo.AlbumId,
+                                        OwnerId = -vkStuff.groupId,
+                                        Id = photo.Id
+                                    }
+                                });
                         }
-
-                        SaveUploadedSchedule();
-
-                        for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
+                        break;
+                    }
+                    case UploadingSchedule.Week:
+                    {
+                        courses[photo.Course].groups[photo.GroupIndex].scheduleSubgroups[photo.Subgroup].PhotoId
+                            = photo.Id;
+                        if (photo.ToSend)
                         {
-                            if (courses[updatingCourses[currentUpdatingCourse]].isBroken)
-                            {
-                                StringBuilder stringBuilder = new StringBuilder();
-                                stringBuilder.Append("Не удалось обработать расписание ");
-                                stringBuilder.Append(courses[updatingCourses[currentUpdatingCourse]].date);
-                                stringBuilder.Append(". Ссылка: ");
-                                stringBuilder.Append(courses[updatingCourses[currentUpdatingCourse]].urlToFile);
-
-                                EnqueueMessageAsync(
-                                    userIds: userRepository.GetIds(updatingCourses[currentUpdatingCourse], mapper),
-                                    message: stringBuilder.ToString());
-                            }
-                            courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
+                            List<long> ids = userRepository.GetIds(photo.GroupName, photo.Subgroup + 1);
+                            EnqueueMessage(
+                                userIds: ids,
+                                message: photo.Message,
+                                attachments: new List<MediaAttachment>
+                                {
+                                    new Photo()
+                                    {
+                                        AlbumId = photo.AlbumId,
+                                        OwnerId = -vkStuff.groupId,
+                                        Id = photo.Id
+                                    }
+                                });
                         }
+                        break;
                     }
                 }
             });
         }
-        
+
         public async Task UploadPhotosAsync()
         {
-            await Task.Run(async () => 
+            int queuePhotosAmount;
+            int photosInRequestAmount = 0;
+            int timer = 0;
+            MultipartFormDataContent form = new MultipartFormDataContent();
+            List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
+            while (true)
             {
-                int queuePhotosAmount;
-                int photosInRequestAmount = 0;
-                int timer = 0;
-                MultipartFormDataContent form = new MultipartFormDataContent();
-                List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
-                while (true)
+                queuePhotosAmount = photosQueue.Count;
+                if (queuePhotosAmount > 5 - photosInRequestAmount)
                 {
-                    queuePhotosAmount = vkStuff.photosQueue.Count;
-                    if (queuePhotosAmount > 5 - photosInRequestAmount)
+                    queuePhotosAmount = 5 - photosInRequestAmount;
+                }
+                for (int i = 0; i < queuePhotosAmount; ++i)
+                {
+                    if (photosQueue.TryDequeue(out PhotoUploadProperties photoUploadProperties))
                     {
-                        queuePhotosAmount = 5 - photosInRequestAmount;
+                        photosUploadProperties.Add(photoUploadProperties);
+                        form.Add(new ByteArrayContent(photosUploadProperties[i].Photo), "file" + i.ToString(), i.ToString() + ".png");
+                        ++photosInRequestAmount;
                     }
-                    for (int i = 0; i < queuePhotosAmount; ++i)
+                    else
                     {
-                        if (vkStuff.photosQueue.TryDequeue(out PhotoUploadProperties photoUploadProperties))
-                        {
-                            photosUploadProperties.Add(photoUploadProperties);
-                            form.Add(new ByteArrayContent(photosUploadProperties[i].Photo), "file" + i.ToString(), i.ToString() + ".png");
-                            ++photosInRequestAmount;
-                        }
-                        else
-                        {
-                            --i;
-                            timer += 1;
-                            await Task.Delay(1);
-                        }
+                        --i;
+                        timer += 1;
+                        await Task.Delay(1);
                     }
-                    if (photosInRequestAmount == 5 || timer >= 333)
+                }
+                if (photosInRequestAmount == 5 || timer >= 333)
+                {
+                    if (photosInRequestAmount == 0)
                     {
-                        if (photosInRequestAmount == 0)
+                        timer = 0;
+                    }
+                    else
+                    {
+                        bool success = false;
+                        HttpResponseMessage response;
+                        while (!success)
                         {
-                            timer = 0;
-                        }
-                        else
-                        {
-                            bool success = false;
-                            HttpResponseMessage response;
-                            while (!success)
+                            try
                             {
-                                try
+                                var uploadServer = vkStuff.apiPhotos.Photo.GetUploadServer(vkStuff.mainAlbumId, vkStuff.groupId);
+                                response = null;
+                                response = await ScheduleBot.client.PostAsync(new Uri(uploadServer.UploadUrl), form);
+                                if (response != null)
                                 {
-                                    var uploadServer = vkStuff.apiPhotos.Photo.GetUploadServer(vkStuff.MainAlbumId, vkStuff.GroupId);
-                                    response = null;
-                                    response = await ScheduleBot.client.PostAsync(new Uri(uploadServer.UploadUrl), form);
-                                    if (response != null)
+                                    IReadOnlyCollection<Photo> photos = vkStuff.apiPhotos.Photo.Save(new PhotoSaveParams
                                     {
-                                        IReadOnlyCollection<Photo> photos = vkStuff.apiPhotos.Photo.Save(new PhotoSaveParams
+                                        SaveFileResponse = Encoding.ASCII.GetString(await response.Content.ReadAsByteArrayAsync()),
+                                        AlbumId = vkStuff.mainAlbumId,
+                                        GroupId = vkStuff.groupId
+                                    });
+                                    if (photos.Count == photosInRequestAmount)
+                                    {
+                                        for (int currentPhoto = 0; currentPhoto < photosInRequestAmount; currentPhoto++)
                                         {
-                                            SaveFileResponse = Encoding.ASCII.GetString(await response.Content.ReadAsByteArrayAsync()),
-                                            AlbumId = vkStuff.MainAlbumId,
-                                            GroupId = vkStuff.GroupId
-                                        });
-                                        if (photos.Count == photosInRequestAmount)
-                                        {
-                                            for (int currentPhoto = 0; currentPhoto < photosInRequestAmount; currentPhoto++)
-                                            {
-                                                (int?, int) CourseIndexAndGroupIndex = mapper.GetCourseAndIndex(photosUploadProperties[currentPhoto].Group);
-                                                if (photosUploadProperties[currentPhoto].Week == -1)
-                                                {
-                                                    // на неделю
-                                                    courses[(int)CourseIndexAndGroupIndex.Item1].groups[CourseIndexAndGroupIndex.Item2].scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup].PhotoId
-                                                        = (long)photos.ElementAt(currentPhoto).Id;
-                                                    List<long> ids = userRepository.GetIds(photosUploadProperties[currentPhoto].Group, photosUploadProperties[currentPhoto].Subgroup + 1);
-                                                    EnqueueMessageAsync(
-                                                        userIds: ids,
-                                                        message: photosUploadProperties[currentPhoto].Message,
-                                                        attachments: new List<MediaAttachment>
-                                                        {
-                                                            new Photo()
-                                                            {
-                                                                AlbumId = photosUploadProperties[currentPhoto].AlbumId,
-                                                                OwnerId = -vkStuff.GroupId,
-                                                                Id = photos.ElementAt(currentPhoto).Id
-                                                            }
-                                                        });
-                                                }
-                                                else
-                                                {
-                                                    courses[(int)CourseIndexAndGroupIndex.Item1]
-                                                        .groups[CourseIndexAndGroupIndex.Item2]
-                                                        .scheduleSubgroups[photosUploadProperties[currentPhoto].Subgroup]
-                                                        .weeks[photosUploadProperties[currentPhoto].Week]
-                                                        .days[photosUploadProperties[currentPhoto].Day]
-                                                        .PhotoId
-                                                        = (long)photos.ElementAt(currentPhoto).Id;
-                                                    if (photosUploadProperties[currentPhoto].PeerId != 0)
-                                                    {
-                                                        EnqueueMessageAsync(
-                                                            userId: photosUploadProperties[currentPhoto].PeerId,
-                                                            message: photosUploadProperties[currentPhoto].Message,
-                                                            attachments: new List<MediaAttachment>
-                                                            {
-                                                                new Photo()
-                                                                {
-                                                                    AlbumId = photosUploadProperties[currentPhoto].AlbumId,
-                                                                    OwnerId = -vkStuff.GroupId,
-                                                                    Id = photos.ElementAt(currentPhoto).Id
-                                                                }
-                                                            });
-                                                    }
-                                                }
-                                            }
-                                            success = true;
+                                            photosUploadProperties[currentPhoto].Id = (long)photos.ElementAt(currentPhoto).Id;
+                                            UploadedPhotoResponse(photosUploadProperties[currentPhoto]);
                                         }
-                                        else
-                                        {
-                                            await Task.Delay(1000);
-                                        }
+                                        success = true;
+                                    }
+                                    else
+                                    {
+                                        await Task.Delay(1000);
                                     }
                                 }
-                                catch
-                                {
-                                    await Task.Delay(1000);
-                                }
                             }
-                            timer = 0;
-                            photosInRequestAmount = 0;
-                            form.Dispose();
-                            form = new MultipartFormDataContent();
-                            photosUploadProperties.Clear();
+                            catch
+                            {
+                                await Task.Delay(1000);
+                            }
                         }
+                        timer = 0;
+                        photosInRequestAmount = 0;
+                        form.Dispose();
+                        form = new MultipartFormDataContent();
+                        photosUploadProperties.Clear();
                     }
-                    timer += 333;
-                    await Task.Delay(333);
                 }
-            });
+                timer += 333;
+                await Task.Delay(333);
+            }
         }
     
         private class PayloadStuff

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Text;
 using Schedulebot.Schedule;
 using Schedulebot.Drawing;
@@ -18,22 +17,9 @@ namespace Schedulebot
                 scheduleSubgroups[i] = new ScheduleSubgroup();
         }
 
-        public List<int> CompareSubgroupsSchedule(Group group)
-        {
-            List<int> notEqualSubgroups = new List<int>();
-            for (int i = 0; i < 2; ++i)
-            {
-                if (scheduleSubgroups[i] != group.scheduleSubgroups[i])
-                {
-                    notEqualSubgroups.Add(i);
-                }
-            }
-            return notEqualSubgroups;
-        }
-
         public PhotoUploadProperties UpdateSubgroup(int subgroup, UpdateProperties updateProperties)
         {
-            updateProperties.drawingStandartScheduleInfo.schedule = scheduleSubgroups[subgroup];
+            updateProperties.drawingStandartScheduleInfo.weeks = scheduleSubgroups[subgroup].weeks;
             updateProperties.drawingStandartScheduleInfo.group = name;
             updateProperties.drawingStandartScheduleInfo.subgroup = subgroup + 1;
             
@@ -49,8 +35,9 @@ namespace Schedulebot
             stringBuilder.Append(updateProperties.drawingStandartScheduleInfo.date);
             
             updateProperties.photoUploadProperties.Message = stringBuilder.ToString();
-            updateProperties.photoUploadProperties.Group = name;
+            updateProperties.photoUploadProperties.GroupName = name;
             updateProperties.photoUploadProperties.Subgroup = subgroup;
+            updateProperties.photoUploadProperties.UploadingSchedule = UploadingSchedule.Week;
 
             return updateProperties.photoUploadProperties;
         }

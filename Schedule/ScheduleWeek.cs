@@ -5,18 +5,29 @@ namespace Schedulebot.Schedule
 {
     public class ScheduleWeek
     {
-        public ScheduleDay[] days = new ScheduleDay[6];
+        public ScheduleDay[] days;
+
+        public int DaysAmount { get; } = 6;
         
         public ScheduleWeek()
         {
-            for (int i = 0; i < 6; ++i)
+            days = new ScheduleDay[DaysAmount];
+            for (int i = 0; i < DaysAmount; ++i)
+                days[i] = new ScheduleDay();
+        }
+
+        public ScheduleWeek(int daysAmount)
+        {
+            DaysAmount = daysAmount;
+            days = new ScheduleDay[DaysAmount];
+            for (int i = 0; i < DaysAmount; ++i)
                 days[i] = new ScheduleDay();
         }
 
         public override bool Equals(object obj)
         {
-            return obj is ScheduleWeek week &&
-                   EqualityComparer<ScheduleDay[]>.Default.Equals(days, week.days);
+            return obj is ScheduleWeek week
+                && EqualityComparer<ScheduleDay[]>.Default.Equals(days, week.days);
         }
 
         public override int GetHashCode()
@@ -26,7 +37,9 @@ namespace Schedulebot.Schedule
 
         public static bool operator ==(ScheduleWeek week1, ScheduleWeek week2)
         {
-            for (int i = 0; i < 6; ++i)
+            if (week1.DaysAmount != week2.DaysAmount)
+                return false;
+            for (int i = 0; i < week1.DaysAmount; ++i)
             {
                 if (week1.days[i] != week2.days[i])
                     return false;
@@ -35,12 +48,7 @@ namespace Schedulebot.Schedule
         }
         public static bool operator !=(ScheduleWeek week1, ScheduleWeek week2)
         {
-            for (int i = 0; i < 2; ++i)
-            {
-                if (week1.days[i] != week2.days[i])
-                    return true;
-            }
-            return false;
+            return !(week1 == week2);
         }
     }
 }

@@ -9,7 +9,7 @@ namespace Schedulebot.Drawing
 {
     public struct DrawingStandartScheduleInfo
     {
-        public ScheduleSubgroup schedule;
+        public ScheduleWeek[] weeks;
         public string group;
         public int subgroup;
         public string date;
@@ -70,8 +70,8 @@ namespace Schedulebot.Drawing
                 string[] days = { "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота" };
                 for (int i = 0; i < 6; ++i)
                 {
-                    if (drawingScheduleInfo.schedule.weeks[0].days[i].isStudying || drawingScheduleInfo.schedule.weeks[1].days[i].isStudying)
-                        DrawDay(new ScheduleDay[] { drawingScheduleInfo.schedule.weeks[0].days[i], drawingScheduleInfo.schedule.weeks[1].days[i] },
+                    if (drawingScheduleInfo.weeks[0].days[i].isStudying || drawingScheduleInfo.weeks[1].days[i].isStudying)
+                        DrawDay(new ScheduleDay[] { drawingScheduleInfo.weeks[0].days[i], drawingScheduleInfo.weeks[1].days[i] },
                             ref pos, ref image, days[i]);
                 }
                 // Рисуем подвал
@@ -102,7 +102,7 @@ namespace Schedulebot.Drawing
                 return ImageToByteArray(imageCroped);
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Обрабока расписания для рассылки " + course + " " + number);
             }
-            static void DrawDay(ScheduleDay[] scheduleDays, ref int pos, ref System.Drawing.Image image, string day)
+            private static void DrawDay(ScheduleDay[] scheduleDays, ref int pos, ref System.Drawing.Image image, string day)
             {
                 Graphics graphics = Graphics.FromImage(image);
                 graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
@@ -171,14 +171,24 @@ namespace Schedulebot.Drawing
                                           new string[] { "16:20", "17:50" },
                                           new string[] { "18:00", "19:30" },
                                           new string[] { "19:40", "21:10" } };
-                    for (int i = 0; i < 8; ++i)
+                    int start = -1;
+                    int end = -1;
+                    for (int i = 0; i < 8; i++)
                     {
                         if (!(scheduleDays[0].lectures[i].IsEmpty() && scheduleDays[1].lectures[i].IsEmpty()))
-                            DrawLecture(new ScheduleLecture[] { scheduleDays[0].lectures[i], scheduleDays[1].lectures[i] }, ref pos, ref image, times[i]);
+                        {
+                            if (start == -1)
+                                start = i;
+                            end = i;
+                        }
+                    }
+                    for (int i = start; i <= end; ++i)
+                    {
+                        DrawLecture(new ScheduleLecture[] { scheduleDays[0].lectures[i], scheduleDays[1].lectures[i] }, ref pos, ref image, times[i]);
                     }
                 }
             }
-            static void DrawLecture(ScheduleLecture[] lectures, ref int pos, ref System.Drawing.Image image, string[] times)
+            private static void DrawLecture(ScheduleLecture[] lectures, ref int pos, ref System.Drawing.Image image, string[] times)
             {
                 Graphics graphics = Graphics.FromImage(image);
                 graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
@@ -228,7 +238,7 @@ namespace Schedulebot.Drawing
                         Line.size,
                         stringHeight * 2 + Line2.size);
                     // пары
-                    if (lectures[1].status == "F3" || lectures[1].status == "N2")
+                    if (lectures[1].Status == "F3" || lectures[1].Status == "N2")
                     {
                         // пара верхняя
                         graphics.DrawString(
@@ -253,7 +263,7 @@ namespace Schedulebot.Drawing
                                 stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
                             stringFormat);
                     }
-                    else if (lectures[1].status == "F1" || lectures[1].status == "N0")
+                    else if (lectures[1].Status == "F1" || lectures[1].Status == "N0")
                     {
                         string lectureStr = lectures[1].ConstructLecture();
                         // Проверяем есть ли 2 пробела
@@ -299,7 +309,7 @@ namespace Schedulebot.Drawing
                                 stringFormat);
                         }
                     }
-                    else if (lectures[1].status == "F2")
+                    else if (lectures[1].Status == "F2")
                     {
                         string lectureStr = lectures[1].ConstructLecture();
                         // пара верхняя
@@ -333,7 +343,7 @@ namespace Schedulebot.Drawing
                         Image.width - Border.size * 2,
                         Line.size);
                 }
-                else if (lectures[1].IsEmpty())
+                else if (lectures[0].IsEmpty())
                 {
                     // квадрат между индикаторами
                     graphics.FillRectangle(
@@ -393,7 +403,7 @@ namespace Schedulebot.Drawing
                         stringFormat);
                     // пара нижняя
                     graphics.DrawString(
-                        LectureShortening(lectures[0], lectureProperties),
+                        LectureShortening(lectures[1], lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
@@ -417,7 +427,7 @@ namespace Schedulebot.Drawing
                         Image.width - Border.size * 2,
                         Line.size);
                 }
-                else if (lectures[0].IsEmpty())
+                else if (lectures[1].IsEmpty())
                 {
                     // верхний индикатор
                     graphics.FillRectangle(
@@ -464,7 +474,7 @@ namespace Schedulebot.Drawing
                         stringHeight * 2 + Line2.size);
                     // пара верхняя
                     graphics.DrawString(
-                        LectureShortening(lectures[1], lectureProperties),
+                        LectureShortening(lectures[0], lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
@@ -556,7 +566,7 @@ namespace Schedulebot.Drawing
                         stringHeight * 2 + Line2.size);
                     // пара верхняя
                     graphics.DrawString(
-                        LectureShortening(lectures[1], lectureProperties),
+                        LectureShortening(lectures[0], lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
@@ -567,7 +577,7 @@ namespace Schedulebot.Drawing
                         stringFormat);
                     // пара нижняя
                     graphics.DrawString(
-                        LectureShortening(lectures[0], lectureProperties),
+                        LectureShortening(lectures[1], lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
@@ -593,12 +603,12 @@ namespace Schedulebot.Drawing
                 }
                 pos += stringHeight * 2 + Line2.size + Line.size;
             }
-            public static class Image
+            private static class Image
             {
                 public const int width = 700; // ширина постоянная
                 public const int height = 3000; // максимальная высота
             }
-            public static LectureProperties lectureProperties = new LectureProperties()
+            private static LectureProperties lectureProperties = new LectureProperties()
             {
                 sameFix = 6, // сдвиг вверх и вниз при одинаковых парах по верхним и нижним неделям
                 fix = 4, // ???
@@ -611,12 +621,12 @@ namespace Schedulebot.Drawing
                     fix = 2
                 }
             };
-            public static Color backgroundColor = Color.White; // цвет фона
-            public const int stringHeight = 40; // высота строки
-            public const int timeWidth = 120; // ширина времени пар
-            public const int timeendPosX = Border.size + Indicator.size + Line2.size + timeWidth;
-            public const int cellHeight = stringHeight * 2 + Line2.size;
-            public static TextProperties headerTextProperties = new TextProperties
+            private static Color backgroundColor = Color.White; // цвет фона
+            private const int stringHeight = 40; // высота строки
+            private const int timeWidth = 120; // ширина времени пар
+            private const int timeendPosX = Border.size + Indicator.size + Line2.size + timeWidth;
+            private const int cellHeight = stringHeight * 2 + Line2.size;
+            private static TextProperties headerTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -627,7 +637,7 @@ namespace Schedulebot.Drawing
                 // indent = 6,
                 // fix = 2
             };
-            public static TextProperties dayTextProperties = new TextProperties
+            private static TextProperties dayTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -638,14 +648,14 @@ namespace Schedulebot.Drawing
                 // indent = 8,
                 // fix = 2
             };
-            public static TextProperties soloLectureTextProperties = new TextProperties
+            private static TextProperties soloLectureTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 24),
                 indent = 12,
                 fix = 3
             };
-            public static TextProperties timeTextProperties = new TextProperties
+            private static TextProperties timeTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -658,11 +668,7 @@ namespace Schedulebot.Drawing
             // weekProperties: 0 - Верхняя, 1 - Нижняя
             public static byte[] Draw(DrawingDayScheduleInfo drawingScheduleInfo)
             {
-                // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Обрабока расписания на завтра " + course + " " + number + " " + dayOfWeek + " " + weekProperties); // 2log
-                //! кто меня из дурки выпустил? разобраться
-                string week = "Верхняя";
-                if (drawingScheduleInfo.weekProperties == 1)
-                    week = "Нижняя";
+                string week = drawingScheduleInfo.weekProperties == 0 ? "Верхняя" : "Нижняя";
                 string day = "День недели";
                 switch (drawingScheduleInfo.dayOfWeek)
                 {
@@ -809,7 +815,7 @@ namespace Schedulebot.Drawing
                 return ImageToByteArray(image);
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Обрабока расписания для рассылки " + course + " " + number + " " + dayOfWeek + " " + weekProperties);
             }
-            static void DrawLecture(ScheduleLecture lecture, ref int pos, ref System.Drawing.Image image, string[] times)
+            private static void DrawLecture(ScheduleLecture lecture, ref int pos, ref System.Drawing.Image image, string[] times)
             {
                 Graphics graphics = Graphics.FromImage(image);
                 SizeF textSize;
@@ -860,7 +866,7 @@ namespace Schedulebot.Drawing
                     // пары
                     //! тут тоже шиза
                     // string temp = lesson;
-                    if (lecture.status == "F3" || lecture.status == "N2")
+                    if (lecture.Status == "F3" || lecture.Status == "N2")
                     {
                         // верхняя часть пары (только предмет)
                         graphics.DrawString(
@@ -885,7 +891,7 @@ namespace Schedulebot.Drawing
                                 stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
                             stringFormat);
                     }
-                    else if (lecture.status == "F1" || lecture.status == "N0")
+                    else if (lecture.Status == "F1" || lecture.Status == "N0")
                     {
                         string lectureStr = lecture.ConstructLecture();
                         // Проверяем есть ли 2 пробела
@@ -931,7 +937,7 @@ namespace Schedulebot.Drawing
                                 stringFormat);
                         }
                     }
-                    else if (lecture.status == "F2")
+                    else if (lecture.Status == "F2")
                     {
                         string lectureStr = lecture.ConstructLecture();
                         // пара верхняя
@@ -1006,13 +1012,13 @@ namespace Schedulebot.Drawing
                 }
                 pos += stringHeight * 2 + Line.size;
             }
-            public static class Image
+            private static class Image
             {
                 public const int width = 500; // ширина
                 public const int height = 816; // высота
             }
-            public static Color backgroundColor = Color.White; // цвет фона
-            public static LectureProperties lectureProperties = new LectureProperties()
+            private static Color backgroundColor = Color.White; // цвет фона
+            private static LectureProperties lectureProperties = new LectureProperties()
             {
                 sameFix = 6, // сдвиг вверх и вниз при одинаковых парах по верхним и нижним неделям
                 fix = 4, // ???
@@ -1032,12 +1038,12 @@ namespace Schedulebot.Drawing
                     fix = 3
                 }
             };
-            public const int stringHeight = 40; // высота строки
-            public const int timeWidth = 96; // ширина блока с отображением времени начала\конца пары
-            public const int timeendPosX = Border.size + Indicator.size + Line2.size + timeWidth; // todo: сделать картинку с отображением всех этих параметров
-            public const int cellHeight = stringHeight * 2;
-            public const int lessonWidth = Image.width - timeendPosX - Line.size - Border.size;
-            public static TextProperties headerTextProperties = new TextProperties
+            private const int stringHeight = 40; // высота строки
+            private const int timeWidth = 96; // ширина блока с отображением времени начала\конца пары
+            private const int timeendPosX = Border.size + Indicator.size + Line2.size + timeWidth; // todo: сделать картинку с отображением всех этих параметров
+            private const int cellHeight = stringHeight * 2;
+            private const int lessonWidth = Image.width - timeendPosX - Line.size - Border.size;
+            private static TextProperties headerTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -1048,7 +1054,7 @@ namespace Schedulebot.Drawing
                 // indent = 6,
                 // fix = 2
             };
-            public static TextProperties dayTextProperties = new TextProperties
+            private static TextProperties dayTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -1059,14 +1065,14 @@ namespace Schedulebot.Drawing
                 // indent = 8,
                 // fix = 2
             };
-            public static TextProperties timeTextProperties = new TextProperties
+            private static TextProperties timeTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
                 indent = 11,
                 fix = 6
             };
-            public static TextProperties soloLectureTextProperties = new TextProperties
+            private static TextProperties soloLectureTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 24),
@@ -1074,16 +1080,16 @@ namespace Schedulebot.Drawing
                 fix = 3
             };
         }
-        static string LectureShortening(ScheduleLecture lecture, LectureProperties lectureProperties)
+        private static string LectureShortening(ScheduleLecture lecture, LectureProperties lectureProperties)
         {
-            if (lecture.status == "F3" || lecture.status == "N2")
+            if (lecture.Status == "F3" || lecture.Status == "N2")
             {
                 Graphics graphics = Graphics.FromImage(new Bitmap(1, 1));
                 string lectureStr = lecture.ConstructLecture();
                 SizeF lectureSize = graphics.MeasureString(lectureStr, lectureProperties.textProperties.font);
                 if (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                 {
-                    string subject = lecture.subject; // было temp
+                    string subject = lecture.Subject;
                     string lectureWithoutSubject = ScheduleBot.delimiter + lecture.ConstructLectureWithoutSubject();
                     while (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                     {
@@ -1099,7 +1105,7 @@ namespace Schedulebot.Drawing
                 graphics.Dispose();
                 return lectureStr;
             }
-            else if (lecture.status == "F1" || lecture.status == "F2")
+            else if (lecture.Status == "F1" || lecture.Status == "F2")
             {
                 Graphics graphics = Graphics.FromImage(new Bitmap(1, 1));
                 string lectureStr = lecture.ConstructLecture();
@@ -1117,13 +1123,13 @@ namespace Schedulebot.Drawing
                 graphics.Dispose();
                 return lectureStr;
             }
-            else if (lecture.status == "N0")
-            {
+            else if (lecture.Status == "N0")
                 return lecture.ConstructLecture();
-            }
-            return lecture.ConstructLecture();
+            else 
+                return lecture.ConstructLecture();
         }
-        public static byte[] ImageToByteArray(System.Drawing.Image image)
+
+        private static byte[] ImageToByteArray(System.Drawing.Image image)
         {
             MemoryStream memoryStream = new MemoryStream();
             image.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
