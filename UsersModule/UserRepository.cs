@@ -29,7 +29,7 @@ namespace Schedulebot.Users
 
         public void SaveUsers(string path)
         {
-            using (StreamWriter file = new StreamWriter(path))
+            using (StreamWriter file = new StreamWriter(path + "users.txt"))
             {
                 file.WriteLine(this.ToString());
             }
