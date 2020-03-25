@@ -668,11 +668,7 @@ namespace Schedulebot.Drawing
             // weekProperties: 0 - Верхняя, 1 - Нижняя
             public static byte[] Draw(DrawingDayScheduleInfo drawingScheduleInfo)
             {
-                // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Обрабока расписания на завтра " + course + " " + number + " " + dayOfWeek + " " + weekProperties); // 2log
-                //! кто меня из дурки выпустил? разобраться
-                string week = "Верхняя";
-                if (drawingScheduleInfo.weekProperties == 1)
-                    week = "Нижняя";
+                string week = drawingScheduleInfo.weekProperties == 0 ? "Верхняя" : "Нижняя";
                 string day = "День недели";
                 switch (drawingScheduleInfo.dayOfWeek)
                 {

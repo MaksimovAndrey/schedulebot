@@ -399,7 +399,6 @@ namespace Schedulebot.Vk
         /* К сожалению так делать нельзя :(
         private void LoadSettings(string path)
         {
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Загрузка настроек");
             using (StreamReader file = new StreamReader(
                 path,
                 System.Text.Encoding.Default))
@@ -447,7 +446,6 @@ namespace Schedulebot.Vk
                     }
                 }
             }
-            // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Загрузка настроек");
         }
         */
     }

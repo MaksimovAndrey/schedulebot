@@ -1,5 +1,4 @@
-using System.Collections.Generic;
-using System;    
+using System.Collections.Generic; 
 
 namespace Schedulebot
 {
@@ -8,6 +7,11 @@ namespace Schedulebot
         private List<List<string>> coursesMap = new List<List<string>>();
         private Dictionary<string, (int?, int)> groupsMap = new Dictionary<string, (int?, int)>();
         
+        public Mapper(Course[] courses)
+        {
+            CreateMaps(courses);
+        }
+
         public void CreateMaps(Course[] courses)
         {
             coursesMap.Clear();
@@ -18,8 +22,11 @@ namespace Schedulebot
                 List<string> groupNames = new List<string>();
                 for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.Count; currentGroup++)
                 {
-                    groupNames.Add(courses[currentCourse].groups[currentGroup].name);
-                    groupsMap.Add(courses[currentCourse].groups[currentGroup].name, (currentCourse, currentGroup));
+                    if (!groupsMap.ContainsKey(courses[currentCourse].groups[currentGroup].name))
+                    {
+                        groupNames.Add(courses[currentCourse].groups[currentGroup].name);
+                        groupsMap.Add(courses[currentCourse].groups[currentGroup].name, (currentCourse, currentGroup));
+                    }
                 }
                 coursesMap.Add(groupNames);
             }
