@@ -23,6 +23,7 @@ namespace Schedulebot.Parse
 
             string errorType = null;
             bool isLecture = false;
+            bool isRemotely = false;
 
             // ScheduleLecture lecture = new ScheduleLecture();
 
@@ -39,10 +40,20 @@ namespace Schedulebot.Parse
                 isLecture = true;
                 parse = parse.Replace(Parsing.lectureConst, "");
             }
+            
+            if (parse.Contains("дистанционно"))
+            {
+                isRemotely = true;
+                parse = parse.Replace("дистанционно", "");
+            }
+            // Чистим строку
+            while (parse.Contains("  "))
+                parse = parse.Replace("  ", " ");
+
             parse.Trim();
             if (parse == "")
             {
-                // Возможно есть errorType и isLecture, но нет subject/lecturer/lectureHall
+                // Возможно есть errorType и isLecture и isRemotely, но нет subject/lecturer/lectureHall
                 return new ScheduleLecture();
             }
 
@@ -89,6 +100,7 @@ namespace Schedulebot.Parse
                         status: "F2",
                         subject: dictionaries.doubleOptionallySubject[parse],
                         isLecture: isLecture,
+                        isRemotely: isRemotely,
                         errorType: errorType
                     );
                 }
@@ -141,6 +153,7 @@ namespace Schedulebot.Parse
                         status: "F1",
                         subject: "Военная подготовка",
                         isLecture: false,
+                        isRemotely: isRemotely,
                         errorType: errorType
                     );
                 }
@@ -150,12 +163,13 @@ namespace Schedulebot.Parse
                         status: "F1",
                         subject: "Физическая культура",
                         isLecture: false,
+                        isRemotely: isRemotely,
                         errorType: errorType
                     );
                 }
                 else if (lecturer != null)
                 {
-                    if (parse.Contains("по выбору") || parse.Contains("согласно"))
+                    if (parse.Contains("дистанционно") || parse.Contains("согласно") || parse.Contains("по выбору"))
                     {
                         parse = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
                     }
@@ -178,6 +192,7 @@ namespace Schedulebot.Parse
                         subject: parse,
                         lecturer: lecturer,
                         isLecture: isLecture,
+                        isRemotely: isRemotely,
                         errorType: errorType
                     );
                 }
@@ -187,6 +202,7 @@ namespace Schedulebot.Parse
                         status: "N0",
                         subject: parse,
                         isLecture: isLecture,
+                        isRemotely: isRemotely,
                         errorType: errorType
                     );
                 }
@@ -208,7 +224,7 @@ namespace Schedulebot.Parse
                             subject = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
                     }
                 }
-                if (parse.Contains("по выбору") || parse.Contains("согласно"))
+                if (parse.Contains("дистанционно") || parse.Contains("согласно") || parse.Contains("по выбору"))
                     subject = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
                 return new ScheduleLecture(
                     status: "F3",
@@ -216,12 +232,13 @@ namespace Schedulebot.Parse
                     lecturer: lecturer,
                     lectureHall: lectureHall,
                     isLecture: isLecture,
+                    isRemotely: isRemotely,
                     errorType: errorType
                 );
             }
             else
             {
-                if (parse.Contains("по выбору") || parse.Contains("согласно"))
+                if (parse.Contains("дистанционно") || parse.Contains("согласно") || parse.Contains("по выбору"))
                 {
                     parse = char.ToUpper(parse[0]) + parse.Substring(1).ToLower();
                 }
@@ -244,6 +261,7 @@ namespace Schedulebot.Parse
                     subject: parse,
                     lectureHall: lectureHall,
                     isLecture: isLecture,
+                    isRemotely: isRemotely,
                     errorType: errorType
                 );
             }
@@ -385,8 +403,8 @@ namespace Schedulebot.Parse
                 {
                     if (worksheet.Cells[scheduleStartY, 1].Value != null)
                         if (worksheet.Cells[scheduleStartY, 1].ValueType == CellValueType.DateTime)
-                            if (((DateTime)worksheet.Cells[scheduleStartY, 1].Value).Hour == 7
-                                && ((DateTime)worksheet.Cells[scheduleStartY, 1].Value).Minute == 30)
+                            if (((DateTime)worksheet.Cells[scheduleStartY, 1].Value).Hour == 9
+                                && ((DateTime)worksheet.Cells[scheduleStartY, 1].Value).Minute == 0)
                                 break;
                     scheduleStartY++;
                 }
