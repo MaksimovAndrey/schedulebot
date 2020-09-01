@@ -27,6 +27,16 @@ namespace Schedulebot.Drawing
     }
     public static class DrawingSchedule
     {
+        public static readonly string[][] times = { 
+            new string[] { "9:00", "10:30"  },
+            new string[] { "10:40", "12:10" },
+            new string[] { "12:20", "13:50" },
+            new string[] { "14:30", "16:00" },
+            new string[] { "16:10", "17:40" },
+            new string[] { "17:50", "19:20" },
+            new string[] { "19:30", "21:00" },
+            new string[] { "--:--", "--:--" } };
+
         public static class StandartSchedule
         {
             public static byte[] Draw(DrawingStandartScheduleInfo drawingScheduleInfo) // Обработка расписания для рассылки
@@ -163,14 +173,6 @@ namespace Schedulebot.Drawing
                 }
                 else
                 {
-                    string[][] times =  { new string[] { "7:30", "9:00"   },
-                                          new string[] { "9:10", "10:40"  },
-                                          new string[] { "10:50", "12:20" },
-                                          new string[] { "13:00", "14:30" },
-                                          new string[] { "14:40", "16:10" },
-                                          new string[] { "16:20", "17:50" },
-                                          new string[] { "18:00", "19:30" },
-                                          new string[] { "19:40", "21:10" } };
                     int start = -1;
                     int end = -1;
                     for (int i = 0; i < 8; i++)
@@ -779,15 +781,6 @@ namespace Schedulebot.Drawing
                 // Двигаем координату
                 pos += stringHeight + Line.size;
                 // Проходим по парам
-
-                string[][] times =  { new string[] { "7:30", "9:00"   },
-                                      new string[] { "9:10", "10:40"  },
-                                      new string[] { "10:50", "12:20" },
-                                      new string[] { "13:00", "14:30" },
-                                      new string[] { "14:40", "16:10" },
-                                      new string[] { "16:20", "17:50" },
-                                      new string[] { "18:00", "19:30" },
-                                      new string[] { "19:40", "21:10" } };
                 for (int i = 0; i < 8; ++i)
                 {
                     DrawLecture(drawingScheduleInfo.day.lectures[i], ref pos, ref image, times[i]);
