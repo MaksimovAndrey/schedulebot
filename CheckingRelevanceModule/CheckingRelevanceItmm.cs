@@ -17,63 +17,99 @@ namespace Schedulebot.Schedule.Relevance
             DatesAndUrls = new DatesAndUrls(path);
         }
 
-        public async Task<List<int>> CheckRelevanceAsync()
+        public async Task<(string, List<int>)> CheckRelevanceAsync()
         {
-            HtmlDocument htmlDocument;
+            HtmlDocument htmlDocument = await DownloadHtmlDocument();
+            string time = DateTime.Now.ToString();
+            if (htmlDocument == null)
+                return (null, null);
+
+            return (ParseImportantInformation(htmlDocument, time), Parse(htmlDocument));
+        }
+
+        private async Task<HtmlDocument> DownloadHtmlDocument()
+        {
             HtmlWeb htmlWeb = new HtmlWeb();
             try
             {
-                htmlDocument = await htmlWeb.LoadFromWebAsync(url);
+                return await htmlWeb.LoadFromWebAsync(url);
             }
             catch 
             {
                 //! ошибка загрузки страницы
                 return null;
             }
-            if (htmlDocument != null)
+        }
+
+        private string ParseImportantInformation(HtmlDocument htmlDocument, string time)
+        {
+            try
             {
-                return Parse(htmlDocument);
+                //htmlDocument.DocumentNode.InnerHtml = Regex.Replace(htmlDocument.DocumentNode.InnerHtml, @"[\u00A0\u00AD\s]+", "");
+                htmlDocument.DocumentNode.InnerHtml = Regex.Replace(htmlDocument.DocumentNode.InnerHtml, @"\u00ad", "");
+                htmlDocument.DocumentNode.InnerHtml = Regex.Replace(htmlDocument.DocumentNode.InnerHtml, @"&nbsp;", " ");
+                HtmlNodeCollection info = htmlDocument.DocumentNode.SelectNodes("//main");
+                string text = info[0].InnerText;
+                int startIndex = text.IndexOf("Важная информация") + 17;
+                int endIndex = text.IndexOf("Об Институте");
+                if (startIndex != -1 && endIndex != -1)
+                    return "От " + time + "\n" + text.Substring(startIndex, endIndex - startIndex).Trim();
+                else
+                    return "От " + time + "\nНе удалось найти информацию";
             }
-            return null;
+            catch
+            {
+                return null;
+            }
         }
 
         private List<int> Parse(HtmlDocument htmlDocument)
         {
-            htmlDocument.DocumentNode.InnerHtml = Regex.Replace(htmlDocument.DocumentNode.InnerHtml, @"\u00ad|", "");
-            HtmlNodeCollection nodesWithDates = htmlDocument.DocumentNode.SelectNodes("//p[contains(text(), 'Расписание бакалавров')]");
-            HtmlNodeCollection nodesWithUrls = htmlDocument.DocumentNode.SelectNodes("//a[contains(text(), 'скачать')]");
-            if (nodesWithDates == null || nodesWithUrls == null)
+            try
             {
-                // todo: throw error
-                return null;
-            }
-            else if (nodesWithDates.Count > 0 && nodesWithUrls.Count > 0 && nodesWithUrls.Count == nodesWithUrls.Count)
-            {
-                List<int> parseResult = new List<int>();
-                for (int i = 0; i < nodesWithDates.Count; ++i)
+                htmlDocument.DocumentNode.InnerHtml = Regex.Replace(htmlDocument.DocumentNode.InnerHtml, @"\u00ad|", "");
+                htmlDocument.DocumentNode.InnerHtml = Regex.Replace(htmlDocument.DocumentNode.InnerHtml, @"&nbsp;", " ");
+
+                HtmlNodeCollection nodesWithString = htmlDocument.DocumentNode.SelectNodes("//strong[contains(text(), 'Расписание бакалавров')]");
+                HtmlNodeCollection nodesWithDate = htmlDocument.DocumentNode.SelectNodes("//strong[contains(text(), 'Расписание бакалавров')]/span");
+                HtmlNodeCollection nodesWithUrl = htmlDocument.DocumentNode.SelectNodes("//strong[contains(text(), 'Расписание бакалавров')]/a");
+                if (nodesWithDate == null || nodesWithUrl == null)
                 {
-                    string nodeText = nodesWithDates[i].InnerText;
-                    if (nodeText.Contains("(от ") && nodeText.IndexOf(" курс") > 0)
+                    // todo: throw error
+                    return null;
+                }
+                else if (nodesWithDate.Count > 0 && nodesWithUrl.Count > 0 && nodesWithString.Count > 0 && nodesWithUrl.Count == nodesWithUrl.Count && nodesWithUrl.Count == nodesWithString.Count)
+                {
+                    List<int> parseResult = new List<int>();
+                    for (int i = 0; i < nodesWithDate.Count; ++i)
                     {
-                        if (Int32.TryParse(nodeText.Substring(nodeText.IndexOf(" курс") - 1, 1), out int course))
+                        string nodeText = nodesWithString[i].InnerText;
+                        if (nodeText.Contains("(от ") && nodeText.IndexOf(" курс") > 0)
                         {
-                            course--;
-                            if (nodesWithUrls[i].Attributes["href"].Value.Trim() != "")
+                            if (Int32.TryParse(nodeText.Substring(nodeText.IndexOf(" курс") - 1, 1), out int course))
                             {
-                                string date = nodeText.Substring(nodeText.LastIndexOf("(от") + 1, nodeText.LastIndexOf(')') - (nodeText.LastIndexOf("(от") + 1));
-                                if (DatesAndUrls.dates[course] != date)
+                                course--;
+                                if (nodesWithUrl[i].Attributes["href"].Value.Trim() != "")
                                 {
-                                    DatesAndUrls.dates[course] = date;
-                                    DatesAndUrls.urls[course] = nodesWithUrls[i].Attributes["href"].Value.Trim();
-                                    parseResult.Add(course);
+                                    string date = nodeText.Substring(nodeText.LastIndexOf("(от") + 1, nodeText.LastIndexOf(')') - (nodeText.LastIndexOf("(от") + 1));
+                                    if (DatesAndUrls.dates[course] != date)
+                                    {
+                                        DatesAndUrls.dates[course] = date;
+                                        DatesAndUrls.urls[course] = nodesWithUrl[i].Attributes["href"].Value.Trim();
+                                        parseResult.Add(course);
+                                    }
                                 }
                             }
                         }
                     }
+                    return parseResult;
                 }
-                return parseResult;
+                return null;
             }
-            return null;
+            catch
+            {
+                return null;
+            }
         }
     }
 }

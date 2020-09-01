@@ -1,4 +1,7 @@
-// #define SOME_MESSAGES_TEST
+//#define SOME_MESSAGES_TEST
+//#define DONT_UPLOAD_WEEK_SCHEDULE
+//#define DONT_SEND_MESSAGES
+//#define DONT_CHECK_CHANGES
 
 using System;
 using System.IO;
@@ -41,6 +44,8 @@ namespace Schedulebot
         
         private int startDay;
         private int startWeek;
+
+        private string importantInformation = "Здесь ничего нет.";
         
         public DepartmentItmm(string _path, ref List<Task> tasks)
         {
@@ -65,28 +70,34 @@ namespace Schedulebot
 
             LoadUploadedSchedule();
 
-            #if DEBUG
+            #if !DONT_SEND_MESSAGES
                 tasks.Add(ExecuteMethodsAsync());
+            #endif
+
+            #if DEBUG
                 tasks.Add(GetMessagesAsync());
                 tasks.Add(UploadPhotosAsync());
                 tasks.Add(SaveUsersAsync());
             #else
-                tasks.Add(ExecuteMethodsAsync());
                 tasks.Add(GetMessagesAsync());
                 tasks.Add(UploadPhotosAsync());
                 tasks.Add(SaveUsersAsync());
             #endif
+
+            
 
             EnqueueMessage(
                 userId: vkStuff.adminId,
                 message: DateTime.Now.ToString() + " | Запустился"
             );
 
-            bool changes = UploadWeekSchedule();
-            while (!commandsQueue.IsEmpty || !photosQueue.IsEmpty)
-                Thread.Sleep(5000);
-            if (changes)
-                SaveUploadedSchedule();
+            #if !DONT_CHECK_CHANGES
+                bool changes = UploadWeekSchedule();
+                while (!commandsQueue.IsEmpty || !photosQueue.IsEmpty)
+                    Thread.Sleep(5000);
+                if (changes)
+                    SaveUploadedSchedule();
+            #endif
 
             #if DEBUG
                 tasks.Add(CheckRelevanceAsync());
@@ -130,7 +141,10 @@ namespace Schedulebot
                             photoUploadProperties.GroupIndex = currentGroup;
                             photoUploadProperties.ToSend = false;
                             
-                            photosQueue.Enqueue(new PhotoUploadProperties(photoUploadProperties));
+                            #if !DONT_UPLOAD_WEEK_SCHEDULE
+                                photosQueue.Enqueue(new PhotoUploadProperties(photoUploadProperties));
+                            #endif
+
                             result = true;
                         }
                     }
@@ -630,6 +644,13 @@ namespace Schedulebot
                 }
                 switch (message.Text)
                 {
+                    case "ВАЖНАЯ ИНФОРМАЦИЯ":
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: importantInformation);
+                        return;
+                    }
                     case "ОТПИСАТЬСЯ":
                     {
                         string messageText;
@@ -720,6 +741,13 @@ namespace Schedulebot
                 {
                     switch (message.Text)
                     {
+                        case "Важная информация":
+                        {
+                            EnqueueMessage(
+                                userId: message.PeerId,
+                                message: importantInformation);
+                            return;
+                        }
                         case "Расписание":
                         {
                             EnqueueMessage(
@@ -1540,9 +1568,12 @@ namespace Schedulebot
             List<int> coursesToUpdate;
             while (true)
             {
-                coursesToUpdate = await checkingRelevance.CheckRelevanceAsync();
-                if (coursesToUpdate != null)
+                var checkRelevanceResults = await checkingRelevance.CheckRelevanceAsync();
+                if (checkRelevanceResults.Item1 != null)
+                    importantInformation = checkRelevanceResults.Item1;
+                if (checkRelevanceResults.Item2 != null)
                 {
+                    coursesToUpdate = checkRelevanceResults.Item2;
                     if (coursesToUpdate.Count != 0)
                     {
                         List<Schedulebot.Vk.PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
