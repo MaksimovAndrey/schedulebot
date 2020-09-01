@@ -6,8 +6,14 @@ namespace Schedulebot
 {
     public class ScheduleBot
     {
-        public const string version = "v2.3";
+        #if DEBUG
+            public const string version = "v2.3 DEV";
+        #else
+            public const string version = "v2.3";
+        #endif
         public const string delimiter = " · ";
+        public const string lectureSign = "Л";
+        public const string remotelySign = "Д";
         #if DEBUG 
             private const string path = @"C:/Custom/Projects/Shared/sbtest/";
         #else
