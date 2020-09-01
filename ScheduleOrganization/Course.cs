@@ -70,7 +70,8 @@ namespace Schedulebot
                 for (int i = 0; i < groupsSubgroupToUpdate.Count; i++)
                 {
                     photosToUpload.Add(new PhotoUploadProperties(groups[groupsSubgroupToUpdate[i].Item1].UpdateSubgroup(groupsSubgroupToUpdate[i].Item2, updateProperties)));
-                    photosToUpload[i].Message += "\n\n• Изменения\n\n" + groupsSubgroupToUpdate[i].Item3;
+                    if (groupsSubgroupToUpdate[i].Item3 != "new")
+                        photosToUpload[i].Message += "\n\n• Изменения\n\n" + groupsSubgroupToUpdate[i].Item3;
                 }
                 isBroken = false;
                 return photosToUpload;
@@ -123,6 +124,12 @@ namespace Schedulebot
             List<(int, int, string)> groupSubgroupTuplesToUpdate = new List<(int, int, string)>(); // index of a group, subgroup
             for (int currentNewGroup = 0; currentNewGroup < newGroups.Count; ++currentNewGroup)
             {
+                if (groups == null)
+                {
+                    groupSubgroupTuplesToUpdate.Add((currentNewGroup, 0, "new"));
+                    groupSubgroupTuplesToUpdate.Add((currentNewGroup, 1, "new"));
+                    continue;
+                }
                 for (int currentGroup = 0; currentGroup < groups.Count; ++currentGroup)
                 {
                     if (groups[currentGroup].name == newGroups[currentNewGroup].name)

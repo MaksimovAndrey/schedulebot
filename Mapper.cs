@@ -9,7 +9,7 @@ namespace Schedulebot
         
         public Mapper(Course[] courses)
         {
-            CreateMaps(courses);
+            CreateMaps(courses);    
         }
 
         public void CreateMaps(Course[] courses)
@@ -19,6 +19,11 @@ namespace Schedulebot
             int coursesAmount = courses.GetLength(0);
             for (int currentCourse = 0; currentCourse < coursesAmount; currentCourse++)
             {
+                if (courses[currentCourse].groups == null)
+                {
+                    coursesMap.Add(new List<string>());
+                    continue;
+                }
                 List<string> groupNames = new List<string>();
                 for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.Count; currentGroup++)
                 {
