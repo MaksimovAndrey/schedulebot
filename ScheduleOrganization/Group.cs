@@ -9,17 +9,24 @@ namespace Schedulebot
     public class Group
     {
         public string name = "";
-        public ScheduleSubgroup[] scheduleSubgroups = new ScheduleSubgroup[2];
+        public ScheduleSubgroup[] subgroups = new ScheduleSubgroup[2];
+        public int SubgroupsCount { get; }
         
-        public Group()
+        public Group(int subgroupsCount = 2)
         {
-            for (int i = 0; i < 2; ++i)
-                scheduleSubgroups[i] = new ScheduleSubgroup();
+            SubgroupsCount = subgroupsCount;
+            for (int i = 0; i < SubgroupsCount; ++i)
+                subgroups[i] = new ScheduleSubgroup();
+        }
+
+        public void EqualizeSubgroups(int whichToCopy = 0)
+        {
+            subgroups[whichToCopy + 1 % 2] = subgroups[whichToCopy];
         }
 
         public PhotoUploadProperties UpdateSubgroup(int subgroup, UpdateProperties updateProperties)
         {
-            updateProperties.drawingStandartScheduleInfo.weeks = scheduleSubgroups[subgroup].weeks;
+            updateProperties.drawingStandartScheduleInfo.weeks = subgroups[subgroup].weeks;
             updateProperties.drawingStandartScheduleInfo.group = name;
             updateProperties.drawingStandartScheduleInfo.subgroup = subgroup + 1;
             
@@ -40,6 +47,14 @@ namespace Schedulebot
             updateProperties.photoUploadProperties.UploadingSchedule = UploadingSchedule.Week;
 
             return updateProperties.photoUploadProperties;
+        }
+
+        public void SortLectures()
+        {
+            for (int i = 0; i < SubgroupsCount; i++)
+            {
+                subgroups[i].SortLectures();
+            }
         }
     }
 }

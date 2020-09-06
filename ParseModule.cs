@@ -14,6 +14,213 @@ namespace Schedulebot.Parse
         public static readonly string[] errors = { "¹", "²", "³" };
         public const string lectureConst = "+Л+";
 
+        public static ScheduleLecture ParseLecture(string timeStart, string timeEnd, string body, Dictionaries dictionaries)
+        {
+            // Тут все достаем из body
+            const string labStr = "(Лабораторная)";
+            const string seminarStr = "(Практика (семинарские занятия))";
+            const string lectureStr = "(Лекция)";
+
+            bool isLecture = false;
+            bool isSeminar = false;
+            bool isLab = false;
+            bool isRemotely = false;
+
+            string tempBody = body;
+
+            if (tempBody.Contains(labStr))
+            {
+                tempBody = tempBody.Replace(labStr, "");
+                isLab = true;
+            }
+            
+            if (tempBody.Contains(seminarStr))
+            {
+                tempBody = tempBody.Replace(seminarStr, "");
+                isSeminar = true;
+            }
+
+            if (tempBody.Contains(lectureStr))
+            {
+                tempBody = tempBody.Replace(lectureStr, "");
+                isLecture = true;
+            }
+
+            //* На будущее
+            //* Корпус № ?[0-9]+(\/([0-9]+[А-яЁё]?)?(ВП, \d этаж)?)?
+            //* Regex regexLectureHall = new Regex("");
+            
+            // Чистим строку
+            tempBody = tempBody.Trim();
+            while (tempBody.Contains("  "))
+                tempBody = tempBody.Replace("  ", " ");
+
+            MatchCollection matches;
+
+            // Ищем аудиторию
+            const string lectureHallStr = "КОРПУС №";
+            string lectureHall = null;
+
+            int indexOfLectureHall = tempBody.ToUpper().IndexOf(lectureHallStr);
+            if (indexOfLectureHall != -1)
+            {
+                lectureHall = tempBody.Substring(indexOfLectureHall).Trim(); // Вариант с Корпус №
+                //lectureHall = tempBody.Substring(indexOfLectureHall + lectureHallStr.Length); // Вариант без Корпус №
+                tempBody = tempBody.Substring(0, indexOfLectureHall);
+            }
+            else
+            {
+                const string unknownHallVzda = "В.З./Д.А.";
+                indexOfLectureHall = tempBody.ToUpper().IndexOf(unknownHallVzda);
+                if (indexOfLectureHall != -1)
+                {
+                    lectureHall = tempBody.Substring(indexOfLectureHall).Trim();
+                    tempBody = tempBody.Substring(0, indexOfLectureHall);
+                }
+                else
+                {
+                    const string fizra = @"Спортзал на Гагарина/[0-9]+";
+                    matches = Regex.Matches(tempBody, fizra);
+                    if (matches.Count == 1)
+                    {
+                        lectureHall = matches[0].Value;
+                        tempBody = tempBody.Remove(matches[0].Index, matches[0].Length);
+                    }
+                    else
+                    {
+                        // не нашли аудиторию
+                    }
+                }
+            }
+
+            // Ищем ФИО
+            string lecturer = null;
+
+            Regex regexFullName =
+                new Regex("[А-ЯЁ]{1}[а-яё]+([-]{1}[А-ЯЁ]{1}[а-яё]+)? {1}[А-ЯЁ]{1}[.]{1}([А-ЯЁ]{1}[.]?)?|!Вакансия");
+
+            matches = regexFullName.Matches(tempBody);
+            if (matches.Count == 1)
+            {
+                
+                lecturer = matches[0].Value;
+                tempBody = tempBody.Remove(matches[0].Index, matches[0].Length);
+            }
+            else if (matches.Count == 0)
+            {
+                int indexTemp;
+                for (int i = 0; i < dictionaries.fullName.Count; ++i)
+                {
+                    indexTemp = tempBody.IndexOf(dictionaries.fullName[i]);
+                    if (indexTemp != -1)
+                    {
+                        lecturer = dictionaries.fullName[i];
+                        tempBody = tempBody.Remove(indexTemp, dictionaries.fullName[i].Length);
+                        break;
+                    }
+                }
+            }
+            // Такого вроде нет сейчас
+            /*else if (matches.Count >= 2)
+            {
+                if (dictionaries.doubleOptionallySubject.ContainsKey(parse))
+                {
+                    return new ScheduleLecture(
+                        status: "F2",
+                        subject: dictionaries.doubleOptionallySubject[parse],
+                        isLecture: isLecture,
+                        isRemotely: isRemotely,
+                        errorType: errorType
+                    );
+                }
+            }*/
+
+            tempBody = tempBody.Replace('\n', ' ');
+            while (tempBody.Contains("  "))
+               tempBody = tempBody.Replace("  ", " ");
+            tempBody = tempBody.Trim();
+
+            // Выводы: F - полное, N - неполное, n - количество аргументов
+            string status = null;
+            if (lectureHall == null)
+            {
+                if (lecturer != null)
+                {
+                    // Если все капсом и (более одного слова или больше 4 знаков), заглавной остается только первая буква
+                    if ((tempBody.Contains(' ') || tempBody.Length > 4))
+                    {
+                        for (int k = 0; k < tempBody.Length; ++k)
+                        {
+                            if (tempBody[k] != char.ToUpper(tempBody[k]))
+                                break;
+                            if (k == tempBody.Length - 1)
+                                tempBody = char.ToUpper(tempBody[0]) + tempBody.Substring(1).ToLower();
+                        }
+                    }
+                    //Console.WriteLine("N2:" + body);
+                    status = "N2";
+                }
+                else
+                {
+                    //Console.WriteLine("N0:" + body);
+                    status = "N0";
+                }
+            }
+            else if (lecturer != null)
+            {
+                string subject = tempBody;
+                if (dictionaries.acronymToPhrase.ContainsKey(subject))
+                {
+                    subject = dictionaries.acronymToPhrase[subject];
+                }
+                else if (tempBody.Contains(' ') || tempBody.Length > 4) // Если все капсом и более одного слова, заглавной остается только первая буква
+                {
+                    for (int k = 0; k < tempBody.Length; ++k)
+                    {
+                        if (tempBody[k] != char.ToUpper(tempBody[k]))
+                            break;
+                        if (k == tempBody.Length - 1)
+                            subject = char.ToUpper(tempBody[0]) + tempBody.Substring(1).ToLower();
+                    }
+                }
+                
+                tempBody = subject;
+                status = "F3";
+            }
+            else
+            {
+                // Если все капсом и (более одного слова или больше 4 знаков), заглавной остается только первая буква
+                if ((tempBody.Contains(' ') || tempBody.Length > 4))
+                {
+                    for (int k = 0; k < tempBody.Length; ++k)
+                    {
+                        if (tempBody[k] != char.ToUpper(tempBody[k]))
+                            break;
+                        if (k == tempBody.Length - 1)
+                            tempBody = char.ToUpper(tempBody[0]) + tempBody.Substring(1).ToLower();
+                    }
+                }
+
+                //Console.WriteLine("N2last:" + body);
+
+                status = "N2";
+            }
+
+            return new ScheduleLecture(
+                status: status,
+                timeStart: timeStart,
+                timeEnd: timeEnd,
+                body: body,
+                subject: tempBody,
+                lectureHall: lectureHall,
+                lecturer: lecturer,
+                isLecture: isLecture,
+                isSeminar: isSeminar,
+                isLab: isLab,
+                isRemotely: isRemotely
+            );
+        }
+
         public static ScheduleLecture ParseLecture(string parse, Dictionaries dictionaries)
         {
             if (parse == null)
@@ -60,7 +267,7 @@ namespace Schedulebot.Parse
             string lecturer = null;
 
             Regex regexLectureHall = new Regex("[0-9]+([/]{1,2}[0-9]+)?( ?[(]{1}[0-9]+[)]{1})?( {1}[(]{1}[0-9]+ {1}корпус[)]{1})?");
-            Regex regexFullName = new Regex("[А-Я]{1}[а-я]+([-]{1}[А-Я]{1}[а-я]+)? {1}[А-Я]{1}[.]{1}([А-Я]{1}[.]?)?");
+            Regex regexFullName = new Regex("[А-ЯЁ]{1}[а-яё]+([-]{1}[А-ЯЁ]{1}[а-яё]+)? {1}[А-ЯЁ]{1}[.]{1}([А-ЯЁ]{1}[.]?)?");
             MatchCollection matches;
             // Чистим строку
             while (parse.Contains("  "))
@@ -267,85 +474,31 @@ namespace Schedulebot.Parse
             }
         }
         
-       public static async Task<List<Group>> MapperAsync(string pathToFile, Dictionaries dictionaries)
+       public static async Task<List<Group>> MapperAsync(List<string> pathsToFile, Dictionaries dictionaries)
         {
-            string format = pathToFile.Substring(pathToFile.LastIndexOf('.') + 1);
-            string[,] schedule = null;
-            switch (format)
+            List<Group> groups = new List<Group>();
+            for (int currentFile = 0; currentFile < pathsToFile.Count; currentFile++)
             {
-                case "xls":
+                string format = pathsToFile[currentFile].Substring(pathsToFile[currentFile].LastIndexOf('.') + 1);
+                switch (format)
                 {
-                    try 
+                    case "xlsx":
                     {
-                        ExcelFile scheduleSource = ExcelFile.Load(pathToFile);   // Открытие Excel file
-                        ExcelWorksheet worksheet = scheduleSource.Worksheets.ActiveWorksheet; // Выбор листа (worksheet)
-                        schedule = await ParseXlsAsync(worksheet);
-                    }
-                    catch
-                    {
-                        return null;
-                    }
-                    break;
-                }
-            }
-            int groupsAmount = schedule.GetLength(0);
-            // Проверяем группы на наличие одинаковых
-            List<string> groupsNames = new List<string>();
-            List<int> uniqueGroups = new List<int>();
-            for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup += 2)
-            {
-                if (!groupsNames.Contains(schedule[currentGroup, 0]))
-                {
-                    groupsNames.Add(schedule[currentGroup, 0]);
-                    uniqueGroups.Add(currentGroup / 2);
-                }
-                else
-                {
-                    int index = groupsNames.IndexOf(schedule[currentGroup, 0]);
-                    int count = 0;
-                    for (int i = 0; i < 2; i++)
-                    {
-                        for (int j = 2; j < 98; j++)
+                        try 
                         {
-                            if (schedule[index + i, j] != "")
-                                ++count;
+                            ExcelFile scheduleSource = ExcelFile.Load(pathsToFile[currentFile]);   // Открытие Excel file
+                            ExcelWorksheet worksheet = scheduleSource.Worksheets.ActiveWorksheet; // Выбор листа (worksheet)
+                            List<Group> parsedGroups = await ParseXlsxAsync(worksheet, dictionaries);
+                            if (parsedGroups == null || parsedGroups.Count == 0)
+                                continue;
+
+                            groups.AddRange(parsedGroups);
                         }
-                    }
-                    int count2 = 0;
-                    for (int i = 0; i < 2; i++)
-                    {
-                        for (int j = 2; j < 98; j++)
+                        catch
                         {
-                            if (schedule[currentGroup + i, j] != "")
-                                ++count;
+                            continue;
                         }
-                    }
-                    if (count < count2)
-                    {
-                        uniqueGroups[index] = currentGroup / 2;
-                    }
-                }
-            }
-            // Собираем группы
-            List<Group> groups = new List<Group>();                
-            for (int i = 0; i < uniqueGroups.Count; ++i)
-            {
-                groups.Add(new Group());
-                groups[i].name = schedule[uniqueGroups[i] * 2, 0];
-                for (int currentSubgroup = 0; currentSubgroup < 2; ++currentSubgroup)
-                {
-                    for (int currentWeek = 0; currentWeek < 2; ++currentWeek)
-                    {
-                        for (int currentDay = 0; currentDay < 6; ++currentDay)
-                        {
-                            for (int currentLecture = 0; currentLecture < 8; ++currentLecture)
-                            {
-                                groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].lectures[currentLecture]
-                                    = ParseLecture(schedule[uniqueGroups[i] * 2 + currentSubgroup, 2 + currentDay * 16 + currentLecture * 2 + currentWeek], dictionaries);
-                            }
-                            groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].isStudying
-                                = !groups[i].scheduleSubgroups[currentSubgroup].weeks[currentWeek].days[currentDay].IsEmpty();
-                        }
+                        break;
                     }
                 }
             }
@@ -371,6 +524,201 @@ namespace Schedulebot.Parse
                 schedule.y = 0;
             }
         }
+
+        public static async Task<List<Group>> ParseXlsxAsync(ExcelWorksheet worksheet, Dictionaries dictionaries)
+        {
+            List<Group> groups = new List<Group>();
+
+            // Ищем ячейку "Время"
+            const int timeCellX = 1;
+            int timeCellY = 0;
+            while (timeCellY < 100)
+            {
+                if (worksheet.Cells[timeCellY, timeCellX].Value != null)
+                    if (worksheet.Cells[timeCellY, timeCellX].ValueType == CellValueType.String)
+                        if (worksheet.Cells[timeCellY, timeCellX].StringValue.Trim().ToUpper() == "ВРЕМЯ")
+                            break;
+                timeCellY++;
+            }
+            // Считаем количество групп и заполняем названия групп
+            int countOfGroups = 0;
+            int currentX = timeCellX + 1;
+            while (worksheet.Cells[timeCellY, currentX].Value != null
+                && worksheet.Cells[timeCellY, currentX].ValueType == CellValueType.String)
+            {
+                groups.Add(new Group());
+
+                // todo: название лучше брать через Regex
+                const string trashStr = "ГРУППА";
+                string groupName = worksheet.Cells[timeCellY, currentX].StringValue;
+                int indexOfTrash = groupName.ToUpper().IndexOf(trashStr);
+                if (indexOfTrash != -1)
+                {
+                    groupName = groupName.Substring(indexOfTrash + trashStr.Length).Trim();
+                }
+                groups[countOfGroups].name = groupName;
+
+                currentX += 1;
+                countOfGroups++;
+            }
+            // Проходим по ячейкам
+            const int dayCellX = 0;
+            int currentY = timeCellY + 1;
+            currentX = timeCellX + 1;
+
+            while (worksheet.Cells[currentY, dayCellX].Value != null) //! что-то надо придумать
+            {
+                for (int currentGroup = 0; currentGroup < countOfGroups; currentGroup++)
+                {
+                    for (int currentWeek = 0; currentWeek < 2; currentWeek++)
+                    {
+                        // Проверка тела
+                        if (worksheet.Cells[currentY + currentWeek, currentX + currentGroup].Value == null
+                            || worksheet.Cells[currentY + currentWeek, currentX + currentGroup].ValueType != CellValueType.String)
+                            continue;
+
+                        string body = worksheet.Cells[currentY + currentWeek, currentX + currentGroup].StringValue.Trim();
+                        if (body.Length == 0)
+                            continue;
+
+                        // Проверка дня, выбрасываем null, если день нет возможности найти
+                        if (worksheet.Cells[currentY, dayCellX].Value == null
+                            || worksheet.Cells[currentY + currentWeek, currentX + currentGroup].ValueType != CellValueType.String)
+                            return null;
+
+                        // Проверка дня, выбрасываем null, если день не определили
+                        int dayIndex = Utils.Converter.DayToIndex(worksheet.Cells[currentY, dayCellX].StringValue.Trim().ToUpper());
+                        if (dayIndex == -1)
+                            return null;
+
+                        // Ищем время
+                        string timeStart;
+                        string timeEnd;
+                        if (worksheet.Cells[currentY, timeCellX].Value == null
+                            || worksheet.Cells[currentY, timeCellX].ValueType != CellValueType.String)
+                        {
+                            timeStart = "";
+                            timeEnd = "";
+                        }
+                        else
+                        {
+                            string time = worksheet.Cells[currentY, timeCellX].StringValue.Trim();
+                            int indexOfHyphen = time.IndexOf('-');
+                            int indexOfLineBreak = time.IndexOf('\n');
+                            if (indexOfHyphen != -1)
+                            {
+                                timeStart = time.Substring(0, indexOfHyphen).Trim();
+                                timeEnd = time.Substring(indexOfHyphen + 1).Trim();
+                            }
+                            else if (indexOfLineBreak != -1)
+                            {
+                                timeStart = time.Substring(0, indexOfLineBreak).Trim();
+                                timeEnd = time.Substring(indexOfLineBreak + 1).Trim();
+                            }
+                            else
+                            {
+                                timeStart = time;
+                                timeEnd = "";
+                            }
+                        }
+
+                        // Анализируем body
+                        // 382007-2-1
+                        // 382007-2(1)
+                        var matches = Regex.Matches(body, groups[currentGroup].name + @"[-(]\d\)?");
+                        if (matches.Count == 2)
+                        {
+                            string part1 = body.Substring(matches[0].Index + matches[0].Length, matches[1].Index - matches[0].Length).Trim();
+                            string part2 = body.Substring(matches[1].Index + matches[1].Length).Trim();
+                            
+                            ScheduleLecture[] lectures = {
+                                ParseLecture(timeStart, timeEnd, part1, dictionaries),
+                                ParseLecture(timeStart, timeEnd, part2, dictionaries)
+                            };
+
+                            for (int currentMatch = 0; currentMatch < 2; currentMatch++)
+                            {
+                                char subgroupChar =
+                                    matches[currentMatch].Value[matches[currentMatch].Length - 1] == ')' ?
+                                        matches[currentMatch].Value[matches[currentMatch].Length - 2] :
+                                        matches[currentMatch].Value[matches[currentMatch].Length - 1];
+
+                                switch (subgroupChar)
+                                {
+                                    case '1':
+                                        groups[currentGroup].subgroups[0].weeks[currentWeek].days[dayIndex].lectures.Add(lectures[currentMatch]);
+                                        break;
+                                    case '2':
+                                        groups[currentGroup].subgroups[1].weeks[currentWeek].days[dayIndex].lectures.Add(lectures[currentMatch]);
+                                        break;
+                                }
+                            }
+                        }
+                        else if (matches.Count == 1)
+                        {
+                            if (body.IndexOf(groups[currentGroup].name) == 0)
+                            {
+                                char subgroupChar =
+                                    matches[0].Value[matches[0].Length - 1] == ')' ?
+                                        matches[0].Value[matches[0].Length - 2] :
+                                        matches[0].Value[matches[0].Length - 1];
+
+                                switch (subgroupChar)
+                                {
+                                    case '1':
+                                        groups[currentGroup].subgroups[0].weeks[currentWeek].days[dayIndex].lectures.Add(
+                                            ParseLecture(timeStart, timeEnd, body.Substring(matches[0].Index + matches[0].Length), dictionaries)
+                                        );
+                                        break;
+                                    case '2':
+                                        groups[currentGroup].subgroups[1].weeks[currentWeek].days[dayIndex].lectures.Add(
+                                            ParseLecture(timeStart, timeEnd, body.Substring(matches[0].Index + matches[0].Length), dictionaries)
+                                        );
+                                        break;
+                                    default:
+                                        ScheduleLecture lecture = ParseLecture(timeStart, timeEnd, body.Substring(groups[currentGroup].name.Length), dictionaries);
+                                        groups[currentGroup].subgroups[0].weeks[currentWeek].days[dayIndex].lectures.Add(
+                                            lecture);
+                                        groups[currentGroup].subgroups[1].weeks[currentWeek].days[dayIndex].lectures.Add(
+                                            lecture);
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                var lecture = ParseLecture(timeStart, timeEnd, body, dictionaries);
+
+                                groups[currentGroup].subgroups[0].weeks[currentWeek].days[dayIndex].lectures.Add(
+                                    lecture);
+                                groups[currentGroup].subgroups[1].weeks[currentWeek].days[dayIndex].lectures.Add(
+                                    lecture);
+                            }
+                        }
+                        else
+                        {
+                            var lecture = ParseLecture(timeStart, timeEnd, body, dictionaries);
+
+                            groups[currentGroup].subgroups[0].weeks[currentWeek].days[dayIndex].lectures.Add(
+                                lecture);
+
+                            groups[currentGroup].subgroups[1].weeks[currentWeek].days[dayIndex].lectures.Add(
+                                lecture);
+                        }
+                    }
+                }
+                currentY += 2;
+            }
+            // Сортируем
+            for (int i = 0; i < groups.Count; i++)
+            {
+                groups[i].SortLectures();
+            }
+
+            return groups;
+        }
+    
+
+        
 
         public static async Task<string[,]> ParseXlsAsync(ExcelWorksheet worksheet)
         {

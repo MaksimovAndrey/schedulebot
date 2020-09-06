@@ -41,16 +41,6 @@ namespace Schedulebot.Vk
                                 Color = KeyboardButtonColor.Default,
                                 Action = new MessageKeyboardButtonAction {
                                     Type = KeyboardButtonActionType.Text,
-                                    Label = "Важная информация",
-                                    Payload = "{\"menu\": \"0\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
                                     Label = "Расписание",
                                     Payload = "{\"menu\": \"0\"}"
                                 }
@@ -90,6 +80,16 @@ namespace Schedulebot.Vk
                 {
                     Buttons = new List<List<MessageKeyboardButton>>
                     {
+                        new List<MessageKeyboardButton> {
+                            new MessageKeyboardButton() {
+                                Color = KeyboardButtonColor.Default,
+                                Action = new MessageKeyboardButtonAction {
+                                    Type = KeyboardButtonActionType.Text,
+                                    Label = "Важная информация",
+                                    Payload = "{\"menu\": \"1\"}"
+                                }
+                            }
+                        },
                         new List<MessageKeyboardButton> {
                             new MessageKeyboardButton() {
                                 Color = KeyboardButtonColor.Default,

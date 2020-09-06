@@ -1,7 +1,9 @@
+//! DEBUG ONLY
 //#define SOME_MESSAGES_TEST
 //#define DONT_UPLOAD_WEEK_SCHEDULE
-//#define DONT_SEND_MESSAGES
 //#define DONT_CHECK_CHANGES
+//! DEBUG ONLY
+
 
 using System;
 using System.IO;
@@ -19,6 +21,7 @@ using Newtonsoft.Json;
 using System.Text;
 using System.Net.Http;
 using System.Collections.Concurrent;
+using HtmlAgilityPack;
 
 using Schedulebot.Vk;
 using Schedulebot.Users;
@@ -28,17 +31,19 @@ namespace Schedulebot
 {
     public class DepartmentItmm : IDepartment
     {
-        private readonly string path;
+        private string Path { get; }
 
-        private readonly ConcurrentQueue<string> commandsQueue = new ConcurrentQueue<string>();
-        private readonly ConcurrentQueue<PhotoUploadProperties> photosQueue = new ConcurrentQueue<PhotoUploadProperties>();
+        private readonly ConcurrentQueue<string> commandsQueue
+            = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<PhotoUploadProperties> photosQueue
+            = new ConcurrentQueue<PhotoUploadProperties>();
     
         private int CoursesAmount { get; } = 4;
-        private readonly Course[] courses = new Course[4]; // 4 курса
+        private readonly Course[] courses = new Course[4];
         
         private readonly VkStuff vkStuff;
         private readonly Mapper mapper;
-        private readonly ICheckingRelevance checkingRelevance;
+        private readonly IRelevance relevance;
         private readonly UserRepository userRepository;
         private readonly Dictionaries dictionaries;
         
@@ -46,23 +51,69 @@ namespace Schedulebot
         private int startWeek;
 
         private string importantInformation = "Здесь ничего нет.";
-        
-        public DepartmentItmm(string _path, ref List<Task> tasks)
-        {
-            path = _path + @"itmm/";
 
-            #if DEBUG
-                vkStuff = new VkStuff(path + "settings-.txt");
-            #else
-                vkStuff = new VkStuff(path + "settings.txt");
-            #endif
+        
+        
+        // compile-time constants
+        private const int c_loadWebsiteDelay = 600000;
+
+        private const string c_oldKeyboardMessage = "Устаревшая клавиатура, оправляю актуальную";
+
+        private const string c_websiteUrl = @"http://www.itmm.unn.ru/studentam/raspisanie/raspisanie-bakalavriata-i-spetsialiteta-ochnoj-formy-obucheniya/";
+
+        private const string c_defaultFolder = "itmm/";
+        private const string c_defaultDownloadFolder = "downloads/";
+        private const string c_coursesPathsFilename = "coursesPathsToFile.txt";
+        private const string c_userRepositoryFilename = "users.txt";
+        private const string c_dictionariesManualProcessingFolder = "manualProcessing/";
+        private const string c_uploadedScheduleFilename = "uploadedSchedule.txt";
+
+        
+
+    #if DEBUG
+        private const string с_settingsFilename = "settings-.txt";
+    #else
+        private const string с_settingsFilename = "settings.txt";
+    #endif
+
+    #if DEBUG
+        private static readonly bool[] loadModule = {
+            true, // 0 ExecuteMethodsAsync()
+            true, // 1 GetMessagesAsync()
+            true, // 2 UploadPhotosAsync()
+            true, // 3 SaveUsersAsync()
+            true  // 4 CheckRelevanceAsync()
+        };
+    #else
+        private static readonly bool[] loadModule = { 
+            true, // 0 ExecuteMethodsAsync()
+            true, // 1 GetMessagesAsync()
+            true, // 2 UploadPhotosAsync()
+            true, // 3 SaveUsersAsync()
+            true  // 4 CheckRelevanceAsync()
+        };
+    #endif
+        
+        public DepartmentItmm(string path, ref List<Task> tasks)
+        {
+            Path = path + c_defaultFolder;
+
+            vkStuff = new VkStuff(Path + с_settingsFilename);
             
-            userRepository = new UserRepository(path + "users.txt");
-            dictionaries = new Dictionaries(path + @"manualProcessing/");
-            for (int currentCourse = 0; currentCourse < 4; ++currentCourse)
-                courses[currentCourse] = new Course(path + @"downloads/" + currentCourse + "_course.xls", dictionaries);
+            userRepository = new UserRepository(Path + c_userRepositoryFilename);
+            dictionaries = new Dictionaries(Path + c_dictionariesManualProcessingFolder);
+
+            List<List<string>> filenames = GetCoursesFilePaths();
+            for (int currentCourse = 0; currentCourse < CoursesAmount; ++currentCourse)
+            {
+                if (currentCourse < filenames.Count)
+                    courses[currentCourse] = new Course(filenames[currentCourse], dictionaries);
+                else
+                    courses[currentCourse] = new Course(new List<string>(), dictionaries);
+            }
+            
             mapper = new Mapper(courses);
-            checkingRelevance = new CheckingRelevanceItmm(path);
+            relevance = new RelevanceItmm(Path, Path + c_defaultDownloadFolder);
             
             LoadSettings();
             
@@ -70,45 +121,57 @@ namespace Schedulebot
 
             LoadUploadedSchedule();
 
-            #if !DONT_SEND_MESSAGES
-                tasks.Add(ExecuteMethodsAsync());
-            #endif
-
-            #if DEBUG
-                tasks.Add(GetMessagesAsync());
-                tasks.Add(UploadPhotosAsync());
-                tasks.Add(SaveUsersAsync());
-            #else
-                tasks.Add(GetMessagesAsync());
-                tasks.Add(UploadPhotosAsync());
-                tasks.Add(SaveUsersAsync());
-            #endif
-
-            
+            if (loadModule[0]) tasks.Add(ExecuteMethodsAsync());
+            if (loadModule[1]) tasks.Add(GetMessagesAsync());
+            if (loadModule[2]) tasks.Add(UploadPhotosAsync());
+            if (loadModule[3]) tasks.Add(SaveUsersAsync());
 
             EnqueueMessage(
                 userId: vkStuff.adminId,
                 message: DateTime.Now.ToString() + " | Запустился"
             );
 
-            #if !DONT_CHECK_CHANGES
-                bool changes = UploadWeekSchedule();
-                while (!commandsQueue.IsEmpty || !photosQueue.IsEmpty)
-                    Thread.Sleep(5000);
-                if (changes)
-                    SaveUploadedSchedule();
-            #endif
+        #if !DONT_CHECK_CHANGES
+            bool changes = UploadWeekSchedule();
+            while (!commandsQueue.IsEmpty || !photosQueue.IsEmpty)
+                Thread.Sleep(5000);
+            if (changes)
+                SaveUploadedSchedule();
+        #endif
 
-            #if DEBUG
-                tasks.Add(CheckRelevanceAsync());
-            #else
-                tasks.Add(CheckRelevanceAsync());
-            #endif
+            if (loadModule[4]) tasks.Add(StartRelevanceModule());
 
             EnqueueMessage(
                 userId: vkStuff.adminId,
                 message: DateTime.Now.ToString() + " | Запустил CheckRelevance"
             );
+        }
+
+        private void SaveCoursesFilePaths()
+        {
+            List<List<string>> coursesFilePaths = new List<List<string>>();
+            for (int currentCourse = 0; currentCourse < CoursesAmount; currentCourse++)
+            {
+                coursesFilePaths.Add(courses[currentCourse].PathsToFile);
+            }
+            using (StreamWriter file = new StreamWriter(Path + c_coursesPathsFilename))
+            {
+                file.WriteLine(JsonConvert.SerializeObject(coursesFilePaths));
+            }
+        }
+
+        private List<List<string>> GetCoursesFilePaths()
+        {
+            string path = Path + c_coursesPathsFilename;
+            if (File.Exists(path))
+            {
+                using (StreamReader file = new StreamReader(path, System.Text.Encoding.Default))
+                {
+                    return JsonConvert.DeserializeObject<List<List<string>>>(file.ReadToEnd());
+                }
+            }
+            else
+                return new List<List<string>>();
         }
 
         private bool UploadWeekSchedule()
@@ -120,15 +183,15 @@ namespace Schedulebot
                 {
                     for (int currentSubgroup = 0; currentSubgroup < 2; currentSubgroup++)
                     {
-                        if (courses[currentCourse].groups[currentGroup].scheduleSubgroups[currentSubgroup].PhotoId == 0)
+                        if (courses[currentCourse].groups[currentGroup].subgroups[currentSubgroup].PhotoId == 0)
                         {
                             UpdateProperties updateProperties = new UpdateProperties();
 
                             updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.groupUrl;
                             updateProperties.drawingStandartScheduleInfo.date
-                                = checkingRelevance.DatesAndUrls.dates[currentCourse];
+                                = relevance.DatesAndUrls.dates[currentCourse];
                             updateProperties.drawingStandartScheduleInfo.weeks
-                                = courses[currentCourse].groups[currentGroup].scheduleSubgroups[currentSubgroup].weeks;
+                                = courses[currentCourse].groups[currentGroup].subgroups[currentSubgroup].weeks;
                             updateProperties.drawingStandartScheduleInfo.group
                                 = courses[currentCourse].groups[currentGroup].name;
             
@@ -141,9 +204,9 @@ namespace Schedulebot
                             photoUploadProperties.GroupIndex = currentGroup;
                             photoUploadProperties.ToSend = false;
                             
-                            #if !DONT_UPLOAD_WEEK_SCHEDULE
-                                photosQueue.Enqueue(new PhotoUploadProperties(photoUploadProperties));
-                            #endif
+                        #if !DONT_UPLOAD_WEEK_SCHEDULE
+                            photosQueue.Enqueue(new PhotoUploadProperties(photoUploadProperties));
+                        #endif
 
                             result = true;
                         }
@@ -158,7 +221,7 @@ namespace Schedulebot
             while (true)
             {
                 await Task.Delay(3600000);
-                userRepository.SaveUsers(path);
+                userRepository.SaveUsers(Path);
             }
         }
 
@@ -261,11 +324,7 @@ namespace Schedulebot
         private void LoadSettings()
         {
             using (StreamReader file = new StreamReader(
-                #if DEBUG
-                    path + "settings-.txt",
-                #else
-                    path + "settings.txt",
-                #endif
+                Path + с_settingsFilename,
                 System.Text.Encoding.Default))
             {
                 string str, value;
@@ -296,13 +355,16 @@ namespace Schedulebot
         private void LoadUploadedSchedule()
         {
             using (StreamReader file = new StreamReader(
-                path + "uploadedSchedule.txt",
+                Path + c_uploadedScheduleFilename,
                 System.Text.Encoding.Default))
             {
                 string rawLine;
                 while (!file.EndOfStream)
                 {
                     rawLine = file.ReadLine();
+                    if (string.IsNullOrEmpty(rawLine))
+                        break;
+                        
                     var rawSpan = rawLine.AsSpan();
 
                     int spaceIndex = rawSpan.IndexOf(' ');
@@ -314,14 +376,14 @@ namespace Schedulebot
 
                     var indexes = mapper.GetCourseAndIndex(group);
                     if (indexes.Item1 != null)
-                        courses[(int)indexes.Item1].groups[indexes.Item2].scheduleSubgroups[subgroup - 1].PhotoId = id;
+                        courses[(int)indexes.Item1].groups[indexes.Item2].subgroups[subgroup - 1].PhotoId = id;
                 }
             }
         }
 
         private void SaveUploadedSchedule()
         {
-            using (StreamWriter file = new StreamWriter(path + "uploadedSchedule.txt"))
+            using (StreamWriter file = new StreamWriter(Path + c_uploadedScheduleFilename))
             {
                 StringBuilder stringBuilder = new StringBuilder();
                 for (int currentCourse = 0; currentCourse < CoursesAmount; currentCourse++)
@@ -329,17 +391,18 @@ namespace Schedulebot
                     int groupsAmount = courses[currentCourse].groups.Count;
                     for (int currentGroup = 0; currentGroup < groupsAmount; currentGroup++)
                     {
-                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].scheduleSubgroups[0].PhotoId);
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].subgroups[0].PhotoId);
                         stringBuilder.Append(' ');
                         stringBuilder.Append(courses[currentCourse].groups[currentGroup].name);
                         stringBuilder.Append(" 1\n");
-                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].scheduleSubgroups[1].PhotoId);
+                        stringBuilder.Append(courses[currentCourse].groups[currentGroup].subgroups[1].PhotoId);
                         stringBuilder.Append(' ');
                         stringBuilder.Append(courses[currentCourse].groups[currentGroup].name);
                         stringBuilder.Append(" 2\n");
                     }
                 }
-                stringBuilder.Remove(stringBuilder.Length - 1, 1);
+                if (stringBuilder.Length != 0)
+                    stringBuilder.Remove(stringBuilder.Length - 1, 1);
                 file.WriteLine(stringBuilder.ToString());
             }
         }
@@ -357,30 +420,30 @@ namespace Schedulebot
                     Key = serverResponse.Key,
                     Wait = 25
                 };
-                #if (DEBUG && SOME_MESSAGES_TEST)
-                    Message[] messages = new Message[11];
-                    List<Attachment> attachments = new List<Attachment>();
-                    System.Collections.ObjectModel.ReadOnlyCollection<VkNet.Model.Attachments.Attachment> test = new System.Collections.ObjectModel.ReadOnlyCollection<Attachment>(attachments);
-                    for (int i = 0; i < 11; ++i)
-                    {
-                        long l = i + 1;
-                        messages[i] = new Message();
-                        messages[i].Text = "На завтра";
-                        messages[i].PeerId = l;
-                        messages[i].Attachments = test;
-                    }
-                    for (int i = 0; i < 10; i++)
-                    {
-                        int t = i;
-                        Task.Run(() => MessageResponse(messages[t]));
-                        Console.WriteLine(t);
-                    }
-                #endif
+            #if (DEBUG && SOME_MESSAGES_TEST)
+                Message[] messages = new Message[11];
+                List<Attachment> attachments = new List<Attachment>();
+                System.Collections.ObjectModel.ReadOnlyCollection<VkNet.Model.Attachments.Attachment> test = new System.Collections.ObjectModel.ReadOnlyCollection<Attachment>(attachments);
+                for (int i = 0; i < 11; ++i)
+                {
+                    long l = i + 1;
+                    messages[i] = new Message();
+                    messages[i].Text = "На завтра";
+                    messages[i].PeerId = l;
+                    messages[i].Attachments = test;
+                }
+                for (int i = 0; i < 10; i++)
+                {
+                    int t = i;
+                    Task.Run(() => MessageResponse(messages[t]));
+                    Console.WriteLine(t);
+                }
+            #endif
                 while (true)
                 {
                     try
                     {
-                        Console.WriteLine( DateTime.Now.ToString() + " Получаю сообщения");
+                        Console.WriteLine(DateTime.Now.ToString() + " Получаю сообщения");
                         historyResponse = vkStuff.api.Groups.GetBotsLongPollHistory(botsLongPollHistoryParams);
                         if (historyResponse == null)
                             continue;
@@ -490,7 +553,7 @@ namespace Schedulebot
                             Thread.Sleep(60000);
                         while (!commandsQueue.IsEmpty || !photosQueue.IsEmpty)
                             Thread.Sleep(5000); 
-                        userRepository.SaveUsers(path);                   
+                        userRepository.SaveUsers(Path);                   
                         Environment.Exit(0);
                     }
                 }
@@ -608,7 +671,7 @@ namespace Schedulebot
                         stringBuilder.Append("Расписание для ");
                         stringBuilder.Append(userMapping.Item1 + 1);
                         stringBuilder.Append(" курса: ");
-                        stringBuilder.Append(checkingRelevance.DatesAndUrls.urls[(int)userMapping.Item1]);
+                        stringBuilder.Append(String.Join("\n", relevance.DatesAndUrls.urls[(int)userMapping.Item1].ToArray()));
 
                         EnqueueMessage(
                             userId: message.PeerId,
@@ -741,13 +804,6 @@ namespace Schedulebot
                 {
                     switch (message.Text)
                     {
-                        case "Важная информация":
-                        {
-                            EnqueueMessage(
-                                userId: message.PeerId,
-                                message: importantInformation);
-                            return;
-                        }
                         case "Расписание":
                         {
                             EnqueueMessage(
@@ -804,7 +860,7 @@ namespace Schedulebot
                         {
                             EnqueueMessage(
                                 userId: message.PeerId,
-                                message: "Произошла ошибка в меню 0, что-то с message.Text",
+                                message: c_oldKeyboardMessage,
                                 keyboardId: 0);
                             return;
                         }
@@ -817,6 +873,13 @@ namespace Schedulebot
                         EnqueueMessage(
                             userId: message.PeerId,
                             keyboardId: 0);
+                        return;
+                    }
+                    if (message.Text == "Важная информация")
+                    {
+                        EnqueueMessage(
+                            userId: message.PeerId,
+                            message: importantInformation);
                         return;
                     }
                     if (!userRepository.GetUser(message.PeerId, out Users.User user))
@@ -860,7 +923,7 @@ namespace Schedulebot
                         stringBuilder.Append("Расписание для ");
                         stringBuilder.Append(userMapping.Item1 + 1);
                         stringBuilder.Append(" курса: ");
-                        stringBuilder.Append(checkingRelevance.DatesAndUrls.urls[(int)userMapping.Item1]);
+                        stringBuilder.Append(String.Join("\n", relevance.DatesAndUrls.urls[(int)userMapping.Item1].ToArray()));
 
                         EnqueueMessage(
                             userId: message.PeerId,
@@ -895,7 +958,7 @@ namespace Schedulebot
                         {
                             EnqueueMessage(
                                 userId: message.PeerId,
-                                message: "Произошла ошибка в меню 1, что-то с message.Text",
+                                message: c_oldKeyboardMessage,
                                 keyboardId: 0);
                             return;
                         }
@@ -995,7 +1058,7 @@ namespace Schedulebot
                         {
                             EnqueueMessage(
                                 userId: message.PeerId,
-                                message: "Произошла ошибка в меню 2, что-то с message.Text",
+                                message: c_oldKeyboardMessage,
                                 keyboardId: 0);
                             return;
                         }
@@ -1050,7 +1113,7 @@ namespace Schedulebot
                     {
                         EnqueueMessage(
                             userId: message.PeerId,
-                            message: "Произошла ошибка в меню 4, что-то с message.Text", 
+                            message: c_oldKeyboardMessage, 
                             keyboardId: 0);
                         return;
                     }
@@ -1098,7 +1161,7 @@ namespace Schedulebot
                     {
                         EnqueueMessage(
                             userId: message.PeerId,
-                            message: "Произошла ошибка в меню 5, что-то с message.Text",
+                            message: c_oldKeyboardMessage,
                             keyboardId: 0);
                         return;
                     }
@@ -1169,7 +1232,7 @@ namespace Schedulebot
                             }
                             EnqueueMessage(
                                 userId: message.PeerId,
-                                message: "Произошла ошибка в меню 40, что-то с message.Text",
+                                message: c_oldKeyboardMessage,
                                 keyboardId: 0);
                             return;
                         }
@@ -1196,7 +1259,7 @@ namespace Schedulebot
                     {
                         AlbumId = vkStuff.mainAlbumId,
                         OwnerId = -vkStuff.groupId,
-                        Id = courses[course].groups[groupIndex].scheduleSubgroups[user.Subgroup - 1].PhotoId
+                        Id = courses[course].groups[groupIndex].subgroups[user.Subgroup - 1].PhotoId
                     }
                 });
             return;
@@ -1211,8 +1274,8 @@ namespace Schedulebot
                 week = (week + 1) % 2;
                 int day = 0;
                 while (!courses[course].groups[groupIndex]
-                    .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                    .days[day].isStudying)
+                    .subgroups[user.Subgroup - 1].weeks[week]
+                    .days[day].IsStudying)
                 {
                     ++day;
                     if (day == 6)
@@ -1222,14 +1285,14 @@ namespace Schedulebot
                     }
                 }
                 long photoId = courses[course].groups[groupIndex]
-                    .scheduleSubgroups[user.Subgroup - 1].weeks[week]
+                    .subgroups[user.Subgroup - 1].weeks[week]
                     .days[day].PhotoId;
                 if (photoId == 0)
                 {
                     Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
-                    drawingDayScheduleInfo.date = checkingRelevance.DatesAndUrls.dates[course];
+                    drawingDayScheduleInfo.date = relevance.DatesAndUrls.dates[course];
                     drawingDayScheduleInfo.day = courses[course].groups[groupIndex]
-                        .scheduleSubgroups[user.Subgroup - 1].weeks[week].days[day];
+                        .subgroups[user.Subgroup - 1].weeks[week].days[day];
                     drawingDayScheduleInfo.dayOfWeek = day;
                     drawingDayScheduleInfo.group = user.Group;
                     drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
@@ -1287,9 +1350,13 @@ namespace Schedulebot
                 if (today == 0)
                     week = (week + 1) % 2;
                 int weekTemp = week;
+                
+                const int maxDaysFinding = 15;
+                int dayFindingTimes = 0;
+
                 while (!courses[course].groups[groupIndex]
-                    .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                    .days[day].isStudying)
+                    .subgroups[user.Subgroup - 1].weeks[week]
+                    .days[day].IsStudying)
                 {
                     ++day;
                     if (day == 6)
@@ -1297,18 +1364,28 @@ namespace Schedulebot
                         day = 0;
                         week = (week + 1) % 2;
                     }
+
+                    dayFindingTimes++;
+                    if (dayFindingTimes == maxDaysFinding)
+                    {
+                        EnqueueMessage(
+                            userId: user.Id,
+                            message: "В Вашем расписании нет учебных дней"
+                        );
+                        return;
+                    }
                 }
                 string messageTemp = "Завтра Вы не учитесь, вот расписание на ближайший учебный день";
                 if (day == today && week == weekTemp)
                     messageTemp = "Расписание на завтра";
                 long photoId
-                    = courses[course].groups[groupIndex].scheduleSubgroups[user.Subgroup - 1].weeks[week].days[day].PhotoId;
+                    = courses[course].groups[groupIndex].subgroups[user.Subgroup - 1].weeks[week].days[day].PhotoId;
                 if (photoId == 0)
                 {
                     Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
-                    drawingDayScheduleInfo.date = checkingRelevance.DatesAndUrls.dates[course];
+                    drawingDayScheduleInfo.date = relevance.DatesAndUrls.dates[course];
                     drawingDayScheduleInfo.day = courses[course].groups[groupIndex]
-                        .scheduleSubgroups[user.Subgroup - 1].weeks[week].days[day];
+                        .subgroups[user.Subgroup - 1].weeks[week].days[day];
                     drawingDayScheduleInfo.dayOfWeek = day;
                     drawingDayScheduleInfo.group = user.Group;
                     drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
@@ -1376,18 +1453,18 @@ namespace Schedulebot
             {
                 --today;
                 if (courses[course].groups[groupIndex]
-                    .scheduleSubgroups[user.Subgroup - 1].weeks[week]
-                    .days[today].isStudying)
+                    .subgroups[user.Subgroup - 1].weeks[week]
+                    .days[today].IsStudying)
                 {
                     long photoId = courses[course].groups[groupIndex]
-                        .scheduleSubgroups[user.Subgroup - 1].weeks[week]
+                        .subgroups[user.Subgroup - 1].weeks[week]
                         .days[today].PhotoId;
                     if (photoId == 0)
                     {
                         Drawing.DrawingDayScheduleInfo drawingDayScheduleInfo = new Drawing.DrawingDayScheduleInfo();
-                        drawingDayScheduleInfo.date = checkingRelevance.DatesAndUrls.dates[course];
+                        drawingDayScheduleInfo.date = relevance.DatesAndUrls.dates[course];
                         drawingDayScheduleInfo.day = courses[course].groups[groupIndex]
-                            .scheduleSubgroups[user.Subgroup - 1].weeks[week].days[today];
+                            .subgroups[user.Subgroup - 1].weeks[week].days[today];
                         drawingDayScheduleInfo.dayOfWeek = today;
                         drawingDayScheduleInfo.group = user.Group;
                         drawingDayScheduleInfo.subgroup = user.Subgroup.ToString();
@@ -1563,106 +1640,277 @@ namespace Schedulebot
             }
         }
 
-        public async Task CheckRelevanceAsync()
+        public async Task StartRelevanceModule()
         {
-            List<int> coursesToUpdate;
             while (true)
             {
-                var checkRelevanceResults = await checkingRelevance.CheckRelevanceAsync();
-                if (checkRelevanceResults.Item1 != null)
-                    importantInformation = checkRelevanceResults.Item1;
-                if (checkRelevanceResults.Item2 != null)
+                // todo: При неуспешной загрузке добавляем тег и тут проверяем его, если что пытаемся еще раз скачать
+
+                HtmlDocument htmlDocument = await relevance.DownloadHtmlDocument(c_websiteUrl);
+
+                // if parse important information
+                DateTime dt = DateTime.Now;
+                importantInformation = "От " + dt.ToString() + "\n\n" + relevance.ParseInformation(htmlDocument);
+                // if parse schedule
+                List<(int, List<int>)> toUpdate = relevance.UpdateDatesAndUrls(htmlDocument);
+
+                if (toUpdate == null || toUpdate.Count == 0)
                 {
-                    coursesToUpdate = checkRelevanceResults.Item2;
-                    if (coursesToUpdate.Count != 0)
+                    await Task.Delay(c_loadWebsiteDelay);
+                    continue;
+                }
+
+                List<int> updatedCourses = new List<int>();
+                for (int i = 0; i < toUpdate.Count; ++i)
+                {
+                    int courseIndex = toUpdate[i].Item1;
+
+                    List<string> pathsToFile = new List<string>();
+                    for (int j = 0; j < relevance.DatesAndUrls.urls[courseIndex].Count; j++)
+                        pathsToFile.Add(Path + c_defaultDownloadFolder + j.ToString() + '_' + courseIndex.ToString() + IRelevance.defaultFilenameBody);
+                    courses[courseIndex].PathsToFile = pathsToFile;
+
+                    StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.Append("Вышло новое расписание от ");
+                    stringBuilder.Append(relevance.DatesAndUrls.dates[courseIndex]);
+                    stringBuilder.Append(". Ожидайте результата обработки. Возможно дата совпадает с прошлой, но ссылки на расписание на сайте новые.");
+
+                    Task enqueueMessageTask = Task.Run(() => EnqueueMessage(
+                        userIds: userRepository.GetIds(courseIndex, mapper),
+                        message: stringBuilder.ToString()));
+
+                    if (!await relevance.DownloadScheduleFiles(courseIndex, toUpdate[i].Item2))
                     {
-                        List<Schedulebot.Vk.PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
-                        List<int> updatingCourses = new List<int>();
-                        for (int i = 0; i < coursesToUpdate.Count; ++i)
+                        courses[courseIndex].isBroken = true;
+
+                        StringBuilder errorMessageBuilder = new StringBuilder();
+                        errorMessageBuilder.Append("Не удалось загрузить расписание от ");
+                        errorMessageBuilder.Append(relevance.DatesAndUrls.dates[courseIndex]);
+                        errorMessageBuilder.Append(". Новое расписание здесь: ");
+                        errorMessageBuilder.Append(c_websiteUrl);
+
+                        //relevance.DatesAndUrls.dates[courseIndex] = "УСТАРЕЛО";
+
+                        Task enqueueMessageTask2 = Task.Run(() => EnqueueMessage(
+                            userIds: userRepository.GetIds(courseIndex, mapper),
+                            message: errorMessageBuilder.ToString()));
+
+                        continue;
+                    }
+
+                    UpdateProperties updateProperties = new UpdateProperties();
+                    updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.groupUrl;
+                    updateProperties.photoUploadProperties.AlbumId = vkStuff.mainAlbumId;
+                    updateProperties.photoUploadProperties.ToSend = true;
+                    updateProperties.photoUploadProperties.UploadingSchedule = UploadingSchedule.Week;
+
+                    var photosList = await courses[courseIndex].UpdateAsync(
+                        relevance.DatesAndUrls.dates[courseIndex],
+                        updateProperties,
+                        dictionaries);
+
+                    mapper.CreateMaps(courses);
+
+                    if (photosList != null)
+                    {
+                        for (int currentPhoto = 0; currentPhoto < photosList.Count; currentPhoto++)
                         {
-                            StringBuilder stringBuilder = new StringBuilder();
-                            stringBuilder.Append("Вышло новое расписание ");
-                            stringBuilder.Append(checkingRelevance.DatesAndUrls.dates[coursesToUpdate[i]]);
-                            stringBuilder.Append(". Ожидайте результата обработки.");
-
-                            Task enqueueMessageTask = Task.Run(() => EnqueueMessage(
-                                userIds: userRepository.GetIds(coursesToUpdate[i], mapper),
-                                message: stringBuilder.ToString()));
-
-                            UpdateProperties updateProperties = new UpdateProperties();
-                            updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.groupUrl;
-                            updateProperties.photoUploadProperties.AlbumId = vkStuff.mainAlbumId;
-                            updateProperties.photoUploadProperties.ToSend = true;
-                            updateProperties.photoUploadProperties.UploadingSchedule = UploadingSchedule.Week;
-
-                            var tempPhotosList
-                                = await courses[coursesToUpdate[i]]
-                                    .UpdateAsync(
-                                        checkingRelevance.DatesAndUrls.urls[coursesToUpdate[i]],
-                                        checkingRelevance.DatesAndUrls.dates[coursesToUpdate[i]],
-                                        updateProperties,
-                                        dictionaries);
-
-                            if (tempPhotosList != null)
-                            {
-                                photosUploadProperties.AddRange(tempPhotosList);
-                                updatingCourses.Add(coursesToUpdate[i]);
-                            }
+                            var courseGroupIndexTouple = mapper.GetCourseAndIndex(photosList[currentPhoto].GroupName);
+                            if (courseGroupIndexTouple.Item1 == null || (int)courseGroupIndexTouple.Item1 != courseIndex)
+                                continue;
+                            photosList[currentPhoto].Course = (int)courseGroupIndexTouple.Item1;
+                            photosList[currentPhoto].GroupIndex = courseGroupIndexTouple.Item2;
+                            photosQueue.Enqueue(photosList[currentPhoto]);
                         }
-                        if (updatingCourses.Count != 0)
+
+                        List<(string, int)> newGroupSubgroupList = new List<(string, int)>();
+                        for (int currentPhoto = 0; currentPhoto < photosList.Count; currentPhoto++)
+                            newGroupSubgroupList.Add((photosList[currentPhoto].GroupName, photosList[currentPhoto].Subgroup + 1));
+
+                        Task enqueueMessageTask1 = Task.Run(() => EnqueueMessage(
+                            message: "Для Вас изменений нет",
+                            userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList, courseIndex))));
+                        
+                        while (true)
                         {
-                            mapper.CreateMaps(courses);
-                            ConstructKeyboards();
-
-                            for (int i = 0; i < photosUploadProperties.Count; i++)
-                                photosQueue.Enqueue(photosUploadProperties[i]);
-
-                            List<(string, int)> newGroupSubgroupList = new List<(string, int)>();
-                            for (int currentPhoto = 0; currentPhoto < photosUploadProperties.Count; currentPhoto++)
-                                newGroupSubgroupList.Add((photosUploadProperties[currentPhoto].GroupName, photosUploadProperties[currentPhoto].Subgroup + 1));
-
-                            Task enqueueMessageTask = Task.Run(() => EnqueueMessage(
-                                message: "Для Вас изменений нет",
-                                userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList, updatingCourses))));
-                            
-                            while (true)
+                            if (photosQueue.IsEmpty)
                             {
-                                if (photosQueue.IsEmpty)
-                                {
-                                    await Task.Delay(5000);
-                                    for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
-                                        courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
-                                    break;
-                                }
-                                await Task.Delay(2000);
+                                await Task.Delay(6000);
+                                courses[courseIndex].isUpdating = false;
+                                break;
                             }
-
-                            SaveUploadedSchedule();
-
-                            for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
-                            {
-                                if (courses[updatingCourses[currentUpdatingCourse]].isBroken)
-                                {
-                                    StringBuilder stringBuilder = new StringBuilder();
-                                    stringBuilder.Append("Не удалось обработать расписание ");
-                                    stringBuilder.Append(checkingRelevance.DatesAndUrls.dates[currentUpdatingCourse]);
-                                    stringBuilder.Append(". Ссылка: ");
-                                    stringBuilder.Append(checkingRelevance.DatesAndUrls.urls[currentUpdatingCourse]);
-
-                                    Task enqueueMessageTask2 = Task.Run(() => EnqueueMessage(
-                                        userIds: userRepository.GetIds(updatingCourses[currentUpdatingCourse], mapper),
-                                        message: stringBuilder.ToString()));
-                                }
-                                courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
-                            }
-                            checkingRelevance.DatesAndUrls.Save();
+                            await Task.Delay(2000);
                         }
+                        updatedCourses.Add(courseIndex);
                     }
                 }
-                await Task.Delay(600000);
+                if (updatedCourses.Count != 0)
+                {
+                    SaveCoursesFilePaths();
+
+                    for (int currentUpdatedCourse = 0; currentUpdatedCourse < updatedCourses.Count; currentUpdatedCourse++)
+                    {
+                        if (courses[updatedCourses[currentUpdatedCourse]].isBroken)
+                        {
+                            StringBuilder stringBuilder = new StringBuilder();
+                            stringBuilder.Append("Не удалось обработать расписание от ");
+                            stringBuilder.Append(relevance.DatesAndUrls.dates[currentUpdatedCourse]);
+                            stringBuilder.Append(". Новое расписание здесь: ");
+                            stringBuilder.Append(c_websiteUrl);
+
+                            Task enqueueMessageTask2 = Task.Run(() => EnqueueMessage(
+                                userIds: userRepository.GetIds(updatedCourses[currentUpdatedCourse], mapper),
+                                message: stringBuilder.ToString()));
+                        }
+                    }
+
+                    ConstructKeyboards();
+
+                    SaveUploadedSchedule();
+
+                    relevance.DatesAndUrls.Save();
+                }
+                await Task.Delay(c_loadWebsiteDelay);
             }
         }
-        
+
+
+        public async Task StartRelevanceModule_NotEnoughRAM()
+        {
+            while (true)
+            {
+                // todo: При неуспешной загрузке добавляем тег и тут проверяем его, если что пытаемся еще раз скачать
+
+                HtmlDocument htmlDocument = await relevance.DownloadHtmlDocument(c_websiteUrl);
+
+                // if parse important information
+                DateTime dt = DateTime.Now;
+                importantInformation = "От " + dt.ToString() + "\n\n" + relevance.ParseInformation(htmlDocument);
+                // if parse schedule
+                List<(int, List<int>)> toUpdate = relevance.UpdateDatesAndUrls(htmlDocument);
+
+                if (toUpdate == null || toUpdate.Count == 0)
+                {
+                    await Task.Delay(c_loadWebsiteDelay);
+                    continue;
+                }
+
+                List<Schedulebot.Vk.PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
+                List<int> updatingCourses = new List<int>();
+                for (int i = 0; i < toUpdate.Count; ++i)
+                {
+                    int courseIndex = toUpdate[i].Item1;
+
+                    List<string> pathsToFile = new List<string>();
+                    for (int j = 0; j < relevance.DatesAndUrls.urls[courseIndex].Count; j++)
+                        pathsToFile.Add(Path + c_defaultDownloadFolder + j.ToString() + '_' + courseIndex.ToString() + IRelevance.defaultFilenameBody);
+                    courses[courseIndex].PathsToFile = pathsToFile;
+
+                    StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.Append("Вышло новое расписание от ");
+                    stringBuilder.Append(relevance.DatesAndUrls.dates[courseIndex]);
+                    stringBuilder.Append(". Ожидайте результата обработки. Возможно дата совпадает с прошлой, но ссылки на расписание на сайте новые.");
+
+                    Task enqueueMessageTask = Task.Run(() => EnqueueMessage(
+                        userIds: userRepository.GetIds(courseIndex, mapper),
+                        message: stringBuilder.ToString()));
+
+                    if (!await relevance.DownloadScheduleFiles(courseIndex, toUpdate[i].Item2))
+                    {
+                        courses[courseIndex].isBroken = true;
+
+                        StringBuilder errorMessageBuilder = new StringBuilder();
+                        errorMessageBuilder.Append("Не удалось загрузить расписание от ");
+                        errorMessageBuilder.Append(relevance.DatesAndUrls.dates[courseIndex]);
+                        errorMessageBuilder.Append(". Новое расписание здесь: ");
+                        errorMessageBuilder.Append(c_websiteUrl);
+
+                        //relevance.DatesAndUrls.dates[courseIndex] = "УСТАРЕЛО";
+
+                        Task enqueueMessageTask2 = Task.Run(() => EnqueueMessage(
+                            userIds: userRepository.GetIds(courseIndex, mapper),
+                            message: errorMessageBuilder.ToString()));
+
+                        continue;
+                    }
+
+                    UpdateProperties updateProperties = new UpdateProperties();
+                    updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.groupUrl;
+                    updateProperties.photoUploadProperties.AlbumId = vkStuff.mainAlbumId;
+                    updateProperties.photoUploadProperties.ToSend = true;
+                    updateProperties.photoUploadProperties.UploadingSchedule = UploadingSchedule.Week;
+
+                    var tempPhotosList = await courses[courseIndex].UpdateAsync(
+                        relevance.DatesAndUrls.dates[courseIndex],
+                        updateProperties,
+                        dictionaries);
+
+                    if (tempPhotosList != null)
+                    {
+                        photosUploadProperties.AddRange(tempPhotosList);
+                        updatingCourses.Add(courseIndex);
+                    }
+                }
+                if (updatingCourses.Count != 0)
+                {
+                    SaveCoursesFilePaths();
+
+                    for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
+                    {
+                        if (courses[updatingCourses[currentUpdatingCourse]].isBroken)
+                        {
+                            StringBuilder stringBuilder = new StringBuilder();
+                            stringBuilder.Append("Не удалось обработать расписание от ");
+                            stringBuilder.Append(relevance.DatesAndUrls.dates[currentUpdatingCourse]);
+                            stringBuilder.Append(". Новое расписание здесь: ");
+                            stringBuilder.Append(c_websiteUrl);
+
+                            Task enqueueMessageTask2 = Task.Run(() => EnqueueMessage(
+                                userIds: userRepository.GetIds(updatingCourses[currentUpdatingCourse], mapper),
+                                message: stringBuilder.ToString()));
+                        }
+                    }
+
+                    mapper.CreateMaps(courses);
+                    ConstructKeyboards();
+
+                    for (int i = 0; i < photosUploadProperties.Count; i++)
+                    {
+                        photosQueue.Enqueue(photosUploadProperties[i]);
+                        photosUploadProperties[i].Photo = null;
+                    }
+
+                    List<(string, int)> newGroupSubgroupList = new List<(string, int)>();
+                    for (int currentPhoto = 0; currentPhoto < photosUploadProperties.Count; currentPhoto++)
+                        newGroupSubgroupList.Add((photosUploadProperties[currentPhoto].GroupName, photosUploadProperties[currentPhoto].Subgroup + 1));
+
+                    Task enqueueMessageTask = Task.Run(() => EnqueueMessage(
+                        message: "Для Вас изменений нет",
+                        userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList, updatingCourses))));
+                    
+                    while (true)
+                    {
+                        if (photosQueue.IsEmpty)
+                        {
+                            await Task.Delay(6000);
+                            for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
+                                courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
+                            break;
+                        }
+                        await Task.Delay(2000);
+                    }
+
+                    SaveUploadedSchedule();
+
+                    for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
+                        courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
+
+                    relevance.DatesAndUrls.Save();
+                }
+                await Task.Delay(c_loadWebsiteDelay);
+            }
+        }
+
         public async void UploadedPhotoResponse(PhotoUploadProperties photo)
         {
             await Task.Run(() => 
@@ -1671,7 +1919,7 @@ namespace Schedulebot
                 {
                     case UploadingSchedule.Day:
                     {
-                        courses[photo.Course].groups[photo.GroupIndex].scheduleSubgroups[photo.Subgroup]
+                        courses[photo.Course].groups[photo.GroupIndex].subgroups[photo.Subgroup]
                         .weeks[photo.Week].days[photo.Day].PhotoId
                             = photo.Id;
                         if (photo.ToSend && photo.PeerId != 0)
@@ -1693,7 +1941,7 @@ namespace Schedulebot
                     }
                     case UploadingSchedule.Week:
                     {
-                        courses[photo.Course].groups[photo.GroupIndex].scheduleSubgroups[photo.Subgroup].PhotoId
+                        courses[photo.Course].groups[photo.GroupIndex].subgroups[photo.Subgroup].PhotoId
                             = photo.Id;
                         if (photo.ToSend)
                         {

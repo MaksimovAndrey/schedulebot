@@ -13,11 +13,13 @@ namespace Schedulebot
         #endif
         public const string delimiter = " · ";
         public const string lectureSign = "Л";
+        public const string labSign = "Лаб";
+        public const string seminarSign = "П";
         public const string remotelySign = "Д";
         #if DEBUG 
-            private const string path = @"C:/Custom/Projects/Shared/sbtest/";
+            private const string с_path = @"C:/Custom/Projects/Shared/sbtest/";
         #else
-            private const string path = @"/media/projects/sbtest/";
+            private const string с_path = @"/media/projects/sbtest/";
         #endif
 
         public static readonly HttpClient client = new HttpClient();
@@ -33,7 +35,7 @@ namespace Schedulebot
             departments = new IDepartment[departmentsAmount];
             for (int currentDepartment = 0; currentDepartment < departmentsAmount; currentDepartment++)
             {
-                departments[currentDepartment] = new DepartmentItmm(path, ref tasks);
+                departments[currentDepartment] = new DepartmentItmm(с_path, ref tasks);
             }            
             _tasks.Add(Task.WhenAny(tasks));
         }

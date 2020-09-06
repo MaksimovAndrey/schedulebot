@@ -1,38 +1,101 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Schedulebot.Schedule
 {
     public class ScheduleDay
     {
-        public ScheduleLecture[] lectures;
-        public bool isStudying = false;
+        public List<ScheduleLecture> lectures;
         public long PhotoId { get; set; } = 0; // вынести 
-
-        public int LecturesAmount { get; } = 8;
+        public bool IsStudying => lectures.Count == 0 ? false : true;
         
         public ScheduleDay()
         {
-            lectures = new ScheduleLecture[LecturesAmount];
-            for (int i = 0; i < LecturesAmount; ++i)
-                lectures[i] = new ScheduleLecture();
+            lectures = new List<ScheduleLecture>();
         }
 
-        public ScheduleDay(int lecturesAmount)
+        public ScheduleDay(ScheduleDay day)
         {
-            if (lecturesAmount < 1)
-                throw new ArgumentOutOfRangeException("lecturesAmount", lecturesAmount, "Количество пар в день не может быть меньше 1");
-            LecturesAmount = lecturesAmount;
-            lectures = new ScheduleLecture[LecturesAmount];
-            for (int i = 0; i < LecturesAmount; ++i)
-                lectures[i] = new ScheduleLecture();
+            lectures = new List<ScheduleLecture>(day.lectures);
+            PhotoId = day.PhotoId;
+        }
+
+        public void SortLectures()
+        {
+            if (lectures.Count == 0)
+                return;
+
+            List<ScheduleLecture> result = new List<ScheduleLecture>();
+            List<int> startTimes = new List<int>();
+            for (int currentLecture = 0; currentLecture < lectures.Count; currentLecture++)
+            {
+                startTimes.Add(lectures[currentLecture].TimeStartToInt());
+            }
+            while (startTimes.Count > 1)
+            {
+                int minIndex = 0;
+                int minTime = startTimes[0];
+                for (int currentTime = 1; currentTime < startTimes.Count; currentTime++)
+                {
+                    if (startTimes[currentTime] < minTime)
+                    {
+                        minTime = startTimes[currentTime];
+                        minIndex = currentTime;
+                    }
+                }
+                result.Add(lectures[minIndex]);
+                lectures.RemoveAt(minIndex);
+                startTimes.RemoveAt(minIndex);
+            }
+            result.Add(lectures[0]);
+            lectures.RemoveAt(0); // lectures.Clear();
+            lectures = result;
+        }
+
+        public bool IsEmpty()
+        {
+            return lectures.Count == 0 ? true : false;
+        }
+
+        public string GetChanges(List<ScheduleLecture> newLectures)
+        {
+            int currentLecture;
+            int minLectures = Math.Min(lectures.Count, newLectures.Count);
+            StringBuilder changesBuilder = new StringBuilder();
+
+            for (currentLecture = 0; currentLecture < minLectures; currentLecture++)
+            {
+                if (lectures[currentLecture] != newLectures[currentLecture])
+                {
+                    changesBuilder.Append('-');
+                    changesBuilder.Append(lectures[currentLecture].ToString());
+                    changesBuilder.Append("\n+");
+                    changesBuilder.Append(newLectures[currentLecture].ToString());
+                    changesBuilder.Append('\n');
+                }
+            }
+            for (int lectureIndex = currentLecture + 1; lectureIndex < lectures.Count; lectureIndex++)
+            {
+                changesBuilder.Append('-');
+                changesBuilder.Append(lectures[lectureIndex].ToString());
+                changesBuilder.Append('\n');
+            }
+            for (int lectureIndex = currentLecture + 1; lectureIndex < newLectures.Count; lectureIndex++)
+            {
+                changesBuilder.Append('+');
+                changesBuilder.Append(newLectures[lectureIndex].ToString());
+                changesBuilder.Append('\n');
+            }
+
+            return changesBuilder.ToString();
         }
         
         public static bool operator ==(ScheduleDay day1, ScheduleDay day2)
         {
-            if (day1.LecturesAmount != day2.LecturesAmount)
+            if (day1.lectures.Count != day2.lectures.Count)
                 return false;
-            for (int i = 0; i < day1.LecturesAmount; ++i)
+            for (int i = 0; i < day1.lectures.Count; ++i)
             {
                 if (day1.lectures[i] != day2.lectures[i])
                     return false;
@@ -44,36 +107,15 @@ namespace Schedulebot.Schedule
         {
             return !(day1 == day2);
         }
-        
-        public bool IsEmpty()
-        {
-            for (int i = 0; i < LecturesAmount; ++i)
-                if (!lectures[i].IsEmpty())
-                    return false;
-            return true;
-        }
-        
-        public int CountOfLectures()
-        {
-            int count = 0;
-            for (int i = 0; i < LecturesAmount; ++i)
-            {
-                if (!lectures[i].IsEmpty())
-                    ++count;
-            }
-            return count;
-        }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(lectures, isStudying);
+            return HashCode.Combine(lectures);
         }
 
         public override bool Equals(object obj)
         {
-            return obj is ScheduleDay day &&
-                   EqualityComparer<ScheduleLecture[]>.Default.Equals(lectures, day.lectures) &&
-                   isStudying == day.isStudying;
+            return obj is ScheduleDay day && EqualityComparer<List<ScheduleLecture>>.Default.Equals(lectures, day.lectures);
         }
     }
 }

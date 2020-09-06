@@ -8,21 +8,22 @@ namespace Schedulebot.Schedule
         public ScheduleWeek[] weeks;
         public long PhotoId { get; set; } = 0; // вынести
 
-        public int SubgroupsAmount { get; } = 2;
+        public int WeeksCount { get; }
 
-        public ScheduleSubgroup()
+        public ScheduleSubgroup(int weeksCount = 2)
         {
-            weeks = new ScheduleWeek[SubgroupsAmount];
-            for (int i = 0; i < SubgroupsAmount; ++i)
+            WeeksCount = weeksCount;
+            weeks = new ScheduleWeek[WeeksCount];
+            for (int i = 0; i < WeeksCount; ++i)
                 weeks[i] = new ScheduleWeek();
         }
 
-        public ScheduleSubgroup(int subgroupsAmount)
+        public void SortLectures()
         {
-            SubgroupsAmount = subgroupsAmount;
-            weeks = new ScheduleWeek[SubgroupsAmount];
-            for (int i = 0; i < SubgroupsAmount; ++i)
-                weeks[i] = new ScheduleWeek();
+            for (int i = 0; i < WeeksCount; i++)
+            {
+                weeks[i].SortLectures();
+            }
         }
 
         public override bool Equals(object obj)
@@ -38,9 +39,9 @@ namespace Schedulebot.Schedule
 
         public static bool operator ==(ScheduleSubgroup schedule1, ScheduleSubgroup schedule2)
         {
-            if (schedule1.SubgroupsAmount != schedule2.SubgroupsAmount)
+            if (schedule1.WeeksCount != schedule2.WeeksCount)
                 return false;
-            for (int i = 0; i < schedule1.SubgroupsAmount; ++i)
+            for (int i = 0; i < schedule1.WeeksCount; ++i)
             {
                 if (schedule1.weeks[i] != schedule2.weeks[i])
                     return false;

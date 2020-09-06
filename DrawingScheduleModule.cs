@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Linq;
 using System.IO;
+using System.Collections.Generic;
 
 using Schedulebot.Schedule;
 
@@ -27,18 +28,9 @@ namespace Schedulebot.Drawing
     }
     public static class DrawingSchedule
     {
-        public static readonly string[][] times = { 
-            new string[] { "9:00", "10:30"  },
-            new string[] { "10:40", "12:10" },
-            new string[] { "12:20", "13:50" },
-            new string[] { "14:30", "16:00" },
-            new string[] { "16:10", "17:40" },
-            new string[] { "17:50", "19:20" },
-            new string[] { "19:30", "21:00" },
-            new string[] { "--:--", "--:--" } };
-
         public static class StandartSchedule
         {
+            const string c_noOneLecture = "____";
             public static byte[] Draw(DrawingStandartScheduleInfo drawingScheduleInfo) // Обработка расписания для рассылки
             {
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [S] Обрабока расписания для рассылки " + course + " " + number);
@@ -77,12 +69,15 @@ namespace Schedulebot.Drawing
                 // Переносим координату
                 pos += stringHeight + Line.size;
                 // Проходим по дням недели
-                string[] days = { "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота" };
                 for (int i = 0; i < 6; ++i)
                 {
-                    if (drawingScheduleInfo.weeks[0].days[i].isStudying || drawingScheduleInfo.weeks[1].days[i].isStudying)
-                        DrawDay(new ScheduleDay[] { drawingScheduleInfo.weeks[0].days[i], drawingScheduleInfo.weeks[1].days[i] },
-                            ref pos, ref image, days[i]);
+                    if (drawingScheduleInfo.weeks[0].days[i].IsStudying || drawingScheduleInfo.weeks[1].days[i].IsStudying)
+                        DrawDay(new ScheduleDay[]
+                            { 
+                                new ScheduleDay(drawingScheduleInfo.weeks[0].days[i]),
+                                new ScheduleDay(drawingScheduleInfo.weeks[1].days[i])
+                            },
+                            ref pos, ref image, Utils.Converter.IndexToDay(i));
                 }
                 // Рисуем подвал
                 graphics.DrawString(
@@ -133,7 +128,7 @@ namespace Schedulebot.Drawing
                         stringHeight + dayTextProperties.indent),
                     stringFormat);
                 // Рисуем количество пар
-                float countOfLectures = (scheduleDays[0].CountOfLectures() + scheduleDays[1].CountOfLectures()) / 2F;
+                float countOfLectures = (scheduleDays[0].lectures.Count + scheduleDays[1].lectures.Count) / 2F;
                 string countOfLecturesStr = countOfLectures.ToString();
                 if (new float[] { 0.5F, 1.5F, 2F, 2.5F, 3F, 3.5F, 4F, 4.5F }.ToList().Contains(countOfLectures))
                 {
@@ -154,7 +149,7 @@ namespace Schedulebot.Drawing
                     new RectangleF(
                         Border.size,
                         pos,
-                        timeendPosX - Border.size - lectureProperties.fix,
+                        timeendPosX - Border.size, // - lectureProperties.fix,
                         stringHeight + lectureProperties.textProperties.indent),
                     stringFormat);
                 // Отделяем
@@ -166,32 +161,92 @@ namespace Schedulebot.Drawing
                     Line.size);
                 // Двигаем координату
                 pos += stringHeight + Line.size;
-                // Проходим по парам
-                if (scheduleDays[0].lectures[0].ConstructLecture().ToUpper().Contains("ВОЕННАЯ ПОДГОТОВКА")) //? если только по верхним/нижним неделям неверно, бывает ли такое?
+                
+                List<int>[] daysTimes = { new List<int>(), new List<int>() };
+                for (int currentDay = 0; currentDay < 2; currentDay++)
                 {
-                    DrawLecture(new ScheduleLecture[] { scheduleDays[0].lectures[0], scheduleDays[1].lectures[0] }, ref pos, ref image, new string[] { "Весь", "день" });
-                }
-                else
-                {
-                    int start = -1;
-                    int end = -1;
-                    for (int i = 0; i < 8; i++)
+                    for (int currentLecture = 0; currentLecture < scheduleDays[currentDay].lectures.Count; currentLecture++)
                     {
-                        if (!(scheduleDays[0].lectures[i].IsEmpty() && scheduleDays[1].lectures[i].IsEmpty()))
+                        daysTimes[currentDay].Add(scheduleDays[currentDay].lectures[currentLecture].TimeStartToInt());
+                    }
+                }
+
+                for (int currentDay = 0; currentDay < 2; currentDay++)
+                {
+                    for (int currentLecture = 0; currentLecture < scheduleDays[currentDay].lectures.Count; currentLecture++)
+                    {
+                        if (daysTimes[currentDay][currentLecture] == 0)
                         {
-                            if (start == -1)
-                                start = i;
-                            end = i;
+                            if (currentDay == 0)
+                                DrawLecture(scheduleDays[currentDay].lectures[currentLecture], null, ref pos, ref image);
+                            else
+                                DrawLecture(null, scheduleDays[currentDay].lectures[currentLecture], ref pos, ref image);
+
+                            scheduleDays[currentDay].lectures.RemoveAt(currentLecture);
+                            daysTimes[currentDay].RemoveAt(currentLecture);
+                            currentLecture--;
+                        }
+                        else
+                        {
+                            break;
                         }
                     }
-                    for (int i = start; i <= end; ++i)
+                }
+
+                while (daysTimes[0].Count != 0 && daysTimes[1].Count != 0)
+                {
+                    if (daysTimes[0][0] < daysTimes[1][0])
                     {
-                        DrawLecture(new ScheduleLecture[] { scheduleDays[0].lectures[i], scheduleDays[1].lectures[i] }, ref pos, ref image, times[i]);
+                        DrawLecture(scheduleDays[0].lectures[0], null, ref pos, ref image);
+                        daysTimes[0].RemoveAt(0);
+                        scheduleDays[0].lectures.RemoveAt(0);
+                    }
+                    else if (daysTimes[0][0] > daysTimes[1][0])
+                    {
+                        DrawLecture(null, scheduleDays[1].lectures[0], ref pos, ref image);
+                        daysTimes[1].RemoveAt(0);
+                        scheduleDays[1].lectures.RemoveAt(0);
+                    }
+                    else
+                    {
+                        if (scheduleDays[0].lectures[0].TimeEnd == scheduleDays[1].lectures[0].TimeEnd)
+                        {
+                            DrawLecture(scheduleDays[0].lectures[0], scheduleDays[1].lectures[0], ref pos, ref image);
+
+                            daysTimes[0].RemoveAt(0);
+                            scheduleDays[0].lectures.RemoveAt(0);
+
+                            daysTimes[1].RemoveAt(0);
+                            scheduleDays[1].lectures.RemoveAt(0);
+                        }
+                        else
+                        {
+                            DrawLecture(scheduleDays[0].lectures[0], null, ref pos, ref image);
+                            daysTimes[0].RemoveAt(0);
+                            scheduleDays[0].lectures.RemoveAt(0);
+
+                            DrawLecture(null, scheduleDays[1].lectures[0], ref pos, ref image);
+                            daysTimes[1].RemoveAt(0);
+                            scheduleDays[1].lectures.RemoveAt(0);
+                        }
+                    }
+                }
+
+                for (int currentDay = 0; currentDay < 2; currentDay++)
+                {
+                    for (int currentLecture = 0; currentLecture < scheduleDays[currentDay].lectures.Count; currentLecture++)
+                    {
+                        if (currentDay == 0)
+                            DrawLecture(scheduleDays[currentDay].lectures[currentLecture], null, ref pos, ref image);
+                        else
+                            DrawLecture(null, scheduleDays[currentDay].lectures[currentLecture], ref pos, ref image);
                     }
                 }
             }
-            private static void DrawLecture(ScheduleLecture[] lectures, ref int pos, ref System.Drawing.Image image, string[] times)
+            private static void DrawLecture(ScheduleLecture upperWeekLecture, ScheduleLecture downWeekLecture, ref int pos, ref System.Drawing.Image image)
             {
+                if (upperWeekLecture is null && downWeekLecture is null)
+                    return;
                 Graphics graphics = Graphics.FromImage(image);
                 graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 SizeF textSize;
@@ -201,151 +256,7 @@ namespace Schedulebot.Drawing
                     LineAlignment = StringAlignment.Center,
                     FormatFlags = StringFormatFlags.NoWrap
                 };
-                if (lectures[0] == lectures[1])
-                {
-                    // индикатор
-                    graphics.FillRectangle(
-                        Indicator.brush,
-                        Border.size,
-                        pos,
-                        Indicator.size,
-                        stringHeight * 2 + Line2.size);
-                    // закрывающая индикатор
-                    graphics.FillRectangle(
-                        Line.brush,
-                        Border.size + Indicator.size,
-                        pos,
-                        Line2.size,
-                        stringHeight * 2 + Line2.size);
-                    // время начала
-                    graphics.DrawString(
-                        times[0],
-                        timeTextProperties.font,
-                        timeTextProperties.brush,
-                        Border.size + Indicator.size + Line2.size + timeTextProperties.fix,
-                        pos + timeTextProperties.indent);
-                    // время конца
-                    textSize = graphics.MeasureString(times[1], lectureProperties.textProperties.font);
-                    graphics.DrawString(
-                        times[1],
-                        timeTextProperties.font,
-                        timeTextProperties.brush,
-                        timeendPosX - textSize.Width - timeTextProperties.fix,
-                        pos + stringHeight + Line2.size + timeTextProperties.indent);
-                    // закрытие времени
-                    graphics.FillRectangle(
-                        Line.brush,
-                        timeendPosX,
-                        pos,
-                        Line.size,
-                        stringHeight * 2 + Line2.size);
-                    // пары
-                    if (lectures[1].Status == "F3" || lectures[1].Status == "N2")
-                    {
-                        // пара верхняя
-                        graphics.DrawString(
-                            LectureShortening(lectures[1].GetLectureWithOnlySubject(), lectureProperties),
-                            lectureProperties.textProperties.font,
-                            lectureProperties.textProperties.brush,
-                            new RectangleF(
-                                timeendPosX + Line.size,
-                                pos,
-                                lectureProperties.width - lectureProperties.fix,
-                                stringHeight + lectureProperties.textProperties.indent + lectureProperties.sameFix * 2),
-                            stringFormat);
-                        // пара нижняя
-                        graphics.DrawString(
-                            lectures[0].ConstructLectureWithoutSubject(),
-                            lectureProperties.textProperties.font,
-                            lectureProperties.textProperties.brush,
-                            new RectangleF(
-                                timeendPosX + Line.size,
-                                pos + stringHeight + Line2.size,
-                                lectureProperties.width - lectureProperties.fix,
-                                stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
-                            stringFormat);
-                    }
-                    else if (lectures[1].Status == "F1" || lectures[1].Status == "N0")
-                    {
-                        string lectureStr = lectures[1].ConstructLecture();
-                        // Проверяем есть ли 2 пробела
-                        if (lectureStr.IndexOf(' ') != -1
-                            && lectureStr.IndexOf(' ') != lectureStr.LastIndexOf(' ')
-                            && graphics.MeasureString(lectureStr, soloLectureTextProperties.font).Width >= lectureProperties.width - lectureProperties.fix)
-                        {
-                            // пара верхняя
-                            graphics.DrawString(
-                                lectureStr.Substring(0, lectureStr.IndexOf(' ')),
-                                lectureProperties.textProperties.font,
-                                lectureProperties.textProperties.brush,
-                                new RectangleF(
-                                    timeendPosX + Line.size,
-                                    pos,
-                                    lectureProperties.width - lectureProperties.fix,
-                                    stringHeight + lectureProperties.textProperties.indent + lectureProperties.sameFix * 2),
-                                stringFormat);
-                            // пара нижняя
-                            graphics.DrawString(
-                                lectureStr.Substring(lectureStr.IndexOf(' ') + 1),
-                                lectureProperties.textProperties.font,
-                                lectureProperties.textProperties.brush,
-                                new RectangleF(
-                                    timeendPosX + Line.size,
-                                    pos + stringHeight + Line2.size,
-                                    lectureProperties.width - lectureProperties.fix,
-                                    stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
-                                stringFormat);
-                        }
-                        else
-                        {
-                            // пара посередине
-                            graphics.DrawString(
-                                lectureStr,
-                                soloLectureTextProperties.font,
-                                soloLectureTextProperties.brush,
-                                new RectangleF(
-                                    timeendPosX + Line.size,
-                                    pos,
-                                    lectureProperties.width - soloLectureTextProperties.fix,
-                                    stringHeight * 2 + Line2.size + soloLectureTextProperties.indent),
-                                stringFormat);
-                        }
-                    }
-                    else if (lectures[1].Status == "F2")
-                    {
-                        string lectureStr = lectures[1].ConstructLecture();
-                        // пара верхняя
-                        graphics.DrawString(
-                            lectureStr.Substring(0, lectureStr.IndexOf(" или ") + 4),
-                            lectureProperties.textProperties.font,
-                            lectureProperties.textProperties.brush,
-                            new RectangleF(
-                                timeendPosX + Line.size,
-                                pos,
-                                lectureProperties.width - lectureProperties.fix,
-                                stringHeight + lectureProperties.textProperties.indent + lectureProperties.sameFix * 2),
-                            stringFormat);
-                        // пара нижняя
-                        graphics.DrawString(
-                            lectureStr.Substring(lectureStr.IndexOf(" или ") + 1),
-                            lectureProperties.textProperties.font,
-                            lectureProperties.textProperties.brush,
-                            new RectangleF(
-                                timeendPosX + Line.size,
-                                pos + stringHeight + Line2.size,
-                                lectureProperties.width - lectureProperties.fix,
-                                stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
-                            stringFormat);
-                    }
-                    // после
-                    graphics.FillRectangle(
-                        Line.brush,
-                        Border.size,
-                        pos + stringHeight * 2 + Line2.size,
-                        Image.width - Border.size * 2,
-                        Line.size);
-                }
-                else if (lectures[0].IsEmpty())
+                if (upperWeekLecture is null)
                 {
                     // квадрат между индикаторами
                     graphics.FillRectangle(
@@ -370,15 +281,15 @@ namespace Schedulebot.Drawing
                         stringHeight * 2 + Line2.size);
                     // время начала
                     graphics.DrawString(
-                        times[0],
+                        downWeekLecture.TimeStart,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         Border.size + Indicator.size + Line2.size + timeTextProperties.fix,
                         pos + timeTextProperties.indent);
                     // время конца
-                    textSize = graphics.MeasureString(times[1], lectureProperties.textProperties.font);
+                    textSize = graphics.MeasureString(downWeekLecture.TimeEnd, lectureProperties.textProperties.font);
                     graphics.DrawString(
-                        times[1],
+                        downWeekLecture.TimeEnd,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         timeendPosX - textSize.Width - timeTextProperties.fix,
@@ -391,27 +302,26 @@ namespace Schedulebot.Drawing
                         Line.size,
                         stringHeight * 2 + Line2.size);
                     // пара верхняя
-                    string noLecture = "____"; // todo: вынести noLecture в свойства расписания
-                    textSize = graphics.MeasureString(noLecture, lectureProperties.textProperties.font);
+                    textSize = graphics.MeasureString(c_noOneLecture, lectureProperties.textProperties.font);
                     graphics.DrawString(
-                        noLecture,
+                        c_noOneLecture,
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
                             timeendPosX + Line.size,
                             pos,
-                            lectureProperties.width - lectureProperties.fix,
+                            lectureProperties.width, // - lectureProperties.fix,
                             stringHeight - lectureProperties.textProperties.indent),
                         stringFormat);
                     // пара нижняя
                     graphics.DrawString(
-                        LectureShortening(lectures[1], lectureProperties),
+                        LectureShortening(downWeekLecture, lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
                             timeendPosX + Line.size,
                             pos + stringHeight + Line2.size,
-                            lectureProperties.width - lectureProperties.fix,
+                            lectureProperties.width, // - lectureProperties.fix,
                             stringHeight + lectureProperties.textProperties.indent),
                         stringFormat);
                     // между парами
@@ -429,7 +339,7 @@ namespace Schedulebot.Drawing
                         Image.width - Border.size * 2,
                         Line.size);
                 }
-                else if (lectures[1].IsEmpty())
+                else if (downWeekLecture is null)
                 {
                     // верхний индикатор
                     graphics.FillRectangle(
@@ -454,15 +364,15 @@ namespace Schedulebot.Drawing
                         stringHeight * 2 + Line2.size);
                     // время начала
                     graphics.DrawString(
-                        times[0],
+                        upperWeekLecture.TimeStart,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         Border.size + Indicator.size + Line2.size + timeTextProperties.fix,
                         pos + timeTextProperties.indent);
                     // время конца
-                    textSize = graphics.MeasureString(times[1], lectureProperties.textProperties.font);
+                    textSize = graphics.MeasureString(upperWeekLecture.TimeEnd, lectureProperties.textProperties.font);
                     graphics.DrawString(
-                        times[1],
+                        upperWeekLecture.TimeEnd,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         timeendPosX - textSize.Width - timeTextProperties.fix,
@@ -476,26 +386,25 @@ namespace Schedulebot.Drawing
                         stringHeight * 2 + Line2.size);
                     // пара верхняя
                     graphics.DrawString(
-                        LectureShortening(lectures[0], lectureProperties),
+                        LectureShortening(upperWeekLecture, lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
                             timeendPosX + Line.size,
                             pos,
-                            lectureProperties.width - lectureProperties.fix,
+                            lectureProperties.width, // - lectureProperties.fix,
                             stringHeight + lectureProperties.textProperties.indent),
                         stringFormat);
                     // пара нижняя
-                    string noLecture = "____"; // todo: вынести noLecture в свойства расписания
-                    textSize = graphics.MeasureString(noLecture, lectureProperties.textProperties.font);
+                    textSize = graphics.MeasureString(c_noOneLecture, lectureProperties.textProperties.font);
                     graphics.DrawString(
-                        noLecture,
+                        c_noOneLecture,
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
                             timeendPosX + Line.size,
                             pos + stringHeight + Line2.size,
-                            lectureProperties.width - lectureProperties.fix,
+                            lectureProperties.width, // - lectureProperties.fix,
                             stringHeight - lectureProperties.textProperties.indent),
                         stringFormat);
                     // между парами
@@ -505,6 +414,150 @@ namespace Schedulebot.Drawing
                         pos + stringHeight,
                         Image.width - (timeendPosX + Line.size) - Border.size,
                         Line2.size);
+                    // после
+                    graphics.FillRectangle(
+                        Line.brush,
+                        Border.size,
+                        pos + stringHeight * 2 + Line2.size,
+                        Image.width - Border.size * 2,
+                        Line.size);
+                }
+                else if (upperWeekLecture == downWeekLecture)
+                {
+                    // индикатор
+                    graphics.FillRectangle(
+                        Indicator.brush,
+                        Border.size,
+                        pos,
+                        Indicator.size,
+                        stringHeight * 2 + Line2.size);
+                    // закрывающая индикатор
+                    graphics.FillRectangle(
+                        Line.brush,
+                        Border.size + Indicator.size,
+                        pos,
+                        Line2.size,
+                        stringHeight * 2 + Line2.size);
+                    // время начала
+                    graphics.DrawString(
+                        upperWeekLecture.TimeStart,
+                        timeTextProperties.font,
+                        timeTextProperties.brush,
+                        Border.size + Indicator.size + Line2.size + timeTextProperties.fix,
+                        pos + timeTextProperties.indent);
+                    // время конца
+                    textSize = graphics.MeasureString(upperWeekLecture.TimeEnd, lectureProperties.textProperties.font);
+                    graphics.DrawString(
+                        upperWeekLecture.TimeEnd,
+                        timeTextProperties.font,
+                        timeTextProperties.brush,
+                        timeendPosX - textSize.Width - timeTextProperties.fix,
+                        pos + stringHeight + Line2.size + timeTextProperties.indent);
+                    // закрытие времени
+                    graphics.FillRectangle(
+                        Line.brush,
+                        timeendPosX,
+                        pos,
+                        Line.size,
+                        stringHeight * 2 + Line2.size);
+                    // пары
+                    if (upperWeekLecture.Status == "F3" || upperWeekLecture.Status == "N2")
+                    {
+                        // пара верхняя
+                        graphics.DrawString(
+                            LectureShortening(upperWeekLecture.GetLectureWithOnlySubject(), lectureProperties),
+                            lectureProperties.textProperties.font,
+                            lectureProperties.textProperties.brush,
+                            new RectangleF(
+                                timeendPosX + Line.size,
+                                pos,
+                                lectureProperties.width, // - lectureProperties.fix,
+                                stringHeight + lectureProperties.textProperties.indent + lectureProperties.sameFix * 2),
+                            stringFormat);
+                        // пара нижняя
+                        graphics.DrawString(
+                            upperWeekLecture.ToString(withTime: false, withSubject: false),
+                            lectureProperties.textProperties.font,
+                            lectureProperties.textProperties.brush,
+                            new RectangleF(
+                                timeendPosX + Line.size,
+                                pos + stringHeight + Line2.size,
+                                lectureProperties.width, // - lectureProperties.fix,
+                                stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
+                            stringFormat);
+                    }
+                    else if (upperWeekLecture.Status == "F1" || upperWeekLecture.Status == "N0")
+                    {
+                        string lectureStr = upperWeekLecture.ToString(withTime: false);
+                        // Проверяем есть ли 2 пробела
+                        if (lectureStr.IndexOf(' ') != -1
+                            && lectureStr.IndexOf(' ') != lectureStr.LastIndexOf(' ')
+                            && graphics.MeasureString(lectureStr, soloLectureTextProperties.font).Width >= lectureProperties.width - lectureProperties.fix)
+                        {
+                            // пара верхняя
+                            graphics.DrawString(
+                                lectureStr.Substring(0, lectureStr.IndexOf(' ')),
+                                lectureProperties.textProperties.font,
+                                lectureProperties.textProperties.brush,
+                                new RectangleF(
+                                    timeendPosX + Line.size,
+                                    pos,
+                                    lectureProperties.width, // - lectureProperties.fix,
+                                    stringHeight + lectureProperties.textProperties.indent + lectureProperties.sameFix * 2),
+                                stringFormat);
+                            // пара нижняя
+                            graphics.DrawString(
+                                lectureStr.Substring(lectureStr.IndexOf(' ') + 1),
+                                lectureProperties.textProperties.font,
+                                lectureProperties.textProperties.brush,
+                                new RectangleF(
+                                    timeendPosX + Line.size,
+                                    pos + stringHeight + Line2.size,
+                                    lectureProperties.width, // - lectureProperties.fix,
+                                    stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
+                                stringFormat);
+                        }
+                        else
+                        {
+                            // пара посередине
+                            graphics.DrawString(
+                                lectureStr,
+                                soloLectureTextProperties.font,
+                                soloLectureTextProperties.brush,
+                                new RectangleF(
+                                    timeendPosX + Line.size,
+                                    pos,
+                                    lectureProperties.width - soloLectureTextProperties.fix,
+                                    stringHeight * 2 + Line2.size + soloLectureTextProperties.indent),
+                                stringFormat);
+                        }
+                    }
+                    /*else if (upperWeekLecture.Status == "F2")
+                    {
+                        string lectureStr = upperWeekLecture.ToString(withTime: false);
+                        // пара верхняя
+                        graphics.DrawString(
+                            lectureStr.Substring(0, lectureStr.IndexOf(" или ") + 4),
+                            lectureProperties.textProperties.font,
+                            lectureProperties.textProperties.brush,
+                            new RectangleF(
+                                timeendPosX + Line.size,
+                                pos,
+                                lectureProperties.width - lectureProperties.fix,
+                                stringHeight + lectureProperties.textProperties.indent + lectureProperties.sameFix * 2),
+                            stringFormat);
+                        // пара нижняя
+                        graphics.DrawString(
+                            lectureStr.Substring(lectureStr.IndexOf(" или ") + 1),
+                            lectureProperties.textProperties.font,
+                            lectureProperties.textProperties.brush,
+                            new RectangleF(
+                                timeendPosX + Line.size,
+                                pos + stringHeight + Line2.size,
+                                lectureProperties.width - lectureProperties.fix,
+                                stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
+                            stringFormat);
+                    }*/
                     // после
                     graphics.FillRectangle(
                         Line.brush,
@@ -546,15 +599,15 @@ namespace Schedulebot.Drawing
                         stringHeight * 2 + Line2.size);
                     // время начала
                     graphics.DrawString(
-                        times[0],
+                        upperWeekLecture.TimeStart,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         Border.size + Indicator.size + Line2.size + timeTextProperties.fix,
                         pos + timeTextProperties.indent);
                     // время конца
-                    textSize = graphics.MeasureString(times[1], lectureProperties.textProperties.font);
+                    textSize = graphics.MeasureString(upperWeekLecture.TimeEnd, lectureProperties.textProperties.font);
                     graphics.DrawString(
-                        times[1],
+                        upperWeekLecture.TimeEnd,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         timeendPosX - textSize.Width - timeTextProperties.fix,
@@ -568,24 +621,24 @@ namespace Schedulebot.Drawing
                         stringHeight * 2 + Line2.size);
                     // пара верхняя
                     graphics.DrawString(
-                        LectureShortening(lectures[0], lectureProperties),
+                        LectureShortening(upperWeekLecture, lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
                             timeendPosX + Line.size,
                             pos,
-                            lectureProperties.width - lectureProperties.fix,
+                            lectureProperties.width, // - lectureProperties.fix,
                             stringHeight + lectureProperties.textProperties.indent),
                         stringFormat);
                     // пара нижняя
                     graphics.DrawString(
-                        LectureShortening(lectures[1], lectureProperties),
+                        LectureShortening(downWeekLecture, lectureProperties),
                         lectureProperties.textProperties.font,
                         lectureProperties.textProperties.brush,
                         new RectangleF(
                             timeendPosX + Line.size,
                             pos + stringHeight + Line2.size,
-                            lectureProperties.width - lectureProperties.fix,
+                            lectureProperties.width, // - lectureProperties.fix,
                             stringHeight + lectureProperties.textProperties.indent),
                         stringFormat);
                     // между парами
@@ -671,40 +724,8 @@ namespace Schedulebot.Drawing
             public static byte[] Draw(DrawingDayScheduleInfo drawingScheduleInfo)
             {
                 string week = drawingScheduleInfo.weekProperties == 0 ? "Верхняя" : "Нижняя";
-                string day = "День недели";
-                switch (drawingScheduleInfo.dayOfWeek)
-                {
-                    case 0:
-                    {
-                        day = "Понедельник";
-                        break;
-                    }
-                    case 1:
-                    {
-                        day = "Вторник";
-                        break;
-                    }
-                    case 2:
-                    {
-                        day = "Среда";
-                        break;
-                    }
-                    case 3:
-                    {
-                        day = "Четверг";
-                        break;
-                    }
-                    case 4:
-                    {
-                        day = "Пятница";
-                        break;
-                    }
-                    case 5:
-                    {
-                        day = "Суббота";
-                        break;
-                    }
-                }
+                string day = Utils.Converter.IndexToDay(drawingScheduleInfo.dayOfWeek);
+            
                 System.Drawing.Image image = new Bitmap(Image.width, Image.height);
                 Graphics graphics = Graphics.FromImage(image);
                 // Заливаем фон
@@ -747,7 +768,7 @@ namespace Schedulebot.Drawing
                         stringHeight + dayTextProperties.indent),
                     stringFormat);
                 // Рисуем количество пар
-                int countOfLectures = drawingScheduleInfo.day.CountOfLectures();
+                int countOfLectures = drawingScheduleInfo.day.lectures.Count;
                 string countOfLecturesStr = countOfLectures.ToString();
                 if (new int[] { 2, 3, 4 }.ToList().Contains(countOfLectures))
                 {
@@ -768,7 +789,7 @@ namespace Schedulebot.Drawing
                     new RectangleF(
                         Border.size,
                         pos,
-                        timeendPosX - Border.size - lectureProperties.fix,
+                        timeendPosX - Border.size, // - lectureProperties.fix,
                         stringHeight + lectureProperties.textProperties.indent),
                     stringFormat);
                 // Отделяем
@@ -781,9 +802,9 @@ namespace Schedulebot.Drawing
                 // Двигаем координату
                 pos += stringHeight + Line.size;
                 // Проходим по парам
-                for (int i = 0; i < 8; ++i)
+                for (int currentLecture = 0; currentLecture < drawingScheduleInfo.day.lectures.Count; currentLecture++)
                 {
-                    DrawLecture(drawingScheduleInfo.day.lectures[i], ref pos, ref image, times[i]);
+                    DrawLecture(drawingScheduleInfo.day.lectures[currentLecture], ref pos, ref image);
                 }
                 // Рисуем подвал
                 graphics.DrawString(
@@ -802,13 +823,20 @@ namespace Schedulebot.Drawing
                 graphics.FillRectangle(Line.brush, 0, pos, Image.width, Border.size);
                 graphics.FillRectangle(Line.brush, 0, 0, Border.size, pos);
                 graphics.FillRectangle(Line.brush, Image.width - Border.size, 0, Border.size, pos);
-                // Cохраняем
+                pos += Border.size;
+                // Обрезаем, сохраняем
                 graphics.Save();
                 graphics.Dispose();
-                return ImageToByteArray(image);
+                System.Drawing.Image imageCroped = new Bitmap(Image.width, pos);
+                graphics = Graphics.FromImage(imageCroped);
+                graphics.DrawImage(image, new Point(0, 0));
+                graphics.Save();
+                graphics.Dispose();
+
+                return ImageToByteArray(imageCroped);
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Обрабока расписания для рассылки " + course + " " + number + " " + dayOfWeek + " " + weekProperties);
             }
-            private static void DrawLecture(ScheduleLecture lecture, ref int pos, ref System.Drawing.Image image, string[] times)
+            private static void DrawLecture(ScheduleLecture lecture, ref int pos, ref System.Drawing.Image image)
             {
                 Graphics graphics = Graphics.FromImage(image);
                 SizeF textSize;
@@ -818,7 +846,7 @@ namespace Schedulebot.Drawing
                     LineAlignment = StringAlignment.Center,
                     FormatFlags = StringFormatFlags.NoWrap
                 };
-                if (!lecture.IsEmpty())
+                if (lecture != null)
                 {
                     // индикатор
                     graphics.FillRectangle(
@@ -836,15 +864,15 @@ namespace Schedulebot.Drawing
                         stringHeight * 2);
                     // время начала
                     graphics.DrawString(
-                        times[0],
+                        lecture.TimeStart,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         Border.size + Indicator.size + Line2.size + timeTextProperties.fix,
                         pos + timeTextProperties.indent);
                     // время конца
-                    textSize = graphics.MeasureString(times[1], lectureProperties.textProperties.font);
+                    textSize = graphics.MeasureString(lecture.TimeEnd, lectureProperties.textProperties.font);
                     graphics.DrawString(
-                        times[1],
+                        lecture.TimeEnd,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         timeendPosX - textSize.Width - timeTextProperties.fix,
@@ -858,7 +886,6 @@ namespace Schedulebot.Drawing
                         stringHeight * 2);
                     // пары
                     //! тут тоже шиза
-                    // string temp = lesson;
                     if (lecture.Status == "F3" || lecture.Status == "N2")
                     {
                         // верхняя часть пары (только предмет)
@@ -869,24 +896,24 @@ namespace Schedulebot.Drawing
                             new RectangleF(
                                 timeendPosX + Line.size,
                                 pos,
-                                lectureProperties.width - lectureProperties.fix,
+                                lectureProperties.width, // - lectureProperties.fix,
                                 stringHeight + lectureProperties.textProperties.indent + lectureProperties.sameFix * 2),
                             stringFormat);
                         // нижняя часть пары
                         graphics.DrawString(
-                            lecture.ConstructLectureWithoutSubject(),
+                            lecture.ToString(withTime: false, withSubject: false),
                             lectureProperties.textProperties.font,
                             lectureProperties.textProperties.brush,
                             new RectangleF(
                                 timeendPosX + Line.size,
                                 pos + stringHeight + Line2.size,
-                                lectureProperties.width - lectureProperties.fix,
+                                lectureProperties.width, // - lectureProperties.fix,
                                 stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
                             stringFormat);
                     }
                     else if (lecture.Status == "F1" || lecture.Status == "N0")
                     {
-                        string lectureStr = lecture.ConstructLecture();
+                        string lectureStr = lecture.ToString(withTime: false);
                         // Проверяем есть ли 2 пробела
                         if (lectureStr.IndexOf(' ') != -1
                             && lectureStr.IndexOf(' ') != lectureStr.LastIndexOf(' ')
@@ -900,7 +927,7 @@ namespace Schedulebot.Drawing
                                 new RectangleF(
                                     timeendPosX + Line.size,
                                     pos,
-                                    lectureProperties.width - lectureProperties.fix,
+                                    lectureProperties.width, // - lectureProperties.fix,
                                     stringHeight + lectureProperties.textProperties.indent + lectureProperties.sameFix * 2),
                                 stringFormat);
                             // пара нижняя
@@ -911,7 +938,7 @@ namespace Schedulebot.Drawing
                                 new RectangleF(
                                     timeendPosX + Line.size,
                                     pos + stringHeight + Line2.size,
-                                    lectureProperties.width - lectureProperties.fix,
+                                    lectureProperties.width, // - lectureProperties.fix,
                                     stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
                                 stringFormat);
                         }
@@ -930,7 +957,7 @@ namespace Schedulebot.Drawing
                                 stringFormat);
                         }
                     }
-                    else if (lecture.Status == "F2")
+                    /*else if (lecture.Status == "F2")
                     {
                         string lectureStr = lecture.ConstructLecture();
                         // пара верхняя
@@ -955,7 +982,7 @@ namespace Schedulebot.Drawing
                                 lectureProperties.width - lectureProperties.fix,
                                 stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
                             stringFormat);
-                    }
+                    }*/
                     // после
                     graphics.FillRectangle(
                         Line.brush,
@@ -975,15 +1002,15 @@ namespace Schedulebot.Drawing
                         stringHeight * 2);
                     // время начала
                     graphics.DrawString(
-                        times[0],
+                        lecture.TimeStart,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         Border.size + Indicator.size + Line2.size + timeTextProperties.fix,
                         pos + timeTextProperties.indent);
                     // время конца
-                    textSize = graphics.MeasureString(times[1], lectureProperties.textProperties.font);
+                    textSize = graphics.MeasureString(lecture.TimeEnd, lectureProperties.textProperties.font);
                     graphics.DrawString(
-                        times[1],
+                        lecture.TimeEnd,
                         timeTextProperties.font,
                         timeTextProperties.brush,
                         timeendPosX - textSize.Width - timeTextProperties.fix,
@@ -1008,7 +1035,7 @@ namespace Schedulebot.Drawing
             private static class Image
             {
                 public const int width = 500; // ширина
-                public const int height = 816; // высота
+                public const int height = 1500; // 816; // высота
             }
             private static Color backgroundColor = Color.White; // цвет фона
             private static LectureProperties lectureProperties = new LectureProperties()
@@ -1078,12 +1105,12 @@ namespace Schedulebot.Drawing
             if (lecture.Status == "F3" || lecture.Status == "N2")
             {
                 Graphics graphics = Graphics.FromImage(new Bitmap(1, 1));
-                string lectureStr = lecture.ConstructLecture();
+                string lectureStr = lecture.ToString(withTime: false);
                 SizeF lectureSize = graphics.MeasureString(lectureStr, lectureProperties.textProperties.font);
                 if (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                 {
                     string subject = lecture.Subject;
-                    string lectureWithoutSubject = ScheduleBot.delimiter + lecture.ConstructLectureWithoutSubject();
+                    string lectureWithoutSubject = ScheduleBot.delimiter + lecture.ToString(withTime: false, withSubject: false);
                     while (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                     {
                         subject = subject.Substring(0, subject.Length - 1);
@@ -1101,7 +1128,7 @@ namespace Schedulebot.Drawing
             else if (lecture.Status == "F1" || lecture.Status == "F2")
             {
                 Graphics graphics = Graphics.FromImage(new Bitmap(1, 1));
-                string lectureStr = lecture.ConstructLecture();
+                string lectureStr = lecture.ToString(withTime: false);
                 SizeF lectureSize = graphics.MeasureString(lectureStr, lectureProperties.textProperties.font);
                 if (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                 {
@@ -1117,9 +1144,9 @@ namespace Schedulebot.Drawing
                 return lectureStr;
             }
             else if (lecture.Status == "N0")
-                return lecture.ConstructLecture();
+                return lecture.ToString(withTime: false);
             else 
-                return lecture.ConstructLecture();
+                return lecture.ToString(withTime: false);
         }
 
         private static byte[] ImageToByteArray(System.Drawing.Image image)

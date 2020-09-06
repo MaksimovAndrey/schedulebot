@@ -9,7 +9,7 @@ namespace Schedulebot
         
         public Mapper(Course[] courses)
         {
-            CreateMaps(courses);    
+            CreateMaps(courses);
         }
 
         public void CreateMaps(Course[] courses)
@@ -45,6 +45,20 @@ namespace Schedulebot
                 for (int currentGroupName = 0; currentGroupName < coursesMap[updatingCourses[currentUpdatingCourse]].Count; currentGroupName++)
                     for (int currentSubgroup = 1; currentSubgroup < 3; currentSubgroup++)
                         groupSubgroupList.Add((coursesMap[updatingCourses[currentUpdatingCourse]][currentGroupName], currentSubgroup));
+
+            for (int currentNewGroupName = 0; currentNewGroupName < newGroupNames.Count; currentNewGroupName++)
+                groupSubgroupList.Remove(newGroupNames[currentNewGroupName]);
+            
+            return groupSubgroupList;
+        }
+
+        public List<(string, int)> GetOldGroupSubgroupList(List<(string, int)> newGroupNames, int updatingCourse)
+        {
+            List<(string, int)> groupSubgroupList = new List<(string, int)>();
+
+            for (int currentGroupName = 0; currentGroupName < coursesMap[updatingCourse].Count; currentGroupName++)
+                for (int currentSubgroup = 1; currentSubgroup < 3; currentSubgroup++)
+                    groupSubgroupList.Add((coursesMap[updatingCourse][currentGroupName], currentSubgroup));
 
             for (int currentNewGroupName = 0; currentNewGroupName < newGroupNames.Count; currentNewGroupName++)
                 groupSubgroupList.Remove(newGroupNames[currentNewGroupName]);

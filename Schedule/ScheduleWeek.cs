@@ -7,21 +7,22 @@ namespace Schedulebot.Schedule
     {
         public ScheduleDay[] days;
 
-        public int DaysAmount { get; } = 6;
+        public int DaysCount { get; }
         
-        public ScheduleWeek()
+        public ScheduleWeek(int daysCount = 6)
         {
-            days = new ScheduleDay[DaysAmount];
-            for (int i = 0; i < DaysAmount; ++i)
+            DaysCount = daysCount;
+            days = new ScheduleDay[DaysCount];
+            for (int i = 0; i < DaysCount; ++i)
                 days[i] = new ScheduleDay();
         }
 
-        public ScheduleWeek(int daysAmount)
+        public void SortLectures()
         {
-            DaysAmount = daysAmount;
-            days = new ScheduleDay[DaysAmount];
-            for (int i = 0; i < DaysAmount; ++i)
-                days[i] = new ScheduleDay();
+            for (int i = 0; i < DaysCount; i++)
+            {
+                days[i].SortLectures();
+            }
         }
 
         public override bool Equals(object obj)
@@ -37,9 +38,9 @@ namespace Schedulebot.Schedule
 
         public static bool operator ==(ScheduleWeek week1, ScheduleWeek week2)
         {
-            if (week1.DaysAmount != week2.DaysAmount)
+            if (week1.DaysCount != week2.DaysCount)
                 return false;
-            for (int i = 0; i < week1.DaysAmount; ++i)
+            for (int i = 0; i < week1.DaysCount; ++i)
             {
                 if (week1.days[i] != week2.days[i])
                     return false;
