@@ -1,41 +1,51 @@
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using Schedulebot.Users.Enums;
 
 namespace Schedulebot.Users
 {
     public class UserRepository : IUserRepository
     {
         private readonly List<User> users = new List<User>();
-        
+
         public UserRepository(string path)
         {
             LoadUsers(path);
         }
 
+        public AddOrEditUserResult AddOrEditUser(long? id, string group, int subgroup)
+        {
+            for (int i = 0; i < users.Count; i++)
+            {
+                if (users[i].Id == id)
+                {
+                    users[i].Group = group;
+                    users[i].Subgroup = subgroup;
+                    return AddOrEditUserResult.Edited;
+                }
+            }
+            users.Add(new User((long)id, group, subgroup));
+            return AddOrEditUserResult.Added;
+        }
+
         private void LoadUsers(string path)
         {
-            using (StreamReader file = new StreamReader(
-                path,
-                System.Text.Encoding.Default))
+            using StreamReader file = new StreamReader(path, Encoding.Default);
+            while (!file.EndOfStream)
             {
-                while (!file.EndOfStream)
-                {
-                    if (User.TryParseUser(file.ReadLine(), out var user))
-                        this.AddUser(user);
-                }
+                if (User.TryParseUser(file.ReadLine(), out var user))
+                    AddUser(user);
             }
         }
 
         public void SaveUsers(string path)
         {
-            using (StreamWriter file = new StreamWriter(path + "users.txt"))
-            {
-                file.WriteLine(this.ToString());
-            }
+            using StreamWriter file = new StreamWriter(path + "users.txt");
+            file.WriteLine(this.ToString());
         }
-        
-        
+
+
         public override string ToString()
         {
             StringBuilder stringBuilder = new StringBuilder();
@@ -89,8 +99,8 @@ namespace Schedulebot.Users
             }
             return ids;
         }
-        
-        public List<long> GetIds(int course, Mapper mapper)
+
+        public List<long> GetIds(int course, Mapper.Mapper mapper)
         {
             List<string> groupNames = mapper.GetGroupNames(course);
             List<long> ids = new List<long>();
@@ -136,7 +146,15 @@ namespace Schedulebot.Users
             users.Add(new User(id, group, subgroup));
         }
 
-        public bool DeleteUser(long id)
+        /// <summary>
+        /// ”дал€ет пользовател€ из базы
+        /// </summary>
+        /// <param name="id">Vk Id пользовател€</param>
+        /// <returns>
+        /// <see langword="true"/> если пользователь удалЄн
+        /// <br><see langword="false"/> если пользовател€ не было в базе</br>
+        /// </returns>
+        public bool DeleteUser(long? id)
         {
             for (int i = 0; i < users.Count; i++)
             {
@@ -149,31 +167,19 @@ namespace Schedulebot.Users
             return false;
         }
 
-        public void EditUser(long id, int newSubgroup, string newGroup = null)
-        {
-            for (int i = 0; i < users.Count; i++)
-            {
-                if (users[i].Id == id)
-                {
-                    users[i].Subgroup = newSubgroup;
-                    if (newGroup != null)
-                        users[i].Group = newGroup;
-                    return;
-                }
-            }
-        }
-
-        public User ChangeSubgroup(long? id)
+        public bool ChangeSubgroup(long? id, out User user)
         {
             for (int i = 0; i < users.Count; i++)
             {
                 if (users[i].Id == id)
                 {
                     users[i].Subgroup = users[i].Subgroup % 2 + 1;
-                    return users[i];
+                    user = users[i];
+                    return true;
                 }
             }
-            return null;
+            user = null;
+            return false;
         }
 
         public bool ContainsUser(long? id)

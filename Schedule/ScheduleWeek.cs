@@ -1,20 +1,29 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Schedulebot.Schedule
 {
-    public class ScheduleWeek
+    public class ScheduleWeek : ICloneable
     {
         public ScheduleDay[] days;
 
         public int DaysCount { get; }
-        
+
         public ScheduleWeek(int daysCount = 6)
         {
             DaysCount = daysCount;
             days = new ScheduleDay[DaysCount];
             for (int i = 0; i < DaysCount; ++i)
                 days[i] = new ScheduleDay();
+        }
+
+        public object Clone()
+        {
+            ScheduleWeek clone = new ScheduleWeek(DaysCount);
+            for (int i = 0; i < DaysCount; i++)
+                clone.days[i] = new ScheduleDay(days[i]);
+            return clone;
         }
 
         public void SortLectures()

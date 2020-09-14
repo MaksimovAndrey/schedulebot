@@ -1,12 +1,15 @@
-using System.Collections.Generic; 
+using System.Collections.Generic;
+using Schedulebot.Mapper.Utils;
 
-namespace Schedulebot
+namespace Schedulebot.Mapper
 {
     public class Mapper
     {
-        private List<List<string>> coursesMap = new List<List<string>>();
-        private Dictionary<string, (int?, int)> groupsMap = new Dictionary<string, (int?, int)>();
-        
+        private readonly List<List<string>> coursesMap
+            = new List<List<string>>();
+        private readonly Dictionary<string, UserMapping> groupsMap
+            = new Dictionary<string, UserMapping>();
+
         public Mapper(Course[] courses)
         {
             CreateMaps(courses);
@@ -30,7 +33,8 @@ namespace Schedulebot
                     if (!groupsMap.ContainsKey(courses[currentCourse].groups[currentGroup].name))
                     {
                         groupNames.Add(courses[currentCourse].groups[currentGroup].name);
-                        groupsMap.Add(courses[currentCourse].groups[currentGroup].name, (currentCourse, currentGroup));
+                        groupsMap.Add(courses[currentCourse].groups[currentGroup].name,
+                                      new UserMapping(currentCourse, currentGroup));
                     }
                 }
                 coursesMap.Add(groupNames);
@@ -48,7 +52,7 @@ namespace Schedulebot
 
             for (int currentNewGroupName = 0; currentNewGroupName < newGroupNames.Count; currentNewGroupName++)
                 groupSubgroupList.Remove(newGroupNames[currentNewGroupName]);
-            
+
             return groupSubgroupList;
         }
 
@@ -62,7 +66,7 @@ namespace Schedulebot
 
             for (int currentNewGroupName = 0; currentNewGroupName < newGroupNames.Count; currentNewGroupName++)
                 groupSubgroupList.Remove(newGroupNames[currentNewGroupName]);
-            
+
             return groupSubgroupList;
         }
 
@@ -71,9 +75,7 @@ namespace Schedulebot
             return coursesMap[course];
         }
 
-        public (int?, int) GetCourseAndIndex(string group)
-        {
-            return groupsMap.GetValueOrDefault(group);
-        }
+        public bool TryGetCourseAndGroupIndex(string group, out UserMapping value)
+            => groupsMap.TryGetValue(group, out value);
     }
 }

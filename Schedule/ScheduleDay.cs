@@ -8,8 +8,8 @@ namespace Schedulebot.Schedule
     {
         public List<ScheduleLecture> lectures;
         public long PhotoId { get; set; } = 0; // вынести 
-        public bool IsStudying => lectures.Count == 0 ? false : true;
-        
+        public bool IsStudying => lectures.Count != 0;
+
         public ScheduleDay()
         {
             lectures = new List<ScheduleLecture>();
@@ -21,6 +21,9 @@ namespace Schedulebot.Schedule
             PhotoId = day.PhotoId;
         }
 
+        /// <summary>
+        /// Сортирует пары
+        /// </summary>
         public void SortLectures()
         {
             if (lectures.Count == 0)
@@ -30,7 +33,7 @@ namespace Schedulebot.Schedule
             List<int> startTimes = new List<int>();
             for (int currentLecture = 0; currentLecture < lectures.Count; currentLecture++)
             {
-                startTimes.Add(lectures[currentLecture].TimeStartToInt());
+                startTimes.Add(Utils.Converter.TimeToInt(lectures[currentLecture].TimeStart));
             }
             while (startTimes.Count > 1)
             {
@@ -53,44 +56,44 @@ namespace Schedulebot.Schedule
             lectures = result;
         }
 
-        public bool IsEmpty()
+        /// <summary>
+        /// Ищет изменения в расписании в этот день
+        /// <br>Обращаемся к новому дню, передаем устаревшие пары</br>
+        /// </summary>
+        /// <param name="oldLectures">Устаревшие пары</param>
+        /// <returns>Строка с изменениями</returns>
+        public string GetChanges(List<ScheduleLecture> oldLectures)
         {
-            return lectures.Count == 0 ? true : false;
-        }
-
-        public string GetChanges(List<ScheduleLecture> newLectures)
-        {
-            int currentLecture;
-            int minLectures = Math.Min(lectures.Count, newLectures.Count);
+            int minOfOldNewLectures = Math.Min(lectures.Count, oldLectures.Count);
             StringBuilder changesBuilder = new StringBuilder();
 
-            for (currentLecture = 0; currentLecture < minLectures; currentLecture++)
+            for (int currentLecture = 0; currentLecture < minOfOldNewLectures; currentLecture++)
             {
-                if (lectures[currentLecture] != newLectures[currentLecture])
+                if (lectures[currentLecture] != oldLectures[currentLecture])
                 {
                     changesBuilder.Append('-');
-                    changesBuilder.Append(lectures[currentLecture].ToString());
+                    changesBuilder.Append(oldLectures[currentLecture].ToString());
                     changesBuilder.Append("\n+");
-                    changesBuilder.Append(newLectures[currentLecture].ToString());
+                    changesBuilder.Append(lectures[currentLecture].ToString());
                     changesBuilder.Append('\n');
                 }
             }
-            for (int lectureIndex = currentLecture + 1; lectureIndex < lectures.Count; lectureIndex++)
+            for (int lectureIndex = minOfOldNewLectures; lectureIndex < oldLectures.Count; lectureIndex++)
             {
                 changesBuilder.Append('-');
-                changesBuilder.Append(lectures[lectureIndex].ToString());
+                changesBuilder.Append(oldLectures[lectureIndex].ToString());
                 changesBuilder.Append('\n');
             }
-            for (int lectureIndex = currentLecture + 1; lectureIndex < newLectures.Count; lectureIndex++)
+            for (int lectureIndex = minOfOldNewLectures; lectureIndex < lectures.Count; lectureIndex++)
             {
                 changesBuilder.Append('+');
-                changesBuilder.Append(newLectures[lectureIndex].ToString());
+                changesBuilder.Append(lectures[lectureIndex].ToString());
                 changesBuilder.Append('\n');
             }
 
             return changesBuilder.ToString();
         }
-        
+
         public static bool operator ==(ScheduleDay day1, ScheduleDay day2)
         {
             if (day1.lectures.Count != day2.lectures.Count)
@@ -102,7 +105,7 @@ namespace Schedulebot.Schedule
             }
             return true;
         }
-        
+
         public static bool operator !=(ScheduleDay day1, ScheduleDay day2)
         {
             return !(day1 == day2);

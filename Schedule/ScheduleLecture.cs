@@ -1,12 +1,13 @@
 using System;
 using System.Text;
+using Schedulebot.Parse.Enums;
 
 namespace Schedulebot.Schedule
 {
-    public class ScheduleLecture
+    public class ScheduleLecture : IEquatable<ScheduleLecture>
     {
         // статус (что спарсили?) F1, F2, F3, N0, N2 (F - нашли всё, что есть | N - нашли не всё | int - количество найденных аргументов)
-        public string Status { get; } // todo: enum
+        public ParseStatus Status { get; }
 
         public string TimeStart { get; }
         public string TimeEnd { get; }
@@ -19,13 +20,13 @@ namespace Schedulebot.Schedule
 
         public bool IsLecture { get; }
         public bool IsSeminar { get; }
-        public bool IsLab { get; }        
+        public bool IsLab { get; }
         public bool IsRemotely { get; }
 
         public string ErrorType { get; }
 
         public ScheduleLecture(
-            string status = null,
+            ParseStatus status = default(ParseStatus),
 
             string timeStart = "",
             string timeEnd = "",
@@ -35,7 +36,7 @@ namespace Schedulebot.Schedule
             string subject = null,
             string lectureHall = null,
             string lecturer = null,
-    
+
             bool isLecture = false,
             bool isSeminar = false,
             bool isLab = false,
@@ -64,21 +65,6 @@ namespace Schedulebot.Schedule
             ErrorType = errorType;
         }
 
-        public int TimeStartToInt()
-        {
-            if (TimeStart == "")
-                return 0;
-            if (TimeStart.Contains(':'))
-            {
-                string timeStart = TimeStart.Replace(":", "");
-                if (int.TryParse(timeStart, out int time))
-                    return time;
-                else
-                    return 0;
-            }
-            return 0;
-        }
-        
         // Собираем лекцию полностью с временем
         public string ToString(bool withTime = true, bool withSubject = true)
         {
@@ -106,7 +92,7 @@ namespace Schedulebot.Schedule
             }
 
             StringBuilder lectureBuilder = new StringBuilder();
-            if (Status == "N0")
+            if (Status == ParseStatus.N0)
             {
                 lectureBuilder.Append(Body);
             }
@@ -131,7 +117,7 @@ namespace Schedulebot.Schedule
                 lectureBuilder.Append("Ошибка");
 
             resultBuilder.Append(lectureBuilder.ToString());
-            
+
             if (IsRemotely)
             {
                 resultBuilder.Append(ScheduleBot.delimiter);
@@ -162,7 +148,7 @@ namespace Schedulebot.Schedule
             if (string.IsNullOrEmpty(Subject))
                 return new ScheduleLecture();
             return new ScheduleLecture(
-                status: "F1",
+                status: ParseStatus.F1,
                 subject: Subject
             );
         }
@@ -183,10 +169,45 @@ namespace Schedulebot.Schedule
                 && ErrorType == lecture.ErrorType;
         }
 
+        public bool Equals(ScheduleLecture other)
+        {
+            return other != null &&
+                   Status == other.Status &&
+                   TimeStart == other.TimeStart &&
+                   TimeEnd == other.TimeEnd &&
+                   Body == other.Body &&
+                   Subject == other.Subject &&
+                   LectureHall == other.LectureHall &&
+                   Lecturer == other.Lecturer &&
+                   IsLecture == other.IsLecture &&
+                   IsSeminar == other.IsSeminar &&
+                   IsLab == other.IsLab &&
+                   IsRemotely == other.IsRemotely &&
+                   ErrorType == other.ErrorType;
+        }
+
+        public override int GetHashCode()
+        {
+            HashCode hash = new HashCode();
+            hash.Add(Status);
+            hash.Add(TimeStart);
+            hash.Add(TimeEnd);
+            hash.Add(Body);
+            hash.Add(Subject);
+            hash.Add(LectureHall);
+            hash.Add(Lecturer);
+            hash.Add(IsLecture);
+            hash.Add(IsSeminar);
+            hash.Add(IsLab);
+            hash.Add(IsRemotely);
+            hash.Add(ErrorType);
+            return hash.ToHashCode();
+        }
+
         public static bool operator ==(ScheduleLecture lecture1, ScheduleLecture lecture2)
         {
             if (lecture2 is null)
-                return lecture1 is null ? true : false;
+                return lecture1 is null;
             else if (lecture2 is null
                 || lecture1.Status != lecture2.Status
                 || lecture1.TimeStart != lecture2.TimeStart
@@ -203,7 +224,7 @@ namespace Schedulebot.Schedule
             else
                 return true;
         }
-        
+
         public static bool operator !=(ScheduleLecture lecture1, ScheduleLecture lecture2)
         {
             return !(lecture1 == lecture2);

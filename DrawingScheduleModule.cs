@@ -1,10 +1,9 @@
-using System;
-using System.Drawing;
-using System.Linq;
-using System.IO;
-using System.Collections.Generic;
-
 using Schedulebot.Schedule;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using Schedulebot.Parse.Enums;
 
 namespace Schedulebot.Drawing
 {
@@ -15,6 +14,15 @@ namespace Schedulebot.Drawing
         public int subgroup;
         public string date;
         public string vkGroupUrl;
+
+        public DrawingStandartScheduleInfo(DrawingStandartScheduleInfo dssi)
+        {
+            weeks = (ScheduleWeek[])dssi.weeks.Clone();
+            group = dssi.group;
+            subgroup = dssi.subgroup;
+            date = dssi.date;
+            vkGroupUrl = dssi.vkGroupUrl;
+        }
     }
     public struct DrawingDayScheduleInfo
     {
@@ -73,11 +81,11 @@ namespace Schedulebot.Drawing
                 {
                     if (drawingScheduleInfo.weeks[0].days[i].IsStudying || drawingScheduleInfo.weeks[1].days[i].IsStudying)
                         DrawDay(new ScheduleDay[]
-                            { 
+                            {
                                 new ScheduleDay(drawingScheduleInfo.weeks[0].days[i]),
                                 new ScheduleDay(drawingScheduleInfo.weeks[1].days[i])
                             },
-                            ref pos, ref image, Utils.Converter.IndexToDay(i));
+                            Utils.Converter.IndexToDay(i), ref pos, ref graphics);
                 }
                 // Рисуем подвал
                 graphics.DrawString(
@@ -104,13 +112,18 @@ namespace Schedulebot.Drawing
                 graphics.DrawImage(image, new Point(0, 0));
                 graphics.Save();
                 graphics.Dispose();
-                return ImageToByteArray(imageCroped);
+
+                var result = ImageToByteArray(imageCroped);
+
+                temp.Dispose();
+                image.Dispose();
+                imageCroped.Dispose();
+
+                return result;
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Обрабока расписания для рассылки " + course + " " + number);
             }
-            private static void DrawDay(ScheduleDay[] scheduleDays, ref int pos, ref System.Drawing.Image image, string day)
+            private static void DrawDay(ScheduleDay[] scheduleDays, string day, ref int pos, ref Graphics graphics)
             {
-                Graphics graphics = Graphics.FromImage(image);
-                graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 StringFormat stringFormat = new StringFormat()
                 {
                     Alignment = StringAlignment.Center,
@@ -161,13 +174,13 @@ namespace Schedulebot.Drawing
                     Line.size);
                 // Двигаем координату
                 pos += stringHeight + Line.size;
-                
+
                 List<int>[] daysTimes = { new List<int>(), new List<int>() };
                 for (int currentDay = 0; currentDay < 2; currentDay++)
                 {
                     for (int currentLecture = 0; currentLecture < scheduleDays[currentDay].lectures.Count; currentLecture++)
                     {
-                        daysTimes[currentDay].Add(scheduleDays[currentDay].lectures[currentLecture].TimeStartToInt());
+                        daysTimes[currentDay].Add(Utils.Converter.TimeToInt(scheduleDays[currentDay].lectures[currentLecture].TimeStart));
                     }
                 }
 
@@ -178,9 +191,9 @@ namespace Schedulebot.Drawing
                         if (daysTimes[currentDay][currentLecture] == 0)
                         {
                             if (currentDay == 0)
-                                DrawLecture(scheduleDays[currentDay].lectures[currentLecture], null, ref pos, ref image);
+                                DrawLecture(scheduleDays[currentDay].lectures[currentLecture], null, ref pos, ref graphics);
                             else
-                                DrawLecture(null, scheduleDays[currentDay].lectures[currentLecture], ref pos, ref image);
+                                DrawLecture(null, scheduleDays[currentDay].lectures[currentLecture], ref pos, ref graphics);
 
                             scheduleDays[currentDay].lectures.RemoveAt(currentLecture);
                             daysTimes[currentDay].RemoveAt(currentLecture);
@@ -197,13 +210,13 @@ namespace Schedulebot.Drawing
                 {
                     if (daysTimes[0][0] < daysTimes[1][0])
                     {
-                        DrawLecture(scheduleDays[0].lectures[0], null, ref pos, ref image);
+                        DrawLecture(scheduleDays[0].lectures[0], null, ref pos, ref graphics);
                         daysTimes[0].RemoveAt(0);
                         scheduleDays[0].lectures.RemoveAt(0);
                     }
                     else if (daysTimes[0][0] > daysTimes[1][0])
                     {
-                        DrawLecture(null, scheduleDays[1].lectures[0], ref pos, ref image);
+                        DrawLecture(null, scheduleDays[1].lectures[0], ref pos, ref graphics);
                         daysTimes[1].RemoveAt(0);
                         scheduleDays[1].lectures.RemoveAt(0);
                     }
@@ -211,7 +224,7 @@ namespace Schedulebot.Drawing
                     {
                         if (scheduleDays[0].lectures[0].TimeEnd == scheduleDays[1].lectures[0].TimeEnd)
                         {
-                            DrawLecture(scheduleDays[0].lectures[0], scheduleDays[1].lectures[0], ref pos, ref image);
+                            DrawLecture(scheduleDays[0].lectures[0], scheduleDays[1].lectures[0], ref pos, ref graphics);
 
                             daysTimes[0].RemoveAt(0);
                             scheduleDays[0].lectures.RemoveAt(0);
@@ -221,34 +234,34 @@ namespace Schedulebot.Drawing
                         }
                         else
                         {
-                            DrawLecture(scheduleDays[0].lectures[0], null, ref pos, ref image);
+                            DrawLecture(scheduleDays[0].lectures[0], null, ref pos, ref graphics);
                             daysTimes[0].RemoveAt(0);
                             scheduleDays[0].lectures.RemoveAt(0);
 
-                            DrawLecture(null, scheduleDays[1].lectures[0], ref pos, ref image);
+                            DrawLecture(null, scheduleDays[1].lectures[0], ref pos, ref graphics);
                             daysTimes[1].RemoveAt(0);
                             scheduleDays[1].lectures.RemoveAt(0);
                         }
                     }
                 }
-
+                
                 for (int currentDay = 0; currentDay < 2; currentDay++)
                 {
                     for (int currentLecture = 0; currentLecture < scheduleDays[currentDay].lectures.Count; currentLecture++)
                     {
                         if (currentDay == 0)
-                            DrawLecture(scheduleDays[currentDay].lectures[currentLecture], null, ref pos, ref image);
+                            DrawLecture(scheduleDays[currentDay].lectures[currentLecture], null, ref pos, ref graphics);
                         else
-                            DrawLecture(null, scheduleDays[currentDay].lectures[currentLecture], ref pos, ref image);
+                            DrawLecture(null, scheduleDays[currentDay].lectures[currentLecture], ref pos, ref graphics);
                     }
                 }
             }
-            private static void DrawLecture(ScheduleLecture upperWeekLecture, ScheduleLecture downWeekLecture, ref int pos, ref System.Drawing.Image image)
+            
+            private static void DrawLecture(ScheduleLecture upperWeekLecture, ScheduleLecture downWeekLecture, ref int pos, ref Graphics graphics)
             {
                 if (upperWeekLecture is null && downWeekLecture is null)
                     return;
-                Graphics graphics = Graphics.FromImage(image);
-                graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
                 SizeF textSize;
                 StringFormat stringFormat = new StringFormat()
                 {
@@ -302,7 +315,6 @@ namespace Schedulebot.Drawing
                         Line.size,
                         stringHeight * 2 + Line2.size);
                     // пара верхняя
-                    textSize = graphics.MeasureString(c_noOneLecture, lectureProperties.textProperties.font);
                     graphics.DrawString(
                         c_noOneLecture,
                         lectureProperties.textProperties.font,
@@ -396,7 +408,6 @@ namespace Schedulebot.Drawing
                             stringHeight + lectureProperties.textProperties.indent),
                         stringFormat);
                     // пара нижняя
-                    textSize = graphics.MeasureString(c_noOneLecture, lectureProperties.textProperties.font);
                     graphics.DrawString(
                         c_noOneLecture,
                         lectureProperties.textProperties.font,
@@ -461,7 +472,7 @@ namespace Schedulebot.Drawing
                         Line.size,
                         stringHeight * 2 + Line2.size);
                     // пары
-                    if (upperWeekLecture.Status == "F3" || upperWeekLecture.Status == "N2")
+                    if (upperWeekLecture.Status == ParseStatus.F3 || upperWeekLecture.Status == ParseStatus.N1)
                     {
                         // пара верхняя
                         graphics.DrawString(
@@ -486,7 +497,7 @@ namespace Schedulebot.Drawing
                                 stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
                             stringFormat);
                     }
-                    else if (upperWeekLecture.Status == "F1" || upperWeekLecture.Status == "N0")
+                    else if (upperWeekLecture.Status == ParseStatus.F1 || upperWeekLecture.Status == ParseStatus.N0)
                     {
                         string lectureStr = upperWeekLecture.ToString(withTime: false);
                         // Проверяем есть ли 2 пробела
@@ -532,7 +543,7 @@ namespace Schedulebot.Drawing
                                 stringFormat);
                         }
                     }
-                    /*else if (upperWeekLecture.Status == "F2")
+                    /*else if (upperWeekLecture.Status == ParseStatus.F2)
                     {
                         string lectureStr = upperWeekLecture.ToString(withTime: false);
                         // пара верхняя
@@ -663,7 +674,7 @@ namespace Schedulebot.Drawing
                 public const int width = 700; // ширина постоянная
                 public const int height = 3000; // максимальная высота
             }
-            private static LectureProperties lectureProperties = new LectureProperties()
+            private static readonly LectureProperties lectureProperties = new LectureProperties()
             {
                 sameFix = 6, // сдвиг вверх и вниз при одинаковых парах по верхним и нижним неделям
                 fix = 4, // ???
@@ -676,12 +687,12 @@ namespace Schedulebot.Drawing
                     fix = 2
                 }
             };
-            private static Color backgroundColor = Color.White; // цвет фона
+            private static readonly Color backgroundColor = Color.White; // цвет фона
             private const int stringHeight = 40; // высота строки
             private const int timeWidth = 120; // ширина времени пар
             private const int timeendPosX = Border.size + Indicator.size + Line2.size + timeWidth;
             private const int cellHeight = stringHeight * 2 + Line2.size;
-            private static TextProperties headerTextProperties = new TextProperties
+            private static readonly TextProperties headerTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -692,7 +703,7 @@ namespace Schedulebot.Drawing
                 // indent = 6,
                 // fix = 2
             };
-            private static TextProperties dayTextProperties = new TextProperties
+            private static readonly TextProperties dayTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -703,14 +714,14 @@ namespace Schedulebot.Drawing
                 // indent = 8,
                 // fix = 2
             };
-            private static TextProperties soloLectureTextProperties = new TextProperties
+            private static readonly TextProperties soloLectureTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 24),
                 indent = 12,
                 fix = 3
             };
-            private static TextProperties timeTextProperties = new TextProperties
+            private static readonly TextProperties timeTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -725,7 +736,7 @@ namespace Schedulebot.Drawing
             {
                 string week = drawingScheduleInfo.weekProperties == 0 ? "Верхняя" : "Нижняя";
                 string day = Utils.Converter.IndexToDay(drawingScheduleInfo.dayOfWeek);
-            
+
                 System.Drawing.Image image = new Bitmap(Image.width, Image.height);
                 Graphics graphics = Graphics.FromImage(image);
                 // Заливаем фон
@@ -804,7 +815,7 @@ namespace Schedulebot.Drawing
                 // Проходим по парам
                 for (int currentLecture = 0; currentLecture < drawingScheduleInfo.day.lectures.Count; currentLecture++)
                 {
-                    DrawLecture(drawingScheduleInfo.day.lectures[currentLecture], ref pos, ref image);
+                    DrawLecture(drawingScheduleInfo.day.lectures[currentLecture], ref pos, ref graphics);
                 }
                 // Рисуем подвал
                 graphics.DrawString(
@@ -831,14 +842,15 @@ namespace Schedulebot.Drawing
                 graphics = Graphics.FromImage(imageCroped);
                 graphics.DrawImage(image, new Point(0, 0));
                 graphics.Save();
+                var result = ImageToByteArray(imageCroped);
                 graphics.Dispose();
+                image.Dispose();
 
-                return ImageToByteArray(imageCroped);
+                return result;
                 // Console.WriteLine(DateTime.Now.TimeOfDay.ToString() + " [E] Обрабока расписания для рассылки " + course + " " + number + " " + dayOfWeek + " " + weekProperties);
             }
-            private static void DrawLecture(ScheduleLecture lecture, ref int pos, ref System.Drawing.Image image)
+            private static void DrawLecture(ScheduleLecture lecture, ref int pos, ref Graphics graphics)
             {
-                Graphics graphics = Graphics.FromImage(image);
                 SizeF textSize;
                 StringFormat stringFormat = new StringFormat()
                 {
@@ -886,7 +898,7 @@ namespace Schedulebot.Drawing
                         stringHeight * 2);
                     // пары
                     //! тут тоже шиза
-                    if (lecture.Status == "F3" || lecture.Status == "N2")
+                    if (lecture.Status == ParseStatus.F3 || lecture.Status == ParseStatus.N1)
                     {
                         // верхняя часть пары (только предмет)
                         graphics.DrawString(
@@ -911,7 +923,7 @@ namespace Schedulebot.Drawing
                                 stringHeight + lectureProperties.textProperties.indent - lectureProperties.sameFix * 2),
                             stringFormat);
                     }
-                    else if (lecture.Status == "F1" || lecture.Status == "N0")
+                    else if (lecture.Status == ParseStatus.F1 || lecture.Status == ParseStatus.N0)
                     {
                         string lectureStr = lecture.ToString(withTime: false);
                         // Проверяем есть ли 2 пробела
@@ -957,7 +969,7 @@ namespace Schedulebot.Drawing
                                 stringFormat);
                         }
                     }
-                    /*else if (lecture.Status == "F2")
+                    /*else if (lecture.Status == ParseStatus.F2)
                     {
                         string lectureStr = lecture.ConstructLecture();
                         // пара верхняя
@@ -1037,8 +1049,8 @@ namespace Schedulebot.Drawing
                 public const int width = 500; // ширина
                 public const int height = 1500; // 816; // высота
             }
-            private static Color backgroundColor = Color.White; // цвет фона
-            private static LectureProperties lectureProperties = new LectureProperties()
+            private static readonly Color backgroundColor = Color.White; // цвет фона
+            private static readonly LectureProperties lectureProperties = new LectureProperties()
             {
                 sameFix = 6, // сдвиг вверх и вниз при одинаковых парах по верхним и нижним неделям
                 fix = 4, // ???
@@ -1060,10 +1072,10 @@ namespace Schedulebot.Drawing
             };
             private const int stringHeight = 40; // высота строки
             private const int timeWidth = 96; // ширина блока с отображением времени начала\конца пары
-            private const int timeendPosX = Border.size + Indicator.size + Line2.size + timeWidth; // todo: сделать картинку с отображением всех этих параметров
+            private const int timeendPosX = Border.size + Indicator.size + Line2.size + timeWidth; // TODO: сделать картинку с отображением всех этих параметров
             private const int cellHeight = stringHeight * 2;
             private const int lessonWidth = Image.width - timeendPosX - Line.size - Border.size;
-            private static TextProperties headerTextProperties = new TextProperties
+            private static readonly TextProperties headerTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -1074,7 +1086,7 @@ namespace Schedulebot.Drawing
                 // indent = 6,
                 // fix = 2
             };
-            private static TextProperties dayTextProperties = new TextProperties
+            private static readonly TextProperties dayTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
@@ -1085,14 +1097,14 @@ namespace Schedulebot.Drawing
                 // indent = 8,
                 // fix = 2
             };
-            private static TextProperties timeTextProperties = new TextProperties
+            private static readonly TextProperties timeTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 18),
                 indent = 11,
                 fix = 6
             };
-            private static TextProperties soloLectureTextProperties = new TextProperties
+            private static readonly TextProperties soloLectureTextProperties = new TextProperties
             {
                 brush = new SolidBrush(Color.Black),
                 font = new Font("TT Commons Light Italic", 24),
@@ -1102,7 +1114,7 @@ namespace Schedulebot.Drawing
         }
         private static string LectureShortening(ScheduleLecture lecture, LectureProperties lectureProperties)
         {
-            if (lecture.Status == "F3" || lecture.Status == "N2")
+            if (lecture.Status == ParseStatus.F3 || lecture.Status == ParseStatus.N1)
             {
                 Graphics graphics = Graphics.FromImage(new Bitmap(1, 1));
                 string lectureStr = lecture.ToString(withTime: false);
@@ -1113,19 +1125,19 @@ namespace Schedulebot.Drawing
                     string lectureWithoutSubject = ScheduleBot.delimiter + lecture.ToString(withTime: false, withSubject: false);
                     while (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                     {
-                        subject = subject.Substring(0, subject.Length - 1);
-                        lectureSize = graphics.MeasureString(subject + lectureWithoutSubject,  lectureProperties.textProperties.font);
+                        subject = subject[0..^1];
+                        lectureSize = graphics.MeasureString(subject + lectureWithoutSubject, lectureProperties.textProperties.font);
                     }
-                    subject = subject.Substring(0, subject.Length - 1);
-                    while (subject[subject.Length - 1] == ' ' || subject[subject.Length - 1] == '(' || subject[subject.Length - 1] == '.') // пока в конце пробел или открывающая скобка, то убираем его
-                        subject = subject.Substring(0, subject.Length - 1).TrimEnd();
+                    subject = subject[0..^1];
+                    while (subject[^1] == ' ' || subject[^1] == '(' || subject[^1] == '.') // пока в конце пробел или открывающая скобка, то убираем его
+                        subject = subject[0..^1].TrimEnd();
                     subject += "...";
                     lectureStr = subject + lectureWithoutSubject;
                 }
                 graphics.Dispose();
                 return lectureStr;
             }
-            else if (lecture.Status == "F1" || lecture.Status == "F2")
+            else if (lecture.Status == ParseStatus.F1 || lecture.Status == ParseStatus.F2)
             {
                 Graphics graphics = Graphics.FromImage(new Bitmap(1, 1));
                 string lectureStr = lecture.ToString(withTime: false);
@@ -1134,29 +1146,29 @@ namespace Schedulebot.Drawing
                 {
                     while (lectureSize.Width >= lectureProperties.width - lectureProperties.fix)
                     {
-                        lectureStr = lectureStr.Substring(0, lectureStr.Length - 1);
+                        lectureStr = lectureStr[0..^1];
                         lectureSize = graphics.MeasureString(lectureStr, lectureProperties.textProperties.font);
                     }
-                    lectureStr = lectureStr.Substring(0, lectureStr.Length - 1).Trim();
+                    lectureStr = lectureStr[0..^1].Trim();
                     lectureStr += "...";
                 }
                 graphics.Dispose();
                 return lectureStr;
             }
-            else if (lecture.Status == "N0")
+            else if (lecture.Status == ParseStatus.N0)
                 return lecture.ToString(withTime: false);
-            else 
+            else
                 return lecture.ToString(withTime: false);
         }
 
-        private static byte[] ImageToByteArray(System.Drawing.Image image)
+        private static byte[] ImageToByteArray(Image image)
         {
             MemoryStream memoryStream = new MemoryStream();
             image.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
             return memoryStream.ToArray();
         }
     }
-    
+
     public static class Line
     {
         public static readonly Brush brush = new SolidBrush(Color.FromArgb(255, 211, 211, 211)); // кисть

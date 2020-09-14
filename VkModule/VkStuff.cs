@@ -1,13 +1,12 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
-
+using System.IO;
 using VkNet;
-using VkNet.Model;
-using VkNet.Model.Keyboard;
 using VkNet.Enums;
 using VkNet.Enums.SafetyEnums;
+using VkNet.Model;
 using VkNet.Model.Attachments;
+using VkNet.Model.Keyboard;
 
 namespace Schedulebot.Vk
 {
@@ -28,7 +27,7 @@ namespace Schedulebot.Vk
         public VkStuff(string path)
         {
             api.RequestsPerSecond = 20;
-            
+
             menuKeyboards = new MessageKeyboard[6]
             {
                 // main
@@ -334,7 +333,7 @@ namespace Schedulebot.Vk
                     OneTime = false
                 }
             };
-        
+
             // LoadSettings(path);
             using (StreamReader file = new StreamReader(
                 path,
@@ -401,7 +400,7 @@ namespace Schedulebot.Vk
                     }
                 }
             }
-            
+
             textCommandsInfo.OwnerId = -groupId;
             subscribeInfo.OwnerId = -groupId;
         }

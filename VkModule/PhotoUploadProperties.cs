@@ -19,7 +19,7 @@ namespace Schedulebot.Vk
         public int Day { get; set; }
 
         public string Message { get; set; } = null;
-        
+
         public long PeerId { get; set; } = 0; // когда на день, кому отправить
 
         public bool ToSend { get; set; } = true;
@@ -29,7 +29,7 @@ namespace Schedulebot.Vk
         public UploadingSchedule UploadingSchedule { get; set; }
 
         public PhotoUploadProperties() { }
-        
+
         public PhotoUploadProperties(PhotoUploadProperties photoUploadProperties)
         {
             Photo = photoUploadProperties.Photo;
