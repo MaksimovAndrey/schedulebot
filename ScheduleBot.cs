@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -8,23 +9,13 @@ namespace Schedulebot
     public class ScheduleBot
     {
 #if DEBUG
-        public const string version = "v2.3 DEV";
-#else
-        public const string version = "v2.3";
-#endif
-        public const string delimiter = " · ";
-        public const string lectureSign = "Л";
-        public const string labSign = "Лаб";
-        public const string seminarSign = "П";
-        public const string remotelySign = "Д";
-#if DEBUG
-        private const string с_path = @"C:/Custom/Projects/Shared/sbtest/";
+        private const string с_path = @"C:/Main/Projects/Shared/sbinfo/";
 #else
         private const string с_path = @"/media/projects/sbtest/";
 #endif
 
         public static readonly HttpClient client = new HttpClient();
-        private const int departmentsAmount = 1;
+        public const int departmentsCount = 1;
         public IDepartment[] departments;
 
         public ScheduleBot(ref List<Task> _tasks)
@@ -33,8 +24,8 @@ namespace Schedulebot
             // TODO: переписать с restart department
             List<Task> tasks = new List<Task>();
 
-            departments = new IDepartment[departmentsAmount];
-            for (int currentDepartment = 0; currentDepartment < departmentsAmount; currentDepartment++)
+            departments = new IDepartment[departmentsCount];
+            for (int currentDepartment = 0; currentDepartment < departmentsCount; currentDepartment++)
             {
                 departments[currentDepartment] = new DepartmentItmm(с_path, ref tasks);
             }

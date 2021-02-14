@@ -1,6 +1,7 @@
-using HtmlAgilityPack;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System;
+using HtmlAgilityPack;
 
 namespace Schedulebot.Schedule.Relevance
 {

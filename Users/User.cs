@@ -27,7 +27,7 @@ namespace Schedulebot.Users
             return stringBuilder.ToString();
         }
 
-        public static bool TryParseUser(string rawUserLine, out User user)
+        public static bool TryParse(string rawUserLine, out User user)
         {
             try
             {
@@ -36,7 +36,7 @@ namespace Schedulebot.Users
                 int spaceIndex = rawUserSpan.IndexOf(' ');
                 int lastSpaceIndex = rawUserSpan.LastIndexOf(' ');
 
-                long id = Int64.Parse(rawUserSpan.Slice(0, spaceIndex));
+                long id = long.Parse(rawUserSpan.Slice(0, spaceIndex));
                 string group = rawUserSpan.Slice(spaceIndex + 1, lastSpaceIndex - spaceIndex - 1).ToString();
                 int subgroup = int.Parse(rawUserSpan.Slice(lastSpaceIndex + 1, 1));
 

@@ -1,7 +1,7 @@
+using System.IO;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace Schedulebot.Schedule.Relevance
 {
@@ -9,10 +9,10 @@ namespace Schedulebot.Schedule.Relevance
     // {"urls":[[],[],[],[],[]],"dates":["","","","",""],"Count":4}
     public class DatesAndUrls
     {
-        public int Count { get; set; } = 4; // TODO: >5 => error
+        public int Count { get; set; } = 4; // todo: >5 => error
         public List<List<string>> urls;
         public string[] dates;
-
+        
         private string Path { get; }
 
         private const string c_defaultFilename = "datesAndUrls.txt";

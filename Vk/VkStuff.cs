@@ -12,23 +12,45 @@ namespace Schedulebot.Vk
 {
     public class VkStuff
     {
-        public readonly VkApi api = new VkApi();
-        public readonly VkApi apiPhotos = new VkApi();
-        public readonly long groupId;
-        public readonly long mainAlbumId;
-        public readonly long adminId;
-        public readonly string groupUrl;
+        public VkApi Api { get; }
+        public VkApi ApiPhotos { get; }
+        public long GroupId { get; }
+        public long MainAlbumId { get; }
+        public long AdminId { get; }
+        public string GroupUrl { get; }
 
-        public readonly Photo textCommandsInfo;
-        public readonly Document subscribeInfo;
+        private Photo TextCommands { get; }
+        private Document SubscribeInfo { get; }
 
-        public readonly MessageKeyboard[] menuKeyboards;
+        public List<MediaAttachment> TextCommandsAttachments { get; }
+        public List<MediaAttachment> SubscribeInfoAttachments { get; }
 
-        public VkStuff(string path)
+        public MessageKeyboard[] MenuKeyboards { get; }
+
+        public VkStuff(string key, string keyPhotos, long groupId, long mainAlbumId, long adminId,
+            string groupUrl, Photo textCommandsInfo, Document subscribeInfo)
         {
-            api.RequestsPerSecond = 20;
+            this.Api = new VkApi()
+            {
+                RequestsPerSecond = 20
+            };
+            this.Api.Authorize(new ApiAuthParams() { AccessToken = key });
 
-            menuKeyboards = new MessageKeyboard[6]
+            this.ApiPhotos = new VkApi();
+            this.ApiPhotos.Authorize(new ApiAuthParams() { AccessToken = keyPhotos });
+
+            this.GroupId = groupId;
+            this.MainAlbumId = mainAlbumId;
+            this.AdminId = adminId;
+            this.GroupUrl = groupUrl;
+
+            this.TextCommands = textCommandsInfo;
+            this.SubscribeInfo = subscribeInfo;
+
+            this.TextCommandsAttachments = new List<MediaAttachment>() { this.TextCommands };
+            this.SubscribeInfoAttachments = new List<MediaAttachment>() { this.SubscribeInfo };
+
+            this.MenuKeyboards = new MessageKeyboard[6]
             {
                 // main
                 new MessageKeyboard
@@ -333,129 +355,6 @@ namespace Schedulebot.Vk
                     OneTime = false
                 }
             };
-
-            // LoadSettings(path);
-            using (StreamReader file = new StreamReader(
-                path,
-                System.Text.Encoding.Default))
-            {
-                string str, value;
-                while ((str = file.ReadLine()) != null)
-                {
-                    if (str.Contains(':'))
-                    {
-                        value = str.Substring(str.IndexOf(':') + 1);
-                        str = str.Substring(0, str.IndexOf(':'));
-                        switch (str)
-                        {
-                            case "key":
-                            {
-                                api.Authorize(new ApiAuthParams() { AccessToken = value });
-                                break;
-                            }
-                            case "keyPhotos":
-                            {
-                                apiPhotos.Authorize(new ApiAuthParams() { AccessToken = value });
-                                break;
-                            }
-                            case "groupId":
-                            {
-                                groupId = long.Parse(value);
-                                break;
-                            }
-                            case "mainAlbumId":
-                            {
-                                mainAlbumId = Int64.Parse(value);
-                                break;
-                            }
-                            case "groupUrl":
-                            {
-                                groupUrl = value;
-                                break;
-                            }
-                            case "adminId":
-                            {
-                                adminId = Int64.Parse(value);
-                                break;
-                            }
-                            case "textCommandsInfo":
-                            {
-                                textCommandsInfo = new Photo()
-                                {
-                                    AlbumId = long.Parse(value.Substring(value.IndexOf('-') + 1, value.IndexOf('_') - value.IndexOf('-') - 1)),
-                                    Id = long.Parse(value.Substring(value.IndexOf('_') + 1))
-                                };
-                                break;
-                            }
-                            case "subscribeInfo":
-                            {
-                                subscribeInfo = new Document()
-                                {
-                                    Type = DocumentTypeEnum.Gif,
-                                    Id = long.Parse(value.Substring(value.IndexOf('_') + 1))
-                                };
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            textCommandsInfo.OwnerId = -groupId;
-            subscribeInfo.OwnerId = -groupId;
         }
-
-        /* К сожалению так делать нельзя :(
-        private void LoadSettings(string path)
-        {
-            using (StreamReader file = new StreamReader(
-                path,
-                System.Text.Encoding.Default))
-            {
-                string str, value;
-                while ((str = file.ReadLine()) != null)
-                {
-                    if (str.Contains(':'))
-                    {
-                        value = str.Substring(str.IndexOf(':') + 1);
-                        str = str.Substring(0, str.IndexOf(':'));
-                        switch (str)
-                        {
-                            case "key":
-                            {
-                                api.Authorize(new ApiAuthParams() { AccessToken = value });
-                                break;
-                            }
-                            case "keyPhotos":
-                            {
-                                apiPhotos.Authorize(new ApiAuthParams() { AccessToken = value });
-                                break;
-                            }
-                            case "groupId":
-                            {
-                                groupId = long.Parse(value);
-                                break;
-                            }
-                            case "mainAlbumId":
-                            {
-                                mainAlbumId = Int64.Parse(value);
-                                break;
-                            }
-                            case "groupUrl":
-                            {
-                                groupUrl = value;
-                                break;
-                            }
-                            case "adminId":
-                            {
-                                adminId = Int64.Parse(value);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        */
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Schedulebot.Mapper.Utils
+﻿namespace Schedulebot.Mapping.Utils
 {
     public struct UserMapping
     {

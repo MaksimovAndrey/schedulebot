@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Schedulebot.Mapper.Utils;
+using Schedulebot.Mapping.Utils;
 
-namespace Schedulebot.Mapper
+namespace Schedulebot.Mapping
 {
     public class Mapper
     {
@@ -30,10 +30,10 @@ namespace Schedulebot.Mapper
                 List<string> groupNames = new List<string>();
                 for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.Count; currentGroup++)
                 {
-                    if (!groupsMap.ContainsKey(courses[currentCourse].groups[currentGroup].name))
+                    if (!groupsMap.ContainsKey(courses[currentCourse].groups[currentGroup].Name))
                     {
-                        groupNames.Add(courses[currentCourse].groups[currentGroup].name);
-                        groupsMap.Add(courses[currentCourse].groups[currentGroup].name,
+                        groupNames.Add(courses[currentCourse].groups[currentGroup].Name);
+                        groupsMap.Add(courses[currentCourse].groups[currentGroup].Name,
                                       new UserMapping(currentCourse, currentGroup));
                     }
                 }

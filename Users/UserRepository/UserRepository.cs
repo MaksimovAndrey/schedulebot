@@ -7,14 +7,14 @@ namespace Schedulebot.Users
 {
     public class UserRepository : IUserRepository
     {
-        private readonly List<User> users = new List<User>();
+        private readonly List<User> users;
 
-        public UserRepository(string path)
+        public UserRepository()
         {
-            LoadUsers(path);
+            this.users = new List<User>();
         }
 
-        public AddOrEditUserResult AddOrEditUser(long? id, string group, int subgroup)
+        public AddOrEditResult AddOrEdit(long? id, string group, int subgroup)
         {
             for (int i = 0; i < users.Count; i++)
             {
@@ -22,29 +22,12 @@ namespace Schedulebot.Users
                 {
                     users[i].Group = group;
                     users[i].Subgroup = subgroup;
-                    return AddOrEditUserResult.Edited;
+                    return AddOrEditResult.Edited;
                 }
             }
             users.Add(new User((long)id, group, subgroup));
-            return AddOrEditUserResult.Added;
+            return AddOrEditResult.Added;
         }
-
-        private void LoadUsers(string path)
-        {
-            using StreamReader file = new StreamReader(path, Encoding.Default);
-            while (!file.EndOfStream)
-            {
-                if (User.TryParseUser(file.ReadLine(), out var user))
-                    AddUser(user);
-            }
-        }
-
-        public void SaveUsers(string path)
-        {
-            using StreamWriter file = new StreamWriter(path + "users.txt");
-            file.WriteLine(this.ToString());
-        }
-
 
         public override string ToString()
         {
@@ -58,7 +41,7 @@ namespace Schedulebot.Users
             return stringBuilder.ToString();
         }
 
-        public bool GetUser(long? id, out User user)
+        public bool Get(long? id, out User user)
         {
             for (int currentUser = 0; currentUser < users.Count; currentUser++)
             {
@@ -100,7 +83,7 @@ namespace Schedulebot.Users
             return ids;
         }
 
-        public List<long> GetIds(int course, Mapper.Mapper mapper)
+        public List<long> GetIds(int course, Mapping.Mapper mapper)
         {
             List<string> groupNames = mapper.GetGroupNames(course);
             List<long> ids = new List<long>();
@@ -136,7 +119,7 @@ namespace Schedulebot.Users
             return ids;
         }
 
-        public void AddUser(User user)
+        public void Add(User user)
         {
             users.Add(user);
         }
@@ -154,7 +137,7 @@ namespace Schedulebot.Users
         /// <see langword="true"/> если пользователь удалён
         /// <br><see langword="false"/> если пользователя не было в базе</br>
         /// </returns>
-        public bool DeleteUser(long? id)
+        public bool Delete(long? id)
         {
             for (int i = 0; i < users.Count; i++)
             {
@@ -182,7 +165,7 @@ namespace Schedulebot.Users
             return false;
         }
 
-        public bool ContainsUser(long? id)
+        public bool Contains(long? id)
         {
             for (int i = 0; i < users.Count; i++)
             {

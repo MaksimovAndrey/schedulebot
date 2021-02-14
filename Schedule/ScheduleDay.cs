@@ -1,62 +1,49 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace Schedulebot.Schedule
 {
-    public class ScheduleDay
+    public class ScheduleDay : IEquatable<ScheduleDay>
     {
         public List<ScheduleLecture> lectures;
+        public DateTime Date { get; }
         public long PhotoId { get; set; } = 0; // вынести 
         public bool IsStudying => lectures.Count != 0;
 
-        public ScheduleDay()
+        public ScheduleDay(DateTime date)
         {
             lectures = new List<ScheduleLecture>();
+            Date = date;
         }
 
         public ScheduleDay(ScheduleDay day)
         {
             lectures = new List<ScheduleLecture>(day.lectures);
             PhotoId = day.PhotoId;
+            Date = day.Date;
         }
 
-        /// <summary>
-        /// Сортирует пары
-        /// </summary>
-        public void SortLectures()
+        public override string ToString()
         {
-            if (lectures.Count == 0)
-                return;
+            StringBuilder str = new StringBuilder();
 
-            List<ScheduleLecture> result = new List<ScheduleLecture>();
-            List<int> startTimes = new List<int>();
-            for (int currentLecture = 0; currentLecture < lectures.Count; currentLecture++)
+            str.Append("📅");
+            str.Append(Date.ToString("dd'.'MM'.'yyyy"));
+            str.Append(Constants.delimiter);
+            str.Append(CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetDayName(Date.DayOfWeek));
+            for (int i = 0; i < lectures.Count; i++)
             {
-                startTimes.Add(Utils.Converter.TimeToInt(lectures[currentLecture].TimeStart));
+                str.Append("\n\n");
+                str.Append(lectures[i].ToString());
             }
-            while (startTimes.Count > 1)
-            {
-                int minIndex = 0;
-                int minTime = startTimes[0];
-                for (int currentTime = 1; currentTime < startTimes.Count; currentTime++)
-                {
-                    if (startTimes[currentTime] < minTime)
-                    {
-                        minTime = startTimes[currentTime];
-                        minIndex = currentTime;
-                    }
-                }
-                result.Add(lectures[minIndex]);
-                lectures.RemoveAt(minIndex);
-                startTimes.RemoveAt(minIndex);
-            }
-            result.Add(lectures[0]);
-            lectures.RemoveAt(0); // lectures.Clear();
-            lectures = result;
+
+            return str.ToString();
         }
 
         /// <summary>
+        /// !!!НЕ ИСПОЛЬЗОВАТЬ, НЕ РАБОТАЕТ!!!
         /// Ищет изменения в расписании в этот день
         /// <br>Обращаемся к новому дню, передаем устаревшие пары</br>
         /// </summary>
@@ -94,9 +81,27 @@ namespace Schedulebot.Schedule
             return changesBuilder.ToString();
         }
 
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ScheduleDay);
+        }
+
+        public bool Equals(ScheduleDay other)
+        {
+            return other != null &&
+                   EqualityComparer<List<ScheduleLecture>>.Default.Equals(lectures, other.lectures) &&
+                   Date == other.Date;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(lectures, Date);
+        }
+
         public static bool operator ==(ScheduleDay day1, ScheduleDay day2)
         {
-            if (day1.lectures.Count != day2.lectures.Count)
+            if (day1.Date != day2.Date 
+                || day1.lectures.Count != day2.lectures.Count)
                 return false;
             for (int i = 0; i < day1.lectures.Count; ++i)
             {
@@ -109,16 +114,6 @@ namespace Schedulebot.Schedule
         public static bool operator !=(ScheduleDay day1, ScheduleDay day2)
         {
             return !(day1 == day2);
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(lectures);
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is ScheduleDay day && EqualityComparer<List<ScheduleLecture>>.Default.Equals(lectures, day.lectures);
         }
     }
 }

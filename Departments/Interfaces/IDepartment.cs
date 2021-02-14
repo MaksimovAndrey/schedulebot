@@ -1,4 +1,7 @@
 namespace Schedulebot
 {
-    public interface IDepartment { }
+    public interface IDepartment
+    {
+        void SaveUsers();
+    }
 }

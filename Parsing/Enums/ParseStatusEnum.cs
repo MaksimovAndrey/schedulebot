@@ -1,4 +1,4 @@
-namespace Schedulebot.Parse.Enums
+namespace Schedulebot.Parsing.Enums
 {
     /// <summary>
     /// 

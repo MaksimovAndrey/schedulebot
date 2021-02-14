@@ -11,7 +11,7 @@ namespace Schedulebot.Departments.Utils
 {
     public static class Utils
     {
-        public static List<MessageKeyboard>[] ConstructKeyboards(in Mapper.Mapper mapper, int coursesCount)
+        public static List<MessageKeyboard>[] ConstructKeyboards(in Mapping.Mapper mapper, int coursesCount)
         {
             const int buttonsInLine = 2; // 1..4 ограничения vk
             const int linesInKeyboard = 4; // 1..9 ограничения vk
@@ -94,15 +94,15 @@ namespace Schedulebot.Departments.Utils
             return result;
         }
 
-        public static void SaveCoursesFilePaths(in Course[] courses, int coursesCount, string path)
-        {
-            List<List<string>> coursesFilePaths = new List<List<string>>();
-            for (int currentCourse = 0; currentCourse < coursesCount; currentCourse++)
-                coursesFilePaths.Add(courses[currentCourse].PathsToFile);
+        //public static void SaveCoursesFilePaths(in Course[] courses, int coursesCount, string path)
+        //{
+        //    List<List<string>> coursesFilePaths = new List<List<string>>();
+        //    for (int currentCourse = 0; currentCourse < coursesCount; currentCourse++)
+        //        coursesFilePaths.Add(courses[currentCourse].PathsToFile);
 
-            using StreamWriter file = new StreamWriter(path);
-            file.WriteLine(JsonConvert.SerializeObject(coursesFilePaths));
-        }
+        //    using StreamWriter file = new StreamWriter(path);
+        //    file.WriteLine(JsonConvert.SerializeObject(coursesFilePaths));
+        //}
 
         public static List<List<string>> GetCoursesFilePaths(string path)
         {

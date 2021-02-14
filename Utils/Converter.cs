@@ -1,3 +1,6 @@
+using System.Drawing;
+using System.IO;
+
 namespace Schedulebot.Utils
 {
     public static class Converter
@@ -5,6 +8,13 @@ namespace Schedulebot.Utils
         public static string WeekToString(int week) // Определение недели (верхняя или нижняя)
         {
             return week == 0 ? "Верхняя" : "Нижняя";
+        }
+
+        public static byte[] ImageToByteArray(Image image)
+        {
+            MemoryStream memoryStream = new MemoryStream();
+            image.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+            return memoryStream.ToArray();
         }
 
         /// <summary>
@@ -43,11 +53,11 @@ namespace Schedulebot.Utils
             return day switch
             {
                 "ПОНЕДЕЛЬНИК" => 0,
-                "ВТОРНИК"     => 1,
-                "СРЕДА"       => 2,
-                "ЧЕТВЕРГ"     => 3,
-                "ПЯТНИЦА"     => 4,
-                "СУББОТА"     => 5,
+                "ВТОРНИК" => 1,
+                "СРЕДА" => 2,
+                "ЧЕТВЕРГ" => 3,
+                "ПЯТНИЦА" => 4,
+                "СУББОТА" => 5,
                 _ => -1,
             };
         }
@@ -86,7 +96,7 @@ namespace Schedulebot.Utils
         {
             return time switch
             {
-                "9:00-10:30"  => 0,
+                "9:00-10:30" => 0,
                 "10:40-12:10" => 1,
                 "12:20-13:50" => 2,
                 "14:30-16:00" => 3,
