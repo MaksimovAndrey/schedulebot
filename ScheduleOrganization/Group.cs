@@ -1,45 +1,73 @@
+using Schedulebot.Schedule;
+using Schedulebot.Vk;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using Schedulebot.Schedule;
-using Schedulebot.Drawing;
-using Schedulebot.Vk;
 
 namespace Schedulebot
 {
     public class Group
     {
-        public string name = "";
-        public ScheduleSubgroup[] scheduleSubgroups = new ScheduleSubgroup[2];
-        
-        public Group()
+        public string Name { get; }
+        public List<ScheduleDay> days;
+        public DateTime LastTimeUpdated { get; set; } = DateTime.MinValue;
+        public bool IsUpdating { get; set; } = false;
+
+        public Group(string name)
         {
-            for (int i = 0; i < 2; ++i)
-                scheduleSubgroups[i] = new ScheduleSubgroup();
+            Name = name;
+            days = new List<ScheduleDay>();
         }
 
-        public PhotoUploadProperties UpdateSubgroup(int subgroup, UpdateProperties updateProperties)
-        {
-            updateProperties.drawingStandartScheduleInfo.weeks = scheduleSubgroups[subgroup].weeks;
-            updateProperties.drawingStandartScheduleInfo.group = name;
-            updateProperties.drawingStandartScheduleInfo.subgroup = subgroup + 1;
-            
-            updateProperties.photoUploadProperties.Photo
-                = DrawingSchedule.StandartSchedule.Draw(updateProperties.drawingStandartScheduleInfo);
+        /// <summary>
+        /// !!!НЕ РАБОТАЕТ!!!
+        /// Ищет изменения в расписании этой группы, а также сохраняет актуальные фотографии
+        /// </summary>
+        /// <param name="oldGroup">Устаревшая группа</param>
+        /// <returns>Список (подгруппа, изменения)</returns>
+        //public List<(int, string)> GetChangesAndKeepActualPhotoIds(Group oldGroup)
+        //{
+        //    List<(int, string)> subgroupChangesTuples = new List<(int, string)>();
+        //    for (int currentSubgroup = 0; currentSubgroup < 2; currentSubgroup++)
+        //    {
+        //        if (subgroups[currentSubgroup] == oldGroup.subgroups[currentSubgroup])
+        //        {
+        //            subgroups[currentSubgroup] = oldGroup.subgroups[currentSubgroup];
+        //        }
+        //        else
+        //        {
+        //            subgroupChangesTuples.Add((
+        //                currentSubgroup,
+        //                subgroups[currentSubgroup].GetChangesAndKeepActualPhotoIds(
+        //                    oldGroup.subgroups[currentSubgroup])));
+        //        }
+        //    }
+        //    return subgroupChangesTuples;
+        //}
 
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.Append("Новое расписание для ");
-            stringBuilder.Append(name);
-            stringBuilder.Append(" (");
-            stringBuilder.Append((subgroup + 1));
-            stringBuilder.Append(") ");
-            stringBuilder.Append(updateProperties.drawingStandartScheduleInfo.date);
-            
-            updateProperties.photoUploadProperties.Message = stringBuilder.ToString();
-            updateProperties.photoUploadProperties.GroupName = name;
-            updateProperties.photoUploadProperties.Subgroup = subgroup;
-            updateProperties.photoUploadProperties.UploadingSchedule = UploadingSchedule.Week;
+        //public void DrawSubgroupSchedule(int subgroup, ref UpdateProperties updateProperties)
+        //{
+        //    updateProperties.drawingStandartScheduleInfo.weeks = subgroups[subgroup].weeks;
+        //    updateProperties.drawingStandartScheduleInfo.group = name;
+        //    updateProperties.drawingStandartScheduleInfo.subgroup = subgroup + 1;
 
-            return updateProperties.photoUploadProperties;
-        }
+        //    updateProperties.photoUploadProperties.Photo
+        //        = Drawing.Standart.Drawer.Draw(updateProperties.drawingStandartScheduleInfo);
+
+        //    StringBuilder stringBuilder = new StringBuilder();
+        //    stringBuilder.Append("Новое расписание для ");
+        //    stringBuilder.Append(name);
+        //    stringBuilder.Append(" (");
+        //    stringBuilder.Append((subgroup + 1));
+        //    stringBuilder.Append(") ");
+        //    stringBuilder.Append(updateProperties.drawingStandartScheduleInfo.date);
+
+        //    updateProperties.photoUploadProperties.Message = stringBuilder.ToString();
+        //    updateProperties.photoUploadProperties.GroupName = name;
+        //    updateProperties.photoUploadProperties.Subgroup = subgroup;
+        //    updateProperties.photoUploadProperties.UploadingSchedule = UploadingSchedule.Week;
+
+        //    //return updateProperties;
+        //}
     }
 }

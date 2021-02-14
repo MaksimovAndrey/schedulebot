@@ -1,129 +1,114 @@
-using System;
+﻿using System;
 using System.Text;
+using Schedulebot.Parsing.Enums;
 
 namespace Schedulebot.Schedule
 {
-    public class ScheduleLecture
+    public class ScheduleLecture : IEquatable<ScheduleLecture>
     {
-        // статус (что спарсили?) F1, F2, F3, N0, N2 (F - нашли всё, что есть | N - нашли не всё | int - количество найденных аргументов)
-        public string Status { get; }
+        public string TimeStart { get; }
+        public string TimeEnd { get; }
+
         public string Subject { get; }
         public string LectureHall { get; }
         public string Lecturer { get; }
-        // true - лекция, false - практика
-        public bool IsLecture { get; }
-        public string ErrorType { get; }
+
+        public string Type { get; }
 
         public ScheduleLecture(
-            string status = null,
+            string timeStart = "",
+            string timeEnd = "",
+
             string subject = null,
             string lectureHall = null,
             string lecturer = null,
-            bool isLecture = false,
-            string errorType = null
+
+            string type = ""
         )
         {
-            Status = status;
+            TimeStart = timeStart;
+            TimeEnd = timeEnd;
+
             Subject = subject;
             LectureHall = lectureHall;
             Lecturer = lecturer;
-            IsLecture = isLecture;
-            ErrorType = errorType;
+
+            Type = type;
         }
-        
-        public bool IsEmpty()
+
+        public ScheduleLecture(
+            Schedulebot.Parsing.Utils.ParsedLecture parsedLecture
+        )
         {
-            return Status == null ? true : false;
+            TimeStart = parsedLecture.BeginLesson;
+            TimeEnd = parsedLecture.EndLesson;
+
+            Subject = parsedLecture.Discipline;
+            LectureHall = parsedLecture.Auditorium;
+            Lecturer = parsedLecture.Lecturer;
+
+            Type = parsedLecture.KindOfWork;
         }
-        
-        public string ConstructLecture() // собираем лекцию полностью
+
+        public override string ToString()
         {
-            if (IsEmpty())
-                return "";
-            StringBuilder lectureBuilder = new StringBuilder();
-            lectureBuilder.Append(Subject);
-            if (Lecturer != null)
-            {
-                if (lectureBuilder.Length != 0)
-                    lectureBuilder.Append(ScheduleBot.delimiter);
-                lectureBuilder.Append(Lecturer);
-            }
-            if (LectureHall != null)
-            {
-                if (lectureBuilder.Length != 0)
-                    lectureBuilder.Append(ScheduleBot.delimiter);
-                lectureBuilder.Append(LectureHall);
-            }
-            if (lectureBuilder.Length == 0)
-                lectureBuilder.Append("Error");
-            if (IsLecture)
-            {
-                lectureBuilder.Append(ScheduleBot.delimiter);
-                lectureBuilder.Append('Л');
-            }
-            lectureBuilder.Append(ErrorType);
-            return lectureBuilder.ToString();
-        }
-        
-        public string ConstructLectureWithoutSubject() // собираем лекцию без предмета
-        {
-            if (IsEmpty())
-                return "";
-            StringBuilder lectureWithoutSubjectBuilder = new StringBuilder();
-            lectureWithoutSubjectBuilder.Append(Lecturer);
-            if (LectureHall != null)
-            {
-                if (lectureWithoutSubjectBuilder.Length != 0)
-                    lectureWithoutSubjectBuilder.Append(ScheduleBot.delimiter);
-                lectureWithoutSubjectBuilder.Append(LectureHall);
-            }
-            if (IsLecture)
-            {
-                lectureWithoutSubjectBuilder.Append(ScheduleBot.delimiter);
-                lectureWithoutSubjectBuilder.Append('Л');
-            }
-            lectureWithoutSubjectBuilder.Append(ErrorType);
-            return lectureWithoutSubjectBuilder.ToString();
-        }
-        
-        public ScheduleLecture GetLectureWithOnlySubject()
-        {
-            if (IsEmpty())
-                return new ScheduleLecture();
-            return new ScheduleLecture(
-                status: "F1",
-                subject: Subject
-            );
+            StringBuilder str = new StringBuilder();
+
+            str.Append("🕖");
+            str.Append(TimeStart);
+            str.Append(" - ");
+            str.Append(TimeEnd);
+            str.Append('\n');
+            str.Append("🏢");
+            str.Append(LectureHall);
+            str.Append(Constants.delimiter);
+            str.Append("👥");
+            str.Append(Lecturer);
+            str.Append('\n');
+            str.Append(Subject);
+            str.Append(Constants.delimiter);
+            str.Append(Type);
+
+            return str.ToString();
         }
 
         public override bool Equals(object obj)
         {
-            return obj is ScheduleLecture lecture
-                && Status == lecture.Status
-                && Subject == lecture.Subject
-                && LectureHall == lecture.LectureHall
-                && Lecturer == lecture.Lecturer
-                && IsLecture == lecture.IsLecture
-                && ErrorType == lecture.ErrorType;
+            return Equals(obj as ScheduleLecture);
+        }
+
+        public bool Equals(ScheduleLecture other)
+        {
+            return other != null &&
+                   TimeStart == other.TimeStart &&
+                   TimeEnd == other.TimeEnd &&
+                   Subject == other.Subject &&
+                   LectureHall == other.LectureHall &&
+                   Lecturer == other.Lecturer &&
+                   Type == other.Type;
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Status, Subject, LectureHall, Lecturer, IsLecture, ErrorType);
+            return HashCode.Combine(TimeStart, TimeEnd, Subject, LectureHall, Lecturer, Type);
         }
 
         public static bool operator ==(ScheduleLecture lecture1, ScheduleLecture lecture2)
         {
-            if (lecture1.IsLecture != lecture2.IsLecture
-                || lecture1.Status != lecture2.Status
+            if (lecture2 is null)
+                return lecture1 is null;
+            else if (lecture2 is null
+                || lecture1.TimeStart != lecture2.TimeStart
+                || lecture1.TimeEnd != lecture2.TimeEnd
                 || lecture1.Subject != lecture2.Subject
                 || lecture1.LectureHall != lecture2.LectureHall
                 || lecture1.Lecturer != lecture2.Lecturer
-                || lecture1.ErrorType != lecture2.ErrorType)
+                || lecture1.Type != lecture2.Type)
                 return false;
-            return true;
+            else
+                return true;
         }
-        
+
         public static bool operator !=(ScheduleLecture lecture1, ScheduleLecture lecture2)
         {
             return !(lecture1 == lecture2);

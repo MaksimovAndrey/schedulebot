@@ -1,41 +1,34 @@
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using Schedulebot.Users.Enums;
 
 namespace Schedulebot.Users
 {
     public class UserRepository : IUserRepository
     {
-        private readonly List<User> users = new List<User>();
-        
-        public UserRepository(string path)
+        private readonly List<User> users;
+
+        public UserRepository()
         {
-            LoadUsers(path);
+            this.users = new List<User>();
         }
 
-        private void LoadUsers(string path)
+        public AddOrEditResult AddOrEdit(long? id, string group, int subgroup)
         {
-            using (StreamReader file = new StreamReader(
-                path,
-                System.Text.Encoding.Default))
+            for (int i = 0; i < users.Count; i++)
             {
-                while (!file.EndOfStream)
+                if (users[i].Id == id)
                 {
-                    if (User.TryParseUser(file.ReadLine(), out var user))
-                        this.AddUser(user);
+                    users[i].Group = group;
+                    users[i].Subgroup = subgroup;
+                    return AddOrEditResult.Edited;
                 }
             }
+            users.Add(new User((long)id, group, subgroup));
+            return AddOrEditResult.Added;
         }
 
-        public void SaveUsers(string path)
-        {
-            using (StreamWriter file = new StreamWriter(path))
-            {
-                file.WriteLine(this.ToString());
-            }
-        }
-        
-        
         public override string ToString()
         {
             StringBuilder stringBuilder = new StringBuilder();
@@ -48,7 +41,7 @@ namespace Schedulebot.Users
             return stringBuilder.ToString();
         }
 
-        public bool GetUser(long? id, out User user)
+        public bool Get(long? id, out User user)
         {
             for (int currentUser = 0; currentUser < users.Count; currentUser++)
             {
@@ -89,8 +82,8 @@ namespace Schedulebot.Users
             }
             return ids;
         }
-        
-        public List<long> GetIds(int course, Mapper mapper)
+
+        public List<long> GetIds(int course, Mapping.Mapper mapper)
         {
             List<string> groupNames = mapper.GetGroupNames(course);
             List<long> ids = new List<long>();
@@ -126,7 +119,7 @@ namespace Schedulebot.Users
             return ids;
         }
 
-        public void AddUser(User user)
+        public void Add(User user)
         {
             users.Add(user);
         }
@@ -136,7 +129,15 @@ namespace Schedulebot.Users
             users.Add(new User(id, group, subgroup));
         }
 
-        public bool DeleteUser(long id)
+        /// <summary>
+        /// ”дал€ет пользовател€ из базы
+        /// </summary>
+        /// <param name="id">Vk Id пользовател€</param>
+        /// <returns>
+        /// <see langword="true"/> если пользователь удалЄн
+        /// <br><see langword="false"/> если пользовател€ не было в базе</br>
+        /// </returns>
+        public bool Delete(long? id)
         {
             for (int i = 0; i < users.Count; i++)
             {
@@ -149,34 +150,22 @@ namespace Schedulebot.Users
             return false;
         }
 
-        public void EditUser(long id, int newSubgroup, string newGroup = null)
-        {
-            for (int i = 0; i < users.Count; i++)
-            {
-                if (users[i].Id == id)
-                {
-                    users[i].Subgroup = newSubgroup;
-                    if (newGroup != null)
-                        users[i].Group = newGroup;
-                    return;
-                }
-            }
-        }
-
-        public User ChangeSubgroup(long? id)
+        public bool ChangeSubgroup(long? id, out User user)
         {
             for (int i = 0; i < users.Count; i++)
             {
                 if (users[i].Id == id)
                 {
                     users[i].Subgroup = users[i].Subgroup % 2 + 1;
-                    return users[i];
+                    user = users[i];
+                    return true;
                 }
             }
-            return null;
+            user = null;
+            return false;
         }
 
-        public bool ContainsUser(long? id)
+        public bool Contains(long? id)
         {
             for (int i = 0; i < users.Count; i++)
             {

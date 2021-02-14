@@ -7,15 +7,12 @@
 /bin
 /obj
 
-# Common node modules locations
-/node_modules
-/wwwroot/node_modules
-
 
 /__trash__
 .vscode
 .vs
+.fonts
 *.sln
 __*
-
-# End of https://www.gitignore.io/api/dotnetcore
+*_old.*
+.editorconfig

@@ -1,37 +1,37 @@
-using System.Threading.Tasks;
-using System.Net.Http;
+using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Schedulebot.Departments;
 
 namespace Schedulebot
 {
     public class ScheduleBot
     {
-        public const string version = "v2.3";
-        public const string delimiter = " · ";
-        #if DEBUG 
-            private const string path = @"C:/Custom/Projects/Shared/sbtest/";
-        #else
-            private const string path = @"/media/projects/sbtest/";
-        #endif
+#if DEBUG
+        private const string с_path = @"C:/Main/Projects/Shared/sbinfo/";
+#else
+        private const string с_path = @"/media/projects/sbtest/";
+#endif
 
         public static readonly HttpClient client = new HttpClient();
-        private const int departmentsAmount = 1;
+        public const int departmentsCount = 1;
         public IDepartment[] departments;
 
         public ScheduleBot(ref List<Task> _tasks)
         {
             //! Пока один департамент будет так
-            // todo: переписать с restart department
+            // TODO: переписать с restart department
             List<Task> tasks = new List<Task>();
 
-            departments = new IDepartment[departmentsAmount];
-            for (int currentDepartment = 0; currentDepartment < departmentsAmount; currentDepartment++)
+            departments = new IDepartment[departmentsCount];
+            for (int currentDepartment = 0; currentDepartment < departmentsCount; currentDepartment++)
             {
-                departments[currentDepartment] = new DepartmentItmm(path, ref tasks);
-            }            
+                departments[currentDepartment] = new DepartmentItmm(с_path, ref tasks);
+            }
             _tasks.Add(Task.WhenAny(tasks));
         }
 
-        // todo: restart department (при краше модуля(Task.WhenAny))
+        // TODO: restart department (при краше модуля(Task.WhenAny))
     }
 }
