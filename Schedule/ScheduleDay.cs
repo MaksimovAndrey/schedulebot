@@ -32,7 +32,8 @@ namespace Schedulebot.Schedule
             str.Append("📅");
             str.Append(Date.ToString("dd'.'MM'.'yyyy"));
             str.Append(Constants.delimiter);
-            str.Append(CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetDayName(Date.DayOfWeek));
+            string day = CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetDayName(Date.DayOfWeek);
+            str.Append(char.ToUpper(day[0]) + day[1..]);
             for (int i = 0; i < lectures.Count; i++)
             {
                 str.Append("\n\n");
