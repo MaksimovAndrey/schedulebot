@@ -432,7 +432,7 @@ namespace Schedulebot.Departments
                 || Constants.textWeekCommand.Contains(messageStr)
                 || Constants.textLinkCommand.Contains(messageStr))
             {
-                ScheduleMessageResponse(message.Text, message.PeerId);
+                ScheduleMessageResponse(messageStr, message.PeerId);
             }
             else
             {
@@ -484,7 +484,7 @@ namespace Schedulebot.Departments
         private void TextCommandSubscribeResponse(string message, long? peerId)
         {
             message = message.Substring(message.IndexOf(' ') + 1).Trim();
-            if (message.IndexOf("на ") == 0 && message.Length > 3)
+            if (message.ToUpper().IndexOf("НА ") == 0 && message.Length > 3)
                 message = message.Substring(message.IndexOf(' ') + 1).Trim();
 
             if (!message.Contains(' '))
@@ -657,26 +657,31 @@ namespace Schedulebot.Departments
         {
             DateTime tomorrow = DateTime.Today.AddDays(1);
             string addBeforeMsg = "Завтра ";
+            bool tomorrowIsSunday = false;
             if (tomorrow.DayOfWeek == DayOfWeek.Sunday)
             {
+                tomorrowIsSunday = true;
                 addBeforeMsg = "Завтра воскресение, расписание на ";
+                tomorrow = tomorrow.AddDays(1);
             }
 
             while (tomorrow < DateTime.Today.AddDays(12))
             {
-                for (int curDay = 0; curDay < courses[userMapping.Course].groups[userMapping.GroupIndex].days.Count; curDay++)
+                for (int curDay = 1; curDay < courses[userMapping.Course].groups[userMapping.GroupIndex].days.Count; curDay++)
                 {
                     if (courses[userMapping.Course].groups[userMapping.GroupIndex].days[curDay].Date == tomorrow)
                     {
                         EnqueueMessage(
                             userId: user.Id,
-                            message: "Обновлено " 
+                            message: "Обновлено "
                                 + courses[userMapping.Course].groups[userMapping.GroupIndex].LastTimeUpdated.ToString("dd'.'MM'.'yyyy HH:mm")
                                 + "\n\n" + addBeforeMsg
                                 + courses[userMapping.Course].groups[userMapping.GroupIndex].days[curDay].ToString());
                         return;
                     }
                 }
+                if (!tomorrowIsSunday)
+                    addBeforeMsg = "Завтра Вы не учитесь, расписание на ";
                 tomorrow = tomorrow.AddDays(1);
             }
             EnqueueMessage(
