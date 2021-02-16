@@ -62,12 +62,12 @@ namespace Schedulebot.Schedule
             str.Append("🏢");
             str.Append(LectureHall);
             str.Append(Constants.delimiter);
-            str.Append("👥");
+            str.Append(Type);
+            str.Append('\n');
+            str.Append("👤");
             str.Append(Lecturer);
             str.Append('\n');
             str.Append(Subject);
-            str.Append(Constants.delimiter);
-            str.Append(Type);
 
             return str.ToString();
         }
