@@ -667,7 +667,7 @@ namespace Schedulebot.Departments
 
             while (tomorrow < DateTime.Today.AddDays(12))
             {
-                for (int curDay = 1; curDay < courses[userMapping.Course].groups[userMapping.GroupIndex].days.Count; curDay++)
+                for (int curDay = 0; curDay < courses[userMapping.Course].groups[userMapping.GroupIndex].days.Count; curDay++)
                 {
                     if (courses[userMapping.Course].groups[userMapping.GroupIndex].days[curDay].Date == tomorrow)
                     {
