@@ -36,7 +36,7 @@ namespace Schedulebot.Departments.Utils
                         {
                             Type = KeyboardButtonActionType.Text,
                             Label = groupNames[currentName],
-                            Payload = "{\"menu\": \"40\", \"course\": \"" + currentCourse + "\"}"
+                            Payload = "{\"menu\":\"40\",\"act\":\"1\",\"course\":\"" + currentCourse + "\"}"
                         }
                     });
                     if (line.Count == buttonsInLine
@@ -48,15 +48,14 @@ namespace Schedulebot.Departments.Utils
                     if (buttons.Count == linesInKeyboard
                         || (currentName + 1 == groupNames.Count && buttons.Count != 0))
                     {
-                        string payloadService = "{\"menu\": \"40\", \"page\": \"" + currentPage + "\", \"course\": \"" + currentCourse + "\"}";
                         serviceLine.Add(new MessageKeyboardButton()
                         {
                             Color = KeyboardButtonColor.Default,
                             Action = new MessageKeyboardButtonAction
                             {
                                 Type = KeyboardButtonActionType.Text,
-                                Label = Constants.back,
-                                Payload = payloadService
+                                Label = Constants.Labels.previousPage,
+                                Payload = "{\"menu\":\"40\",\"act\":\"2\",\"course\":\"" + currentCourse + "\",\"page\":\"" + currentPage + "\"}"
                             }
                         });
                         serviceLine.Add(new MessageKeyboardButton()
@@ -65,8 +64,8 @@ namespace Schedulebot.Departments.Utils
                             Action = new MessageKeyboardButtonAction
                             {
                                 Type = KeyboardButtonActionType.Text,
-                                Label = (currentPage + 1) + " из " + pagesAmount,
-                                Payload = payloadService
+                                Label = (currentPage + 1) + Constants.Labels.currentPageOfMaxDelimeter + pagesAmount,
+                                Payload = "{\"menu\":\"40\",\"act\":\"3\",\"course\":\"" + currentCourse + "\"}"
                             }
                         });
                         serviceLine.Add(new MessageKeyboardButton()
@@ -75,8 +74,8 @@ namespace Schedulebot.Departments.Utils
                             Action = new MessageKeyboardButtonAction
                             {
                                 Type = KeyboardButtonActionType.Text,
-                                Label = Constants.forward,
-                                Payload = payloadService
+                                Label = Constants.Labels.nextPage,
+                                Payload = "{\"menu\":\"40\",\"act\":\"4\",\"course\":\"" + currentCourse + "\",\"page\":\"" + currentPage + "\"}"
                             }
                         });
                         buttons.Add(new List<MessageKeyboardButton>(serviceLine));
@@ -92,27 +91,6 @@ namespace Schedulebot.Departments.Utils
                 }
             }
             return result;
-        }
-
-        //public static void SaveCoursesFilePaths(in Course[] courses, int coursesCount, string path)
-        //{
-        //    List<List<string>> coursesFilePaths = new List<List<string>>();
-        //    for (int currentCourse = 0; currentCourse < coursesCount; currentCourse++)
-        //        coursesFilePaths.Add(courses[currentCourse].PathsToFile);
-
-        //    using StreamWriter file = new StreamWriter(path);
-        //    file.WriteLine(JsonConvert.SerializeObject(coursesFilePaths));
-        //}
-
-        public static List<List<string>> GetCoursesFilePaths(string path)
-        {
-            if (File.Exists(path))
-            {
-                using StreamReader file = new StreamReader(path, Encoding.Default);
-                return JsonConvert.DeserializeObject<List<List<string>>>(file.ReadToEnd());
-            }
-            else
-                return new List<List<string>>();
         }
 
         public static string ConstructGroupSubgroup(string group, int subgroup)

@@ -26,6 +26,8 @@ using VkNet.Model.RequestParams;
 using Schedulebot;
 using Schedulebot.Schedule;
 using Schedulebot.Parsing;
+using VkNet.Utils;
+using VkNet.Model.Template;
 
 namespace Schedulebot.Departments
 {
@@ -36,8 +38,9 @@ namespace Schedulebot.Departments
             courses[course].groups[group].IsUpdating = true;
             DateTime newUpdateTime = DateTime.Now;
             var newSchedule = GetNewSchedule(course, courses[course].groups[group].Name);
-            // TODO: check for changes
+
             courses[course].groups[group].days = newSchedule;
+            courses[course].groups[group].CheckForUploadedDays();
             courses[course].groups[group].LastTimeUpdated = newUpdateTime;
             courses[course].groups[group].IsUpdating = false;
 
@@ -57,23 +60,24 @@ namespace Schedulebot.Departments
         private void EnqueueMessage(
             long? userId = null,
             List<long> userIds = null,
-            string message = "Отправляю клавиатуру",
+            string message = Constants.defaultMessage,
             List<MediaAttachment> attachments = null,
             int? keyboardId = null,
             MessageKeyboard customKeyboard = null)
         {
-            MessagesSendParams messageSendParams = new MessagesSendParams()
+            VkParameters vkParameters = new VkParameters
             {
-                Message = message,
-                RandomId = (int)DateTime.Now.Ticks
+                { "message", message },
+                { "random_id", (int)DateTime.Now.Ticks }
             };
+
             if (userIds != null)
             {
                 if (userIds.Count == 0)
                     return;
                 else if (userIds.Count > 100)
                 {
-                    messageSendParams.UserIds = userIds.GetRange(0, 100);
+                    vkParameters.Add("user_ids", JsonConvert.SerializeObject(userIds.GetRange(0, 100)));
                     userIds.RemoveRange(0, 100);
                     EnqueueMessage(
                         userIds: userIds,
@@ -83,85 +87,35 @@ namespace Schedulebot.Departments
                         customKeyboard: customKeyboard);
                 }
                 else
-                    messageSendParams.UserIds = userIds;
+                {
+                    vkParameters.Add("user_ids", JsonConvert.SerializeObject(userIds));
+                }
             }
 
-            messageSendParams.PeerId = userId;
+            vkParameters.Add("peer_id", userId);
 
-            messageSendParams.Attachments = attachments;
-
-            messageSendParams.Keyboard = customKeyboard;
-            switch (keyboardId)
+            if (attachments != null)
             {
-                case null:
+                StringBuilder atts = new StringBuilder();
+                atts.Append(attachments[0].ToString());
+                for (int i = 1; i < attachments.Count; i++)
                 {
-                    break;
+                    atts.Append(',');
+                    atts.Append(attachments[i].ToString());
                 }
-                case 0:
-                {
-                    messageSendParams.Keyboard = vkStuff.MenuKeyboards[0];
-                    break;
-                }
-                case 1:
-                {
-                    messageSendParams.Keyboard = vkStuff.MenuKeyboards[1];
-                    break;
-                }
-                case 2:
-                {
-                    messageSendParams.Keyboard = vkStuff.MenuKeyboards[2];
-                    break;
-                }
-                case 4:
-                {
-                    messageSendParams.Keyboard = vkStuff.MenuKeyboards[4];
-                    break;
-                }
+                vkParameters.Add("attachment", atts.ToString());
             }
-            commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messageSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+
+            if (keyboardId == null && customKeyboard != null)
+            {
+                vkParameters.Add("keyboard", JsonConvert.SerializeObject(customKeyboard));
+            }
+            else if (keyboardId != null)
+            {
+                vkParameters.Add("keyboard", JsonConvert.SerializeObject(vkStuff.MenuKeyboards[keyboardId.Value]));
+            }
+            commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(vkParameters) + ");");
         }
-
-//        private bool UploadWeekSchedule()
-//        {
-//            bool result = false;
-//            for (int currentCourse = 0; currentCourse < CoursesCount; currentCourse++)
-//            {
-//                for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.Count; currentGroup++)
-//                {
-//                    for (int currentSubgroup = 0; currentSubgroup < 2; currentSubgroup++)
-//                    {
-//                        if (courses[currentCourse].groups[currentGroup].subgroups[currentSubgroup].PhotoId == 0)
-//                        {
-//                            UpdateProperties updateProperties = new UpdateProperties();
-
-//                            updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
-//                            updateProperties.drawingStandartScheduleInfo.date
-//                                = relevance.DatesAndUrls.dates[currentCourse];
-//                            updateProperties.drawingStandartScheduleInfo.weeks
-//                                = courses[currentCourse].groups[currentGroup].subgroups[currentSubgroup].weeks;
-//                            updateProperties.drawingStandartScheduleInfo.group
-//                                = courses[currentCourse].groups[currentGroup].name;
-
-//                            courses[currentCourse].groups[currentGroup]
-//                                .DrawSubgroupSchedule(currentSubgroup, ref updateProperties);
-
-//                            updateProperties.photoUploadProperties.GroupName
-//                                = courses[currentCourse].groups[currentGroup].name;
-//                            updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
-//                            updateProperties.photoUploadProperties.Course = currentCourse;
-//                            updateProperties.photoUploadProperties.GroupIndex = currentGroup;
-//                            updateProperties.photoUploadProperties.ToSend = false;
-
-//#if !DONT_UPLOAD_WEEK_SCHEDULE
-//                            photosQueue.Enqueue(new PhotoUploadProperties(updateProperties.photoUploadProperties));
-//#endif
-//                            result = true;
-//                        }
-//                    }
-//                }
-//            }
-//            return result;
-//        }
 
         private int CurrentWeek() // Определение недели (верхняя или нижняя)
         {

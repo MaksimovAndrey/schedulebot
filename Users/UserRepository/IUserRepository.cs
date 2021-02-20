@@ -12,6 +12,8 @@ namespace Schedulebot.Users
         bool ChangeSubgroup(long? id, out User user);
         bool Contains(long? id);
 
+        void SetMessageId(long id, int messageId);
+
         bool Get(long? id, out User user);
 
         List<long> GetIds();

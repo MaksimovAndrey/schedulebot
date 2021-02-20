@@ -8,7 +8,7 @@ using Schedulebot.Parsing.Utils;
 
 namespace Schedulebot.Parsing
 {
-    class Parser
+    public static class Parser
     {
         public static List<ScheduleDay> ParseScheduleFromJson(string jsonStr)
         {

@@ -41,6 +41,18 @@ namespace Schedulebot.Users
             return stringBuilder.ToString();
         }
 
+        public void SetMessageId(long id, int messageId)
+        {
+            for (int currentUser = 0; currentUser < users.Count; currentUser++)
+            {
+                if (users[currentUser].Id == id)
+                {
+                    users[currentUser].MessageId = messageId;
+                    return;
+                }
+            }
+        }
+
         public bool Get(long? id, out User user)
         {
             for (int currentUser = 0; currentUser < users.Count; currentUser++)

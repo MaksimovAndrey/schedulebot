@@ -37,7 +37,7 @@ namespace Schedulebot.Schedule
         }
 
         public ScheduleLecture(
-            Schedulebot.Parsing.Utils.ParsedLecture parsedLecture
+            Parsing.Utils.ParsedLecture parsedLecture
         )
         {
             TimeStart = parsedLecture.BeginLesson;

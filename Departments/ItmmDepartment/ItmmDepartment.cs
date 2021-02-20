@@ -52,16 +52,16 @@ namespace Schedulebot.Departments
             true, // 0 ExecuteMethodsAsync()
             true, // 1 GetMessagesAsync()
             true, // 2 ResponseMessagesAsync()
-            false, // 3 UploadPhotosAsync()
+            true, // 3 UploadPhotosAsync()
             true, // 4 SaveUsersAsync()
-            false  // 5 CheckRelevanceAsync()
+            true  // 5 CheckRelevanceAsync()
         };
 #else
         private static readonly bool[] loadModule = { 
             true, // 0 ExecuteMethodsAsync()
             true, // 1 GetMessagesAsync()
             true, // 2 ResponseMessagesAsync()
-            false, // 3 UploadPhotosAsync()
+            true, // 3 UploadPhotosAsync()
             true, // 4 SaveUsersAsync()
             true  // 5 CheckRelevanceAsync()
         };
@@ -100,9 +100,9 @@ namespace Schedulebot.Departments
             if (loadModule[1])
                 tasks.Add(Task.Run(() => GetMessages()));
             if (loadModule[2])
-                tasks.Add(Task.Run(() => ResponseMessagesAsync()));
-            //if (loadModule[3])
-            //    tasks.Add(Task.Run(() => UploadPhotosAsync()));
+                tasks.Add(CreateResponseMessagesTasks(Constants.responseMessagesTaskCount));
+            if (loadModule[3])
+                tasks.Add(Task.Run(() => UploadPhotosAsync()));
             if (loadModule[4])
                 tasks.Add(Task.Run(() => SaveUsersAsync()));
 
@@ -113,13 +113,14 @@ namespace Schedulebot.Departments
                 message: StartTime.ToString() + " | Запустился"
             );
 
-            //if (loadModule[5])
-            //    tasks.Add(StartRelevanceModule());
-
-            //EnqueueMessage(
-            //    userId: vkStuff.AdminId,
-            //    message: DateTime.Now.ToString() + " | Запустил CheckRelevance"
-            //);
+            if (loadModule[5])
+            {
+                tasks.Add(StartRelevanceModule());
+                EnqueueMessage(
+                    userId: vkStuff.AdminId,
+                    message: DateTime.Now.ToString() + " | Запустил CheckRelevance"
+                );
+            }
         }
     }
 }

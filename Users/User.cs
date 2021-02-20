@@ -8,22 +8,26 @@ namespace Schedulebot.Users
         public long Id { get; set; }
         public string Group { get; set; }
         public int Subgroup { get; set; }
+        public int MessageId { get; set; }
 
-        public User(long id, string group, int subgroup)
+        public User(long id, string group, int subgroup, int messageId = 0)
         {
             Id = id;
             Group = group;
             Subgroup = subgroup;
+            MessageId = messageId;
         }
 
         public override string ToString()
         {
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.Append(Id);
-            stringBuilder.Append(' ');
+            stringBuilder.Append(':');
             stringBuilder.Append(Group);
-            stringBuilder.Append(' ');
+            stringBuilder.Append(':');
             stringBuilder.Append(Subgroup);
+            stringBuilder.Append(':');
+            stringBuilder.Append(MessageId);
             return stringBuilder.ToString();
         }
 
@@ -31,16 +35,18 @@ namespace Schedulebot.Users
         {
             try
             {
-                var rawUserSpan = rawUserLine.AsSpan();
+                int index = rawUserLine.IndexOf(':');
+                long id = long.Parse(rawUserLine.Substring(0, index));
+                rawUserLine = rawUserLine.Substring(index + 1);
+                index = rawUserLine.IndexOf(':');
+                string group = rawUserLine.Substring(0, index);
+                rawUserLine = rawUserLine.Substring(index + 1);
+                index = rawUserLine.IndexOf(':');
+                int subgroup = int.Parse(rawUserLine.Substring(0, index));
+                rawUserLine = rawUserLine.Substring(index + 1);
+                int messageId = int.Parse(rawUserLine);
 
-                int spaceIndex = rawUserSpan.IndexOf(' ');
-                int lastSpaceIndex = rawUserSpan.LastIndexOf(' ');
-
-                long id = long.Parse(rawUserSpan.Slice(0, spaceIndex));
-                string group = rawUserSpan.Slice(spaceIndex + 1, lastSpaceIndex - spaceIndex - 1).ToString();
-                int subgroup = int.Parse(rawUserSpan.Slice(lastSpaceIndex + 1, 1));
-
-                user = new User(id, group, subgroup);
+                user = new User(id, group, subgroup, messageId);
                 return true;
             }
             catch
