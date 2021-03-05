@@ -57,6 +57,35 @@ namespace Schedulebot.Departments
             return Parser.ParseScheduleFromJson(ScheduleBot.client.GetStringAsync(url).Result);
         }
 
+        private void EnqueueEventAnswer(
+            string evendId,
+            long userId,
+            long peerId,
+            bool haveEventData = false,
+            string text = null,
+            MessageEventType messageEventType = null)
+        {
+            VkParameters vkParameters = new VkParameters
+            {
+                { "event_id", evendId },
+                { "user_id", userId },
+                { "peer_id", peerId }
+            };
+
+            if (haveEventData)
+            {
+                vkParameters.Add("event_data",
+                    JsonConvert.SerializeObject(new EventData()
+                    {
+                        Text = text,
+                        Type = messageEventType
+                    })
+                );
+            }
+
+            commandsQueue.Enqueue("API.messages.sendMessageEventAnswer(" + JsonConvert.SerializeObject(vkParameters) + ");");
+        }
+
         private void EnqueueMessage(
             long? userId = null,
             List<long> userIds = null,

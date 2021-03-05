@@ -14,6 +14,7 @@ using VkNet.Exception;
 using VkNet.Model;
 using VkNet.Model.Attachments;
 using VkNet.Model.RequestParams;
+using VkNet.Model.GroupUpdate;
 
 namespace Schedulebot.Departments
 {
@@ -52,7 +53,7 @@ namespace Schedulebot.Departments
 #if DEBUG
                     Console.WriteLine(DateTime.Now.ToString() + " Получаю сообщения");
                     Console.WriteLine("commandsQueue count = {0}", commandsQueue.Count);
-                    Console.WriteLine("messagesQueue count = {0}", messagesQueue.Count);
+                    Console.WriteLine("messagesQueue count = {0}", updatesQueue.Count);
                     Console.WriteLine("photosQueue count = {0}", photosQueue.Count);
 #endif
                     historyResponse = vkStuff.Api.Groups.GetBotsLongPollHistory(botsLongPollHistoryParams);
@@ -61,29 +62,9 @@ namespace Schedulebot.Departments
                     botsLongPollHistoryParams.Ts = historyResponse.Ts;
                     if (!historyResponse.Updates.Any())
                         continue;
-                    foreach (var update in historyResponse.Updates)
+                    for (int i = 0; i < historyResponse.Updates.Count(); i++)
                     {
-                        if (update.Type == GroupUpdateType.MessageNew)
-                        {
-                            messagesQueue.Enqueue(update.MessageNew.Message);
-                        }
-                        else if (update.Type == GroupUpdateType.MessageEvent)
-                        {
-                            // TODO
-                            //EnqueueMessage(
-                            //    userId: update.MessageEvent.PeerId,
-                            //    keyboardId: 1);
-                            //vkStuff.Api.Messages.SendMessageEventAnswer(
-                            //    eventId: update.MessageEvent.EventId,
-                            //    userId: update.MessageEvent.UserId.Value,
-                            //    peerId: update.MessageEvent.PeerId.Value
-                            //    //eventData: new EventData()
-                            //    //{
-                            //    //    Text = "Test event response",
-                            //    //    Type = MessageEventType.SnowSnackbar
-                            //    //}
-                            //);
-                        }
+                        updatesQueue.Enqueue(historyResponse.Updates.ElementAt(i));
                     }
                     historyResponse = null;
                 }
@@ -118,12 +99,24 @@ namespace Schedulebot.Departments
                 {
                     while (true)
                     {
-                        while (!messagesQueue.IsEmpty)
+                        while (!updatesQueue.IsEmpty)
                         {
-                            if (messagesQueue.TryDequeue(out Message message))
-                                ResponseMessage(message);
+                            if (updatesQueue.TryDequeue(out GroupUpdate update))
+                            {
+                                if (update.Type == GroupUpdateType.MessageNew)
+                                {
+                                    ResponseMessage(update.MessageNew.Message,
+                                        update.MessageNew.ClientInfo.ButtonActions.Contains(KeyboardButtonActionType.Callback));
+                                }
+                                else if (update.Type == GroupUpdateType.MessageEvent)
+                                {
+                                    ResponseMessageEvent(update.MessageEvent);
+                                }
+                            }
                             else
+                            {
                                 await Task.Delay(1);
+                            }
                         }
                         await Task.Delay(Constants.noMessagesDelay);
                     }

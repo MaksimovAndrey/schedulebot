@@ -174,6 +174,7 @@ namespace Schedulebot
         public const string startMessage = "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.";
 
         public const int responseMessagesTaskCount = 4;
+        public const int keyboardsCount = 6;
 
         public const string defaultFolder = "itmm/";
         public const string defaultDownloadFolder = "downloads/";

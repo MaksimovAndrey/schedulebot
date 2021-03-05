@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using VkNet.Model;
 using VkNet.Model.Keyboard;
 using System.Linq;
+using VkNet.Model.GroupUpdate;
 
 namespace Schedulebot.Departments
 {
@@ -26,14 +27,14 @@ namespace Schedulebot.Departments
             = new ConcurrentQueue<string>();
         private readonly ConcurrentQueue<PhotoUploadProperties> photosQueue
             = new ConcurrentQueue<PhotoUploadProperties>();
-        private readonly ConcurrentQueue<Message> messagesQueue
-            = new ConcurrentQueue<Message>();
+        private readonly ConcurrentQueue<GroupUpdate> updatesQueue
+            = new ConcurrentQueue<GroupUpdate>();
 
         private int CoursesCount { get; } = 4;
         private readonly Course[] courses = new Course[4];
         private List<Dictionary<string, long>> dictionaries;
-
-        private List<MessageKeyboard>[] CoursesKeyboards { get; set; }
+        
+        private List<MessageKeyboard>[,] CoursesKeyboards { get; set; }
 
         private readonly VkStuff vkStuff;
         private readonly Mapper mapper;

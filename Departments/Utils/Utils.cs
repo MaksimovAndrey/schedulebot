@@ -11,82 +11,85 @@ namespace Schedulebot.Departments.Utils
 {
     public static class Utils
     {
-        public static List<MessageKeyboard>[] ConstructKeyboards(in Mapping.Mapper mapper, int coursesCount)
+        public static List<MessageKeyboard>[,] ConstructKeyboards(in Mapping.Mapper mapper, int coursesCount)
         {
             const int buttonsInLine = 2; // 1..4 ограничения vk
             const int linesInKeyboard = 4; // 1..9 ограничения vk
 
-            List<MessageKeyboard>[] result = new List<MessageKeyboard>[coursesCount];
-            for (int currentCourse = 0; currentCourse < coursesCount; ++currentCourse)
+            List<MessageKeyboard>[,] result = new List<MessageKeyboard>[coursesCount, 2];
+            for (int curCourse = 0; curCourse < coursesCount; ++curCourse)
             {
-                result[currentCourse] = new List<MessageKeyboard>();
-                List<string> groupNames = mapper.GetGroupNames(currentCourse);
-                int pagesAmount = (int)Math.Ceiling((double)groupNames.Count
-                    / (double)(linesInKeyboard * buttonsInLine));
-                int currentPage = 0;
-                List<MessageKeyboardButton> line = new List<MessageKeyboardButton>();
-                List<List<MessageKeyboardButton>> buttons = new List<List<MessageKeyboardButton>>();
-                List<MessageKeyboardButton> serviceLine = new List<MessageKeyboardButton>();
-                for (int currentName = 0; currentName < groupNames.Count; currentName++)
+                for (int type = 0; type < 2; type++)
                 {
-                    line.Add(new MessageKeyboardButton()
+                    result[curCourse, type] = new List<MessageKeyboard>();
+                    List<string> groupNames = mapper.GetGroupNames(curCourse);
+                    int pagesAmount = (int)Math.Ceiling((double)groupNames.Count
+                        / (double)(linesInKeyboard * buttonsInLine));
+                    int curPage = 0;
+                    List<MessageKeyboardButton> line = new List<MessageKeyboardButton>();
+                    List<List<MessageKeyboardButton>> buttons = new List<List<MessageKeyboardButton>>();
+                    List<MessageKeyboardButton> serviceLine = new List<MessageKeyboardButton>();
+                    for (int curName = 0; curName < groupNames.Count; curName++)
                     {
-                        Color = KeyboardButtonColor.Primary,
-                        Action = new MessageKeyboardButtonAction
+                        line.Add(new MessageKeyboardButton()
                         {
-                            Type = KeyboardButtonActionType.Text,
-                            Label = groupNames[currentName],
-                            Payload = "{\"menu\":\"40\",\"act\":\"1\",\"course\":\"" + currentCourse + "\"}"
+                            Color = KeyboardButtonColor.Primary,
+                            Action = new MessageKeyboardButtonAction
+                            {
+                                Type = type == 0 ? KeyboardButtonActionType.Text : KeyboardButtonActionType.Callback,
+                                Label = groupNames[curName],
+                                Payload = "{\"menu\":\"40\",\"act\":\"1\",\"course\":\"" + curCourse + "\",\"group\":\"" + groupNames[curName] + "\"}"
+                            }
+                        });
+                        if (line.Count == buttonsInLine
+                            || (curName + 1 == groupNames.Count && line.Count != 0))
+                        {
+                            buttons.Add(new List<MessageKeyboardButton>(line));
+                            line.Clear();
                         }
-                    });
-                    if (line.Count == buttonsInLine
-                        || (currentName + 1 == groupNames.Count && line.Count != 0))
-                    {
-                        buttons.Add(new List<MessageKeyboardButton>(line));
-                        line.Clear();
-                    }
-                    if (buttons.Count == linesInKeyboard
-                        || (currentName + 1 == groupNames.Count && buttons.Count != 0))
-                    {
-                        serviceLine.Add(new MessageKeyboardButton()
+                        if (buttons.Count == linesInKeyboard
+                            || (curName + 1 == groupNames.Count && buttons.Count != 0))
                         {
-                            Color = KeyboardButtonColor.Default,
-                            Action = new MessageKeyboardButtonAction
+                            serviceLine.Add(new MessageKeyboardButton()
                             {
-                                Type = KeyboardButtonActionType.Text,
-                                Label = Constants.Labels.previousPage,
-                                Payload = "{\"menu\":\"40\",\"act\":\"2\",\"course\":\"" + currentCourse + "\",\"page\":\"" + currentPage + "\"}"
-                            }
-                        });
-                        serviceLine.Add(new MessageKeyboardButton()
-                        {
-                            Color = KeyboardButtonColor.Default,
-                            Action = new MessageKeyboardButtonAction
+                                Color = KeyboardButtonColor.Default,
+                                Action = new MessageKeyboardButtonAction
+                                {
+                                    Type = type == 0 ? KeyboardButtonActionType.Text : KeyboardButtonActionType.Callback,
+                                    Label = Constants.Labels.previousPage,
+                                    Payload = "{\"menu\":\"40\",\"act\":\"2\",\"course\":\"" + curCourse + "\",\"page\":\"" + curPage + "\"}"
+                                }
+                            });
+                            serviceLine.Add(new MessageKeyboardButton()
                             {
-                                Type = KeyboardButtonActionType.Text,
-                                Label = (currentPage + 1) + Constants.Labels.currentPageOfMaxDelimeter + pagesAmount,
-                                Payload = "{\"menu\":\"40\",\"act\":\"3\",\"course\":\"" + currentCourse + "\"}"
-                            }
-                        });
-                        serviceLine.Add(new MessageKeyboardButton()
-                        {
-                            Color = KeyboardButtonColor.Default,
-                            Action = new MessageKeyboardButtonAction
+                                Color = KeyboardButtonColor.Default,
+                                Action = new MessageKeyboardButtonAction
+                                {
+                                    Type = type == 0 ? KeyboardButtonActionType.Text : KeyboardButtonActionType.Callback,
+                                    Label = (curPage + 1) + Constants.Labels.currentPageOfMaxDelimeter + pagesAmount,
+                                    Payload = "{\"menu\":\"40\",\"act\":\"3\",\"course\":\"" + curCourse + "\"}"
+                                }
+                            });
+                            serviceLine.Add(new MessageKeyboardButton()
                             {
-                                Type = KeyboardButtonActionType.Text,
-                                Label = Constants.Labels.nextPage,
-                                Payload = "{\"menu\":\"40\",\"act\":\"4\",\"course\":\"" + currentCourse + "\",\"page\":\"" + currentPage + "\"}"
-                            }
-                        });
-                        buttons.Add(new List<MessageKeyboardButton>(serviceLine));
-                        serviceLine.Clear();
-                        result[currentCourse].Add(new MessageKeyboard
-                        {
-                            Buttons = new List<List<MessageKeyboardButton>>(buttons),
-                            OneTime = false
-                        });
-                        buttons.Clear();
-                        ++currentPage;
+                                Color = KeyboardButtonColor.Default,
+                                Action = new MessageKeyboardButtonAction
+                                {
+                                    Type = type == 0 ? KeyboardButtonActionType.Text : KeyboardButtonActionType.Callback,
+                                    Label = Constants.Labels.nextPage,
+                                    Payload = "{\"menu\":\"40\",\"act\":\"4\",\"course\":\"" + curCourse + "\",\"page\":\"" + curPage + "\"}"
+                                }
+                            });
+                            buttons.Add(new List<MessageKeyboardButton>(serviceLine));
+                            serviceLine.Clear();
+                            result[curCourse, type].Add(new MessageKeyboard
+                            {
+                                Buttons = new List<List<MessageKeyboardButton>>(buttons),
+                                OneTime = false
+                            });
+                            buttons.Clear();
+                            ++curPage;
+                        }
                     }
                 }
             }

@@ -50,7 +50,7 @@ namespace Schedulebot.Vk
             this.TextCommandsAttachments = new List<MediaAttachment>() { this.TextCommands };
             this.SubscribeInfoAttachments = new List<MediaAttachment>() { this.SubscribeInfo };
 
-            this.MenuKeyboards = new MessageKeyboard[6];
+            this.MenuKeyboards = new MessageKeyboard[12];
 
             this.MenuKeyboards[0] = new KeyboardBuilder(isOneTime: false)
                 .SetInline(false)
@@ -241,6 +241,199 @@ namespace Schedulebot.Vk
                     Label = Constants.Labels.back,
                     Payload = "{\"menu\":\"5\",\"act\":\"0\"}",
                     Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            // with callbacks
+            this.MenuKeyboards[6] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.schedule,
+                    Payload = "{\"menu\":\"0\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.whatWeek,
+                    Payload = "{\"menu\":\"0\",\"act\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.settings,
+                    Payload = "{\"menu\":\"0\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.about,
+                    Payload = "{\"menu\":\"0\",\"act\":\"4\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[7] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.info,
+                    Payload = "{\"menu\":\"1\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.weekSchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.todaySchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.tomorrowSchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"4\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"1\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[8] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.youAreNotSubscribed,
+                    Payload = "{\"menu\":\"2\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.subscribe,
+                    Payload = "{\"menu\":\"2\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Positive)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"2\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[9] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    //Label = "",
+                    Payload = "{\"menu\":\"2\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.unsubscribe,
+                    Payload = "{\"menu\":\"2\",\"act\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Negative)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.resubscribe,
+                    Payload = "{\"menu\":\"2\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Positive)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.changeSubgroup,
+                    Payload = "{\"menu\":\"2\",\"act\":\"4\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"2\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[10] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.chooseCourse,
+                    Payload = "{\"menu\":\"4\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.first,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.second,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.third,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.fourth,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"4\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[11] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.first,
+                    Payload = "{\"menu\":\"5\",\"act\":\"1\",\"subgroup\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.second,
+                    Payload = "{\"menu\":\"5\",\"act\":\"1\",\"subgroup\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"5\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
                 }, KeyboardButtonColor.Default)
                 .Build();
         }
