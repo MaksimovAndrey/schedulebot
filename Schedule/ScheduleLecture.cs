@@ -44,7 +44,7 @@ namespace Schedulebot.Schedule
             TimeEnd = parsedLecture.EndLesson;
 
             Subject = parsedLecture.Discipline;
-            LectureHall = parsedLecture.Auditorium;
+            LectureHall = parsedLecture.Auditorium + " (" + parsedLecture.Building + ")";
             Lecturer = parsedLecture.Lecturer;
 
             Type = parsedLecture.KindOfWork;
