@@ -71,7 +71,7 @@ namespace Schedulebot.Departments
                     {
                         --toCourse;
                         EnqueueMessage(
-                            userIds: userRepository.GetIds(toCourse, mapper),
+                            userIds: userRepository.GetIds(mapper.GetGroupNames(toCourse)),
                             message: temp.Substring(temp.IndexOf(' ') + 1));
                         EnqueueMessage(
                             userId: message.PeerId,

@@ -20,6 +20,6 @@ namespace Schedulebot.Users
         List<long> GetIds(string group);
         List<long> GetIds(string group, int subgroup);
         List<long> GetIds(List<(string, int)> oldGroupSubgroupList);
-        List<long> GetIds(int course, Mapping.Mapper mapper); // TODO: переделать, нельзя передавать маппер
+        List<long> GetIds(List<string> groupNames);
     }
 }

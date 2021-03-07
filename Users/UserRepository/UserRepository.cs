@@ -95,9 +95,8 @@ namespace Schedulebot.Users
             return ids;
         }
 
-        public List<long> GetIds(int course, Mapping.Mapper mapper)
+        public List<long> GetIds(List<string> groupNames)
         {
-            List<string> groupNames = mapper.GetGroupNames(course);
             List<long> ids = new List<long>();
             for (int currentUser = 0; currentUser < users.Count; currentUser++)
             {
