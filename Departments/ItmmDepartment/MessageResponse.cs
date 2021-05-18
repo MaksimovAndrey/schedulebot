@@ -622,7 +622,7 @@ namespace Schedulebot.Departments
             if (!CheckUser(userId, out UserMapping userMapping, callbackSupported, buttonMessage))
                 return;
 
-            if (CheckUpdates(userMapping).Result)
+            if (!CheckUpdates(userMapping).Result)
             {
                 EnqueueMessage(
                     userId: userId,
