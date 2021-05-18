@@ -27,6 +27,8 @@ namespace Schedulebot
 
         public ScheduleBot(ref List<Task> _tasks)
         {
+            client.Timeout = TimeSpan.FromSeconds(20);
+
             //! Пока один департамент будет так
             // TODO: переписать с restart department
             List<Task> tasks = new List<Task>();
