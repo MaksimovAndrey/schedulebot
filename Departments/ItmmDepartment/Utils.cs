@@ -37,7 +37,10 @@ namespace Schedulebot.Departments
         {
             courses[course].groups[group].IsUpdating = true;
             DateTime newUpdateTime = DateTime.Now;
+
             var newSchedule = GetNewSchedule(course, courses[course].groups[group].Name);
+            if (newSchedule is null)
+                return false;
 
             courses[course].groups[group].days = newSchedule;
             courses[course].groups[group].CheckForUploadedDays();
@@ -54,7 +57,17 @@ namespace Schedulebot.Departments
                 + "&finish=" + DateTime.Now.AddDays(8).ToString("yyyy'.'MM'.'dd")
                 + Constants.portalAPILangArg;
 
-            return Parser.ParseScheduleFromJson(ScheduleBot.client.GetStringAsync(url).Result);
+            string result;
+            try
+            {
+                result = ScheduleBot.client.GetStringAsync(url).Result;
+            }
+            catch
+            {
+                return null;
+            }
+
+            return Parser.ParseScheduleFromJson(result);
         }
 
         private void EnqueueEventAnswer(

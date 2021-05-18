@@ -162,6 +162,7 @@ namespace Schedulebot
         public const string drawPhotoError = "Не удалось нарисовать картинку, попробуйте позже";
         public const string pressAnotherButton = "Попробуйте нажать на другую кнопку";
         public const string unknownError = "Что-то пошло не так";
+        public const string unnAPIError = "API лобача не отвечает на запросы, информация может быть не актуальна!";
 
         public const string scheduleUpdatingMessage = 
             "Происходит обновление расписания, попробуйте через несколько минут";

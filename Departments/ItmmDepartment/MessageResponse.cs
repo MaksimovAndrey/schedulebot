@@ -561,7 +561,7 @@ namespace Schedulebot.Departments
             return true;
         }
 
-        private async void CheckUpdates(UserMapping userMapping)
+        private async Task<bool> CheckUpdates(UserMapping userMapping)
         {
             while (courses[userMapping.Course].groups[userMapping.GroupIndex].IsUpdating == true)
             {
@@ -569,8 +569,9 @@ namespace Schedulebot.Departments
             }
             if (DateTime.Now - courses[userMapping.Course].groups[userMapping.GroupIndex].LastTimeUpdated > TimeSpan.FromMinutes(180))
             {
-                UpdateGroupSchedule(userMapping.Course, userMapping.GroupIndex);
+                return UpdateGroupSchedule(userMapping.Course, userMapping.GroupIndex);
             }
+            return true;
         }
 
         private void ChangeSubgroupResponse(long userId, bool callbackSupported, bool buttonMessage = false)
@@ -621,7 +622,12 @@ namespace Schedulebot.Departments
             if (!CheckUser(userId, out UserMapping userMapping, callbackSupported, buttonMessage))
                 return;
 
-            CheckUpdates(userMapping);
+            if (CheckUpdates(userMapping).Result)
+            {
+                EnqueueMessage(
+                    userId: userId,
+                    message: Constants.unnAPIError);
+            }
 
             switch (type)
             {
