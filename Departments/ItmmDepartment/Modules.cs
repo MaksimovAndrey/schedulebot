@@ -178,18 +178,13 @@ namespace Schedulebot.Departments
             HtmlDocument htmlDocument;
             while (true)
             {
-                try
-                {
-                    htmlDocument = await relevance.DownloadHtmlDocument(Constants.websiteUrl);
+                htmlDocument = await relevance.DownloadHtmlDocument(Constants.websiteUrl);
 
-                    DateTime dt = DateTime.Now;
-                    importantInfo = "От " + dt.ToString() + "\n\n" + relevance.ParseInformation(htmlDocument);
-                }
-                finally
-                {
-                    htmlDocument = null;
-                    await Task.Delay(Constants.loadWebsiteDelay);
-                }
+                DateTime dt = DateTime.Now;
+                importantInfo = "От " + dt.ToString() + "\n\n" + relevance.ParseInformation(htmlDocument);
+
+                htmlDocument = null;
+                await Task.Delay(Constants.loadWebsiteDelay);
             }
         }
 
