@@ -83,7 +83,7 @@ namespace Schedulebot.Departments
 
             mapper = new Mapper(courses);
 
-            relevance = new RelevanceItmm(Path, Path + Constants.defaultDownloadFolder);
+            relevance = new RelevanceItmm(Path);
 
             LoadSettings(Path + Constants.settingsFilename);
 

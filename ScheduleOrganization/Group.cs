@@ -1,8 +1,6 @@
 using Schedulebot.Schedule;
-using Schedulebot.Vk;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Schedulebot
 {

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 
 namespace Schedulebot.Schedule
@@ -79,7 +78,7 @@ namespace Schedulebot.Schedule
 
         public static bool operator ==(ScheduleDay day1, ScheduleDay day2)
         {
-            if (day1.Date != day2.Date 
+            if (day1.Date != day2.Date
                 || day1.lectures.Count != day2.lectures.Count)
                 return false;
             for (int i = 0; i < day1.lectures.Count; ++i)

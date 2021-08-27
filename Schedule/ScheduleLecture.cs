@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text;
-using Schedulebot.Parsing.Enums;
 
 namespace Schedulebot.Schedule
 {
