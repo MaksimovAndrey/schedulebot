@@ -1,14 +1,7 @@
-﻿using System;
+﻿using OfficeOpenXml;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using OfficeOpenXml;
-using System.IO;
-
-using System.Drawing.Text;
-
-using Newtonsoft.Json;
-using Schedulebot.Schedule;
-using System.Drawing;
 
 namespace Schedulebot
 {

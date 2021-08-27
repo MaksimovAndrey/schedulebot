@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using System.IO;
-using Newtonsoft.Json;
-using System.Threading.Tasks;
-using VkNet.Model.Keyboard;
 using VkNet.Enums.SafetyEnums;
+using VkNet.Model.Keyboard;
 
 namespace Schedulebot.Departments.Utils
 {

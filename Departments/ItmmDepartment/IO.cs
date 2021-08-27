@@ -1,7 +1,4 @@
-﻿using Schedulebot.Mapping.Utils;
-using Schedulebot.Users;
-using System;
-using System.Collections.Generic;
+﻿using Schedulebot.Users;
 using System.IO;
 using System.Text;
 

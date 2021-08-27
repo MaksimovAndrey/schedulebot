@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using Schedulebot.Mapping.Utils;
+using System.Collections.Generic;
 
 namespace Schedulebot.Mapping
 {

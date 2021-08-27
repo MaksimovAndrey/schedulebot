@@ -1,6 +1,4 @@
 ﻿using HtmlAgilityPack;
-using Schedulebot.Schedule.Relevance;
-using Schedulebot.Mapping.Utils;
 using Schedulebot.Users;
 using Schedulebot.Vk;
 using System;
@@ -13,8 +11,8 @@ using VkNet.Enums.SafetyEnums;
 using VkNet.Exception;
 using VkNet.Model;
 using VkNet.Model.Attachments;
-using VkNet.Model.RequestParams;
 using VkNet.Model.GroupUpdate;
+using VkNet.Model.RequestParams;
 
 namespace Schedulebot.Departments
 {

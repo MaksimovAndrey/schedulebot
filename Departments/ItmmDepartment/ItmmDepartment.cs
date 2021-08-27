@@ -1,21 +1,14 @@
-#define DONT_CHECK_CHANGES
-
-using Newtonsoft.Json;
-using Schedulebot.Schedule.Relevance;
 using Schedulebot.Mapping;
-using Schedulebot.Mapping.Utils;
+using Schedulebot.Schedule.Relevance;
 using Schedulebot.Users;
 using Schedulebot.Vk;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using VkNet.Model;
-using VkNet.Model.Keyboard;
 using System.Linq;
+using System.Threading.Tasks;
 using VkNet.Model.GroupUpdate;
+using VkNet.Model.Keyboard;
 
 namespace Schedulebot.Departments
 {
@@ -33,7 +26,7 @@ namespace Schedulebot.Departments
         private int CoursesCount { get; } = 4;
         private readonly Course[] courses = new Course[4];
         private List<Dictionary<string, long>> dictionaries;
-        
+
         private List<MessageKeyboard>[,] CoursesKeyboards { get; set; }
 
         private readonly VkStuff vkStuff;

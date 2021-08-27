@@ -1,7 +1,4 @@
-﻿using Schedulebot.Parsing.Enums;
-using Schedulebot.Schedule;
-using SixLabors.Fonts;
-using System.Drawing;
+﻿using SixLabors.Fonts;
 
 namespace Schedulebot.Drawing.Utils
 {

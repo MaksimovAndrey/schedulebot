@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿#define TEST_CFG
 
 namespace Schedulebot
 {
@@ -95,16 +93,6 @@ namespace Schedulebot
                 public const string first = "1";
                 public const string second = "2";
             }
-            //public const string = ;
-            //public const string = ;
-            //public const string = ;
-            //public const string = ;
-            //public const string = ;
-            //public const string = ;
-            //public const string = ;
-            //public const string = ;
-            //public const string = ;
-
         }
 
         #region ScheduleBot
@@ -164,7 +152,7 @@ namespace Schedulebot
         public const string unknownError = "Что-то пошло не так";
         public const string unnAPIError = "API лобача не отвечает на запросы, информация может быть не актуальна!";
 
-        public const string scheduleUpdatingMessage = 
+        public const string scheduleUpdatingMessage =
             "Происходит обновление расписания, попробуйте через несколько минут";
         public const string unknownUserWithPayloadMessage =
             "Вы не настроили свою группу, тут можете настроить, нажмите на кнопку подписаться";
@@ -185,7 +173,8 @@ namespace Schedulebot
         public const string uploadedScheduleFilename = "uploadedSchedule.txt";
 
         public const string dictionariesFilename = "dictionaries.txt";
-#if DEBUG
+
+#if !RELEASE && TEST_CFG
         public const string settingsFilename = "settings-.txt";
 #else
         public const string settingsFilename = "settings.txt";

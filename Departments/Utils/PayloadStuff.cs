@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Schedulebot.Departments.Utils
+﻿namespace Schedulebot.Departments.Utils
 {
     public class PayloadStuff
     {

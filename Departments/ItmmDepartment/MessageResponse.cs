@@ -1,21 +1,20 @@
 ﻿using Newtonsoft.Json;
+using Schedulebot.Departments.Enums;
+using Schedulebot.Departments.Utils;
 using Schedulebot.Mapping.Utils;
 using Schedulebot.Users;
 using Schedulebot.Users.Enums;
-using Schedulebot.Departments.Utils;
 using Schedulebot.Utils;
 using Schedulebot.Vk;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using VkNet.Model;
 using VkNet.Model.Attachments;
-using VkNet.Model.Keyboard;
 using VkNet.Model.GroupUpdate;
-using Schedulebot.Departments.Enums;
+using VkNet.Model.Keyboard;
 
 namespace Schedulebot.Departments
 {
@@ -401,7 +400,7 @@ namespace Schedulebot.Departments
             if (uppercaseMessage.IndexOf(Constants.subscribeSign) == 0)
             {
                 TextCommandSubscribeResponse(message.Text, message.PeerId.Value);
-            } 
+            }
             else if (Constants.textInfoCommand.Contains(uppercaseMessage))
             {
                 InfoResponse(message.PeerId.Value);

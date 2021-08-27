@@ -1,15 +1,14 @@
-using System;
-using System.Collections.Generic;
 using HtmlAgilityPack;
-using System.Threading.Tasks;
-using System.Text.RegularExpressions;
-using System.Net.Http;
+using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace Schedulebot.Schedule.Relevance
 {
     public class RelevanceItmm : IRelevance
-    {        
+    {
         public DatesAndUrls DatesAndUrls { get; }
 
         private string Path { get; }
@@ -57,10 +56,10 @@ namespace Schedulebot.Schedule.Relevance
                 List<(int, List<int>)> toUpdate = new List<(int, List<int>)>();
 
                 for (int currentMatchResult = 0; currentMatchResult < matсhes.Count; currentMatchResult++)
-                {   
+                {
                     try
-                    {  
-                        string dateAndUrlsHere;        
+                    {
+                        string dateAndUrlsHere;
                         if (currentMatchResult != matсhes.Count - 1)
                         {
                             int startIndex = nodeInnerHtml.IndexOf(matсhes[currentMatchResult].Value) + matсhes[currentMatchResult].Value.Length;
@@ -83,7 +82,7 @@ namespace Schedulebot.Schedule.Relevance
                         if (indexOfOt != -1)
                             date = date.Substring(indexOfOt + 2);
                         date = date.Trim();
-   
+
                         int realCourse;
                         if (int.TryParse(Regex.Match(matсhes[currentMatchResult].Value, "\\d").Value, out realCourse))
                         {
@@ -102,7 +101,7 @@ namespace Schedulebot.Schedule.Relevance
 
                         List<int> fileIndexesToUpdate = new List<int>();
 
-                        while(DatesAndUrls.urls[realCourse].Count > urls.Count)
+                        while (DatesAndUrls.urls[realCourse].Count > urls.Count)
                             DatesAndUrls.urls[realCourse].RemoveAt(DatesAndUrls.urls[realCourse].Count - 1);
 
                         if (date != DatesAndUrls.dates[realCourse])
@@ -192,7 +191,7 @@ namespace Schedulebot.Schedule.Relevance
             }
             return true;
         }
-        
+
         public async Task<HtmlDocument> DownloadHtmlDocument(string websiteUrl)
         {
             HtmlWeb htmlWeb = new HtmlWeb();
@@ -200,7 +199,7 @@ namespace Schedulebot.Schedule.Relevance
             {
                 return await htmlWeb.LoadFromWebAsync(websiteUrl);
             }
-            catch 
+            catch
             {
                 //! ошибка загрузки страницы
                 return null;

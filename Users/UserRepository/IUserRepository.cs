@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using Schedulebot.Users.Enums;
+using System.Collections.Generic;
 
 
 namespace Schedulebot.Users

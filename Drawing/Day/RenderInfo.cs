@@ -1,5 +1,4 @@
-﻿using Schedulebot.Drawing.Utils;
-using SixLabors.Fonts;
+﻿using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
@@ -58,7 +57,7 @@ namespace Schedulebot.Drawing.Day
         public const int timeCenterX = Border.size + timeWidth / 2;
         public const int timeEndPosX = Border.size + timeWidth;
         public const int cellStartPosX = Border.size + timeWidth + Line.size;
-        
+
 
         public const int cellCenterX = cellStartPosX + cellWidth / 2;
 

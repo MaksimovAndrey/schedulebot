@@ -1,15 +1,10 @@
-﻿using Schedulebot.Schedule;
-using System.Linq;
-using Schedulebot.Drawing.Utils;
-using Schedulebot.Parsing.Enums;
+﻿using Schedulebot.Drawing.Utils;
+using Schedulebot.Schedule;
+using SixLabors.Fonts;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Metadata;
-using SixLabors.ImageSharp.Drawing;
-using SixLabors.Fonts;
+using SixLabors.ImageSharp.Processing;
 using System.Numerics;
 
 namespace Schedulebot.Drawing.Day

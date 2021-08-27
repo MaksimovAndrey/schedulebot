@@ -1,8 +1,8 @@
-using System;
-using System.IO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using System;
+using System.IO;
 
 namespace Schedulebot.Utils
 {
@@ -18,7 +18,6 @@ namespace Schedulebot.Utils
             else
                 return lecturesCount.ToString() + " пар";
         }
-        
 
         public static string DayOfWeekToString(DayOfWeek dayOfWeek)
         {

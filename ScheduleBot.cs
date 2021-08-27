@@ -1,10 +1,10 @@
+using Schedulebot.Departments;
+using SixLabors.ImageSharp;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Schedulebot.Departments;
-using SixLabors.ImageSharp;
 
 namespace Schedulebot
 {

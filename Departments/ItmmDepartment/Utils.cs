@@ -1,33 +1,14 @@
-﻿using HtmlAgilityPack;
-using Newtonsoft.Json;
-using Schedulebot.Schedule.Relevance;
-using Schedulebot.Mapping;
-using Schedulebot.Mapping.Utils;
-using Schedulebot.Users;
-using Schedulebot.Users.Enums;
-using Schedulebot.Departments.Utils;
-using Schedulebot.Utils;
-using Schedulebot.Vk;
+﻿using Newtonsoft.Json;
+using Schedulebot.Parsing;
+using Schedulebot.Schedule;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using VkNet.Enums.SafetyEnums;
-using VkNet.Exception;
 using VkNet.Model;
 using VkNet.Model.Attachments;
 using VkNet.Model.Keyboard;
-using VkNet.Model.RequestParams;
-using Schedulebot;
-using Schedulebot.Schedule;
-using Schedulebot.Parsing;
 using VkNet.Utils;
-using VkNet.Model.Template;
 
 namespace Schedulebot.Departments
 {
