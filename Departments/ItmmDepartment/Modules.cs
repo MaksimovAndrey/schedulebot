@@ -18,13 +18,8 @@ using VkNet.Model.GroupUpdate;
 
 namespace Schedulebot.Departments
 {
-    public partial class DepartmentItmm : IDepartment
+    public partial class DepartmentItmm : Department
     {
-        public void SaveUsers()
-        {
-            IUserRepositorySaver.Save(userRepository, Path + Constants.userRepositoryFilename);
-        }
-
         private async Task SaveUsersAsync()
         {
             string filename = Path + Constants.userRepositoryFilename;

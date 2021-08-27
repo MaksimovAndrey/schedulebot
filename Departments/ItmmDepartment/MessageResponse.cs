@@ -19,7 +19,7 @@ using Schedulebot.Departments.Enums;
 
 namespace Schedulebot.Departments
 {
-    public partial class DepartmentItmm : IDepartment
+    public partial class DepartmentItmm : Department
     {
         private void ResponseMessageEvent(MessageEvent messageEvent)
         {

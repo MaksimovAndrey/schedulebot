@@ -31,7 +31,7 @@ using VkNet.Model.Template;
 
 namespace Schedulebot.Departments
 {
-    public partial class DepartmentItmm : IDepartment
+    public partial class DepartmentItmm : Department
     {
         private bool UpdateGroupSchedule(int course, int group)
         {

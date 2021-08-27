@@ -19,7 +19,7 @@ using VkNet.Model.GroupUpdate;
 
 namespace Schedulebot.Departments
 {
-    public partial class DepartmentItmm : IDepartment
+    public partial class DepartmentItmm : Department
     {
         private string Path { get; }
 
@@ -119,7 +119,7 @@ namespace Schedulebot.Departments
                 tasks.Add(StartRelevanceModule());
                 EnqueueMessage(
                     userId: vkStuff.AdminId,
-                    message: DateTime.Now.ToString() + " | Запустил CheckRelevance"
+                    message: DateTime.Now.ToString() + " | Запустил RelevanceModule"
                 );
             }
         }
