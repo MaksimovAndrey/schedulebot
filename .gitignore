@@ -16,3 +16,5 @@
 __*
 *_old.*
 .editorconfig
+/Schedulebot.csproj.user
+/Properties/PublishProfiles
