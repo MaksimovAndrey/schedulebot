@@ -27,7 +27,7 @@ namespace Schedulebot.Utils
 
         public static string WeekToString(int week) // Определение недели (верхняя или нижняя)
         {
-            return week == 0 ? "Верхняя" : "Нижняя";
+            return week == 0 ? Constants.upperWeek : Constants.downWeek;
         }
 
         private static IImageEncoder ImageEncoder { get; } = new JpegEncoder();

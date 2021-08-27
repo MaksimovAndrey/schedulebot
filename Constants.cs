@@ -128,6 +128,9 @@ namespace Schedulebot
             }
         }
 
+        public const string upperWeek = "Верхняя";
+        public const string downWeek = "Нижняя";
+
         public const string todayIsSunday = "Сегодня воскресенье";
         public const string scheduleForToday = "Расписание на сегодня";
         public const string scheduleForTomorrow = "Расписание на завтра";
