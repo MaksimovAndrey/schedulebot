@@ -49,9 +49,7 @@ namespace Schedulebot.Utils
         /// </returns>
         public static int TimeToInt(string time)
         {
-            if (time == "")
-                return 0;
-            if (time.Contains(':'))
+            if (time.Length >= 3 && time.Contains(':'))
             {
                 time = time.Replace(":", "");
                 if (int.TryParse(time, out int timeInt))
