@@ -686,7 +686,7 @@ namespace Schedulebot.Departments
                 sendAsNewMessage: !isEvent,
                 editingEnabled: isEvent,
                 userId: userId,
-                message: userRepository.Delete(userId) ? unsubscribeSuccess : cantUnsubscribe,
+                message: userRepository.Disable(userId) ? unsubscribeSuccess : cantUnsubscribe,
                 keyboardId: messageFromKeyboard ? (int?)(callbackSupported ? (2 + Constants.keyboardsCount) : 2) : null);
         }
 
@@ -701,7 +701,7 @@ namespace Schedulebot.Departments
 
         private bool CheckUser(long userId, out UserMapping userMapping, bool callbackSupported, bool messageFromKeyboard, bool isEvent)
         {
-            if (!userRepository.Get(userId, out Users.User user))
+            if (!userRepository.TryGet(userId, out Users.User user) || !user.IsActive)
             {
                 if (messageFromKeyboard)
                 {
@@ -757,7 +757,7 @@ namespace Schedulebot.Departments
 
         private void ChangeSubgroupResponse(long userId, bool callbackSupported, bool messageFromKeyboard, bool isEvent)
         {
-            if (userRepository.ChangeSubgroup(userId, out Users.User user))
+            if (userRepository.TryChangeSubgroup(userId, out Users.User user))
             {
                 MessageKeyboard keyboardCustom;
                 keyboardCustom = vkStuff.MenuKeyboards[callbackSupported ? 3 + Constants.keyboardsCount : 3];
@@ -784,7 +784,7 @@ namespace Schedulebot.Departments
 
         private void SettingsResponse(long? peerId, bool callbackSupported, bool isEvent)
         {
-            if (userRepository.Get(peerId, out Users.User user))
+            if (userRepository.TryGet(peerId, out Users.User user) && user.IsActive)
             {
                 MessageKeyboard keyboardCustom = vkStuff.MenuKeyboards[callbackSupported ? 3 + Constants.keyboardsCount : 3];
                 keyboardCustom.Buttons.First().First().Action.Label =

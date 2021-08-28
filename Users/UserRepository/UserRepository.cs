@@ -13,7 +13,7 @@ namespace Schedulebot.Users
             this.users = new List<User>();
         }
 
-        public AddOrEditResult AddOrEdit(long? id, string group, int subgroup)
+        public AddOrEditResult AddOrEdit(long? id, string group, int subgroup, bool isActive = true)
         {
             for (int i = 0; i < users.Count; i++)
             {
@@ -21,10 +21,11 @@ namespace Schedulebot.Users
                 {
                     users[i].Group = group;
                     users[i].Subgroup = subgroup;
+                    users[i].IsActive = isActive;
                     return AddOrEditResult.Edited;
                 }
             }
-            users.Add(new User((long)id, group, subgroup));
+            users.Add(new User((long)id, group, subgroup, isActive: isActive));
             return AddOrEditResult.Added;
         }
 
@@ -74,7 +75,7 @@ namespace Schedulebot.Users
             }
         }
 
-        public bool Get(long? id, out User user)
+        public bool TryGet(long? id, out User user)
         {
             for (int currentUser = 0; currentUser < users.Count; currentUser++)
             {
@@ -88,66 +89,46 @@ namespace Schedulebot.Users
             return false;
         }
 
-        public List<long> GetIds()
+        public List<long> GetIds(bool onlyActive = true)
         {
             List<long> ids = new List<long>();
             for (int currentUser = 0; currentUser < users.Count; currentUser++)
             {
-                ids.Add(users[currentUser].Id);
-            }
-            return ids;
-        }
-
-        public List<long> GetIds(List<(string, int)> oldGroupSubgroupList)
-        {
-            List<long> ids = new List<long>();
-            for (int currentUser = 0; currentUser < users.Count; currentUser++)
-            {
-                for (int currentOldGroupSubgroup = 0; currentOldGroupSubgroup < oldGroupSubgroupList.Count; currentOldGroupSubgroup++)
-                {
-                    if (users[currentUser].Group == oldGroupSubgroupList[currentOldGroupSubgroup].Item1
-                        && users[currentUser].Subgroup == oldGroupSubgroupList[currentOldGroupSubgroup].Item2)
-                    {
-                        ids.Add(users[currentUser].Id);
-                        break;
-                    }
-                }
-            }
-            return ids;
-        }
-
-        public List<long> GetIds(List<string> groupNames)
-        {
-            List<long> ids = new List<long>();
-            for (int currentUser = 0; currentUser < users.Count; currentUser++)
-            {
-                if (groupNames.Contains(users[currentUser].Group))
+                if (users[currentUser].IsActive || !onlyActive)
                     ids.Add(users[currentUser].Id);
             }
             return ids;
         }
 
-        public List<long> GetIds(string group)
+        public List<long> GetIds(List<string> groupNames, bool onlyActive)
         {
             List<long> ids = new List<long>();
             for (int currentUser = 0; currentUser < users.Count; currentUser++)
             {
-                if (users[currentUser].Group == group)
+                if (groupNames.Contains(users[currentUser].Group) && (users[currentUser].IsActive || !onlyActive))
                     ids.Add(users[currentUser].Id);
             }
             return ids;
         }
 
-        public List<long> GetIds(string group, int subgroup)
+        public List<long> GetIds(string group, bool onlyActive = true)
+        {
+            List<long> ids = new List<long>();
+            for (int currentUser = 0; currentUser < users.Count; currentUser++)
+            {
+                if (users[currentUser].Group == group && (users[currentUser].IsActive || !onlyActive))
+                    ids.Add(users[currentUser].Id);
+            }
+            return ids;
+        }
+
+        public List<long> GetIds(string group, int subgroup, bool onlyActive = true)
         {
             List<long> ids = new List<long>();
             for (int i = 0; i < users.Count; i++)
-            {
-                if (users[i].Group == group && users[i].Subgroup == subgroup)
-                {
+                if (users[i].Group == group && users[i].Subgroup == subgroup && (users[i].IsActive || !onlyActive))
                     ids.Add(users[i].Id);
-                }
-            }
+
             return ids;
         }
 
@@ -156,54 +137,71 @@ namespace Schedulebot.Users
             users.Add(user);
         }
 
-        public void AddUser(long id, string group, int subgroup)
+        public void Add(long id, string group, int subgroup, long lastMessageId = 0, bool isActive = true)
         {
-            users.Add(new User(id, group, subgroup));
+            users.Add(new User(id, group, subgroup, lastMessageId, isActive));
         }
 
         /// <summary>
-        /// Удаляет пользователя из базы
+        /// Изменяет статус пользователя на "Неактивный"
         /// </summary>
         /// <param name="id">Vk Id пользователя</param>
         /// <returns>
-        /// <see langword="true"/> если пользователь удалён
-        /// <br><see langword="false"/> если пользователя не было в базе</br>
+        /// <see langword="true"/> если статус пользователя изменен
+        /// <br><see langword="false"/> если пользователя не было в базе или статус пользователя "Неактивный"</br>
         /// </returns>
-        public bool Delete(long? id)
+        public bool Disable(long? id)
         {
             for (int i = 0; i < users.Count; i++)
             {
                 if (users[i].Id == id)
                 {
-                    users.RemoveAt(i);
-                    return true;
+                    if (users[i].IsActive)
+                    {
+                        users[i].IsActive = false;
+                        return true;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
             return false;
         }
 
-        public bool ChangeSubgroup(long? id, out User user)
+        public bool TryChangeSubgroup(long? id, out User user)
         {
             for (int i = 0; i < users.Count; i++)
             {
                 if (users[i].Id == id)
                 {
-                    users[i].Subgroup = users[i].Subgroup % 2 + 1;
-                    user = users[i];
-                    return true;
+                    if (users[i].IsActive)
+                    {
+                        users[i].Subgroup = users[i].Subgroup % 2 + 1;
+                        user = users[i];
+                        return true;
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
             user = null;
             return false;
         }
 
-        public bool Contains(long? id)
+        public bool Contains(long? id, bool onlyActive = true)
         {
             for (int i = 0; i < users.Count; i++)
             {
                 if (users[i].Id == id)
                 {
-                    return true;
+                    if (onlyActive && !users[i].IsActive)
+                        return false;
+                    else
+                        return true;
                 }
             }
             return false;
