@@ -68,7 +68,7 @@ namespace Schedulebot
             public const string settings = "Настройки";
             public const string about = "О боте";
 
-            public const string info = "Информация с сайта";
+            public const string info = "Информация";
             public const string weekSchedule = "На неделю";
             public const string todaySchedule = "На сегодня";
             public const string tomorrowSchedule = "На завтра";
