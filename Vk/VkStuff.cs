@@ -161,6 +161,7 @@ namespace Schedulebot.Vk
                     Type = KeyboardButtonActionType.Text
                 }, KeyboardButtonColor.Positive)
                 .AddLine()
+                /* Отключаем кнопку изменения подгруппы
                 .AddButton(new MessageKeyboardButtonAction()
                 {
                     Label = Constants.Labels.changeSubgroup,
@@ -168,6 +169,7 @@ namespace Schedulebot.Vk
                     Type = KeyboardButtonActionType.Text
                 }, KeyboardButtonColor.Default)
                 .AddLine()
+                */
                 .AddButton(new MessageKeyboardButtonAction()
                 {
                     Label = Constants.Labels.back,
@@ -354,6 +356,7 @@ namespace Schedulebot.Vk
                     Type = KeyboardButtonActionType.Callback
                 }, KeyboardButtonColor.Positive)
                 .AddLine()
+                /* Отключаем кнопку изменения подгруппы
                 .AddButton(new MessageKeyboardButtonAction()
                 {
                     Label = Constants.Labels.changeSubgroup,
@@ -361,6 +364,7 @@ namespace Schedulebot.Vk
                     Type = KeyboardButtonActionType.Callback
                 }, KeyboardButtonColor.Default)
                 .AddLine()
+                */
                 .AddButton(new MessageKeyboardButtonAction()
                 {
                     Label = Constants.Labels.back,

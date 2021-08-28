@@ -87,14 +87,14 @@ namespace Schedulebot.Departments
             bool editingEnabled,
             long? userId = null,
             List<long> userIds = null,
-            string message = Constants.defaultMessage,
+            string message = null,
             List<MediaAttachment> attachments = null,
             int? keyboardId = null,
             MessageKeyboard customKeyboard = null)
         {
             VkParameters vkParameters = new VkParameters
             {
-                { "message", message },
+                { "message", message is null ? Constants.defaultMessage : message },
                 { "random_id", (int)DateTime.Now.Ticks }
             };
             CommandType type;

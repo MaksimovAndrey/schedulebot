@@ -182,7 +182,7 @@ namespace Schedulebot.Departments
                             return;
                         case 3:
                             SettingsResponse(
-                                peerId: userId,
+                                userId: userId,
                                 callbackSupported: callbackSupported,
                                 isEvent: isEvent);
                             return;
@@ -309,7 +309,7 @@ namespace Schedulebot.Departments
                     {
                         case 0:
                             SettingsResponse(
-                                peerId: userId,
+                                userId: userId,
                                 callbackSupported: callbackSupported,
                                 isEvent: isEvent);
                             return;
@@ -374,6 +374,7 @@ namespace Schedulebot.Departments
                     {
                         case 1:
                         {
+                            /* Отключаем выбор подгруппы
                             MessageKeyboard customKeyboard;
                             customKeyboard = vkStuff.MenuKeyboards[callbackSupported ? 5 + Constants.keyboardsCount : 5];
                             StringBuilder stringBuilder = new StringBuilder();
@@ -395,6 +396,14 @@ namespace Schedulebot.Departments
                                 userId: userId,
                                 message: Constants.Messages.Menu.chooseSubgroup,
                                 customKeyboard: customKeyboard);
+                            return;
+                            */
+                            SubscribeResponse(
+                                userId: userId,
+                                group: payload.Group,
+                                messageFromKeyboard: true,
+                                callbackSupported: callbackSupported,
+                                isEvent: isEvent);
                             return;
                         }
                         case 2:
@@ -611,12 +620,11 @@ namespace Schedulebot.Departments
             }
             messageBuilder.Append(Utils.Utils.ConstructGroupSubgroup(group, subgroup));
 
-            EnqueueMessage(
-                sendAsNewMessage: !isEvent,
-                editingEnabled: isEvent,
+            SettingsResponse(
+                callbackSupported: callbackSupported,
+                isEvent: isEvent,
                 userId: userId,
-                message: messageBuilder.ToString(),
-                keyboardId: messageFromKeyboard ? (int?)(callbackSupported ? 0 + Constants.keyboardsCount : 0) : null);
+                message: messageBuilder.ToString());
         }
 
         private void SubscribeMessageResponse(long userId, bool messageFromKeyboard, bool callbackSupported, bool isEvent)
@@ -782,9 +790,9 @@ namespace Schedulebot.Departments
             }
         }
 
-        private void SettingsResponse(long? peerId, bool callbackSupported, bool isEvent)
+        private void SettingsResponse(long? userId, bool callbackSupported, bool isEvent, string message = null)
         {
-            if (userRepository.TryGet(peerId, out Users.User user) && user.IsActive)
+            if (userRepository.TryGet(userId, out Users.User user) && user.IsActive)
             {
                 MessageKeyboard keyboardCustom = vkStuff.MenuKeyboards[callbackSupported ? 3 + Constants.keyboardsCount : 3];
                 keyboardCustom.Buttons.First().First().Action.Label =
@@ -793,7 +801,8 @@ namespace Schedulebot.Departments
                 EnqueueMessage(
                     sendAsNewMessage: !isEvent,
                     editingEnabled: isEvent,
-                    userId: peerId,
+                    message: message,
+                    userId: userId,
                     customKeyboard: keyboardCustom);
             }
             else
@@ -801,7 +810,8 @@ namespace Schedulebot.Departments
                 EnqueueMessage(
                     sendAsNewMessage: !isEvent,
                     editingEnabled: isEvent,
-                    userId: peerId,
+                    message: message,
+                    userId: userId,
                     keyboardId: callbackSupported ? 2 + Constants.keyboardsCount : 2);
             }
         }

@@ -95,12 +95,15 @@ namespace Schedulebot.Departments.Utils
 
         public static string ConstructGroupSubgroup(string group, int subgroup)
         {
+            /* Отключаем отображение подгруппы
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.Append(group);
             stringBuilder.Append(" (");
             stringBuilder.Append(subgroup);
             stringBuilder.Append(')');
             return stringBuilder.ToString();
+            */
+            return group;
         }
     }
 }
