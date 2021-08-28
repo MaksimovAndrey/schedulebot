@@ -1,6 +1,5 @@
 ﻿using HtmlAgilityPack;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Schedulebot.Commands;
 using Schedulebot.Users;
 using Schedulebot.Vk;
@@ -16,6 +15,7 @@ using VkNet.Model;
 using VkNet.Model.Attachments;
 using VkNet.Model.GroupUpdate;
 using VkNet.Model.RequestParams;
+using VkNet.Utils;
 
 namespace Schedulebot.Departments
 {
@@ -192,9 +192,18 @@ namespace Schedulebot.Departments
 #if DEBUG
                         Console.WriteLine(executeCode.ToString());
 #endif
-                        var response = vkStuff.Api.Execute.Execute(executeCode.ToString());
+                        VkResponse response;
+                        try
+                        {
+                            response = vkStuff.Api.Execute.Execute(executeCode.ToString());
+                        }
+                        catch
+                        {
+                            response = null;
+                        }
 
-                        ProcessExecutionResponse(response);
+                        if (response != null)
+                            ProcessExecutionResponse(response);
 
                         timer = 0;
                         commandsInRequestAmount = 0;
