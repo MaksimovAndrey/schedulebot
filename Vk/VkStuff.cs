@@ -59,7 +59,7 @@ namespace Schedulebot.Vk
                 }, KeyboardButtonColor.Default)
                 .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Label = Constants.Labels.whatWeek,
+                    Label = Constants.Labels.info,
                     Payload = "{\"menu\":\"0\",\"act\":\"2\"}",
                     Type = KeyboardButtonActionType.Text
                 }, KeyboardButtonColor.Default)
@@ -82,28 +82,21 @@ namespace Schedulebot.Vk
                 .SetInline(false)
                 .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Label = Constants.Labels.info,
+                    Label = Constants.Labels.weekSchedule,
                     Payload = "{\"menu\":\"1\",\"act\":\"1\"}",
                     Type = KeyboardButtonActionType.Text
                 }, KeyboardButtonColor.Default)
                 .AddLine()
                 .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Label = Constants.Labels.weekSchedule,
-                    Payload = "{\"menu\":\"1\",\"act\":\"2\"}",
-                    Type = KeyboardButtonActionType.Text
-                }, KeyboardButtonColor.Default)
-                .AddLine()
-                .AddButton(new MessageKeyboardButtonAction()
-                {
                     Label = Constants.Labels.todaySchedule,
-                    Payload = "{\"menu\":\"1\",\"act\":\"3\"}",
+                    Payload = "{\"menu\":\"1\",\"act\":\"2\"}",
                     Type = KeyboardButtonActionType.Text
                 }, KeyboardButtonColor.Default)
                 .AddButton(new MessageKeyboardButtonAction()
                 {
                     Label = Constants.Labels.tomorrowSchedule,
-                    Payload = "{\"menu\":\"1\",\"act\":\"4\"}",
+                    Payload = "{\"menu\":\"1\",\"act\":\"3\"}",
                     Type = KeyboardButtonActionType.Text
                 }, KeyboardButtonColor.Default)
                 .AddLine()
@@ -254,7 +247,7 @@ namespace Schedulebot.Vk
                 }, KeyboardButtonColor.Default)
                 .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Label = Constants.Labels.whatWeek,
+                    Label = Constants.Labels.info,
                     Payload = "{\"menu\":\"0\",\"act\":\"2\"}",
                     Type = KeyboardButtonActionType.Callback
                 }, KeyboardButtonColor.Default)
@@ -277,28 +270,21 @@ namespace Schedulebot.Vk
                 .SetInline(false)
                 .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Label = Constants.Labels.info,
+                    Label = Constants.Labels.weekSchedule,
                     Payload = "{\"menu\":\"1\",\"act\":\"1\"}",
                     Type = KeyboardButtonActionType.Callback
                 }, KeyboardButtonColor.Default)
                 .AddLine()
                 .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Label = Constants.Labels.weekSchedule,
-                    Payload = "{\"menu\":\"1\",\"act\":\"2\"}",
-                    Type = KeyboardButtonActionType.Callback
-                }, KeyboardButtonColor.Default)
-                .AddLine()
-                .AddButton(new MessageKeyboardButtonAction()
-                {
                     Label = Constants.Labels.todaySchedule,
-                    Payload = "{\"menu\":\"1\",\"act\":\"3\"}",
+                    Payload = "{\"menu\":\"1\",\"act\":\"2\"}",
                     Type = KeyboardButtonActionType.Callback
                 }, KeyboardButtonColor.Default)
                 .AddButton(new MessageKeyboardButtonAction()
                 {
                     Label = Constants.Labels.tomorrowSchedule,
-                    Payload = "{\"menu\":\"1\",\"act\":\"4\"}",
+                    Payload = "{\"menu\":\"1\",\"act\":\"3\"}",
                     Type = KeyboardButtonActionType.Callback
                 }, KeyboardButtonColor.Default)
                 .AddLine()

@@ -174,11 +174,10 @@ namespace Schedulebot.Departments
                                 keyboardId: callbackSupported ? 1 + Constants.keyboardsCount : 1);
                             return;
                         case 2:
-                            EnqueueMessage(
-                                sendAsNewMessage: !isEvent,
-                                editingEnabled: isEvent,
+                            InfoResponse(
                                 userId: userId,
-                                message: Converter.WeekToString(CurrentWeek()));
+                                messageFromKeyboard: true,
+                                isEvent: isEvent);
                             return;
                         case 3:
                             SettingsResponse(
@@ -215,12 +214,6 @@ namespace Schedulebot.Departments
                                 keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
                             return;
                         case 1:
-                            InfoResponse(
-                                userId: userId,
-                                messageFromKeyboard: true,
-                                isEvent: isEvent);
-                            return;
-                        case 2:
                             ScheduleResponse(
                                 type: ScheduleResponseType.Week,
                                 userId: userId,
@@ -228,7 +221,7 @@ namespace Schedulebot.Departments
                                 messageFromKeyboard: true,
                                 isEvent: isEvent);
                             return;
-                        case 3:
+                        case 2:
                             ScheduleResponse(
                                 type: ScheduleResponseType.Today,
                                 userId: userId,
@@ -236,7 +229,7 @@ namespace Schedulebot.Departments
                                 messageFromKeyboard: true,
                                 isEvent: isEvent);
                             return;
-                        case 4:
+                        case 3:
                             ScheduleResponse(
                                 type: ScheduleResponseType.Tomorrow,
                                 userId: userId,
