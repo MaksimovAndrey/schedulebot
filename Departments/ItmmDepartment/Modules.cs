@@ -123,8 +123,6 @@ namespace Schedulebot.Departments
 
         private async Task ExecuteMethodsAsync()
         {
-            // "API.messages.sendMessageEventAnswer(" + JsonConvert.SerializeObject(vkParameters) + ");");
-            //"API.messages.send(" + JsonConvert.SerializeObject(vkParameters) + ");");
             int queueCommandsAmount;
             int commandsInRequestAmount = 0;
             int timer = 0;
@@ -197,13 +195,6 @@ namespace Schedulebot.Departments
                         var response = vkStuff.Api.Execute.Execute(executeCode.ToString());
 
                         ProcessExecutionResponse(response);
-
-
-                        var json = JObject.Parse("{\"response\":[[133040900,133040900,133040900,133040900],[6871,6872,6873,6874]]}");
-
-                        var rawResponse = json["response"];
-                        var count1 = rawResponse[0].Count();
-                        var count2 = rawResponse[1].Count();
 
                         timer = 0;
                         commandsInRequestAmount = 0;
