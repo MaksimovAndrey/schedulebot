@@ -1,5 +1,7 @@
 ﻿#define TEST_CFG
 
+using System;
+
 namespace Schedulebot
 {
     public static class Constants
@@ -64,11 +66,12 @@ namespace Schedulebot
             public const string currentPageOfMaxDelimeter = " из ";
 
             public const string schedule = "Расписание";
+            public const string info = "Информация";
             public const string whatWeek = "Неделя";
             public const string settings = "Настройки";
             public const string about = "О боте";
 
-            public const string info = "Информация";
+            public const string openUNN = "Посмотреть на сайте";
             public const string weekSchedule = "На неделю";
             public const string todaySchedule = "На сегодня";
             public const string tomorrowSchedule = "На завтра";
@@ -164,6 +167,9 @@ namespace Schedulebot
         public const string websiteUrl = @"http://www.itmm.unn.ru/studentam/raspisanie/raspisanie-bakalavriata-i-spetsialiteta-ochnoj-formy-obucheniya/";
         public const string about = "Текущая версия - " + version;
         public const string startMessage = "Здравствуйтe, я буду присылать актуальное расписание, если Вы подпишитесь в настройках.";
+
+        public const string unnScheduleUrl = "https://portal.unn.ru/ruz/main";
+        public static readonly Uri unnScheduleUri = new(unnScheduleUrl);
 
         public const int responseMessagesTaskCount = 4;
         public const int keyboardsCount = 6;

@@ -270,6 +270,14 @@ namespace Schedulebot.Vk
                 .SetInline(false)
                 .AddButton(new MessageKeyboardButtonAction()
                 {
+                    Label = Constants.Labels.openUNN,
+                    Link = Constants.unnScheduleUri,
+                    Type = KeyboardButtonActionType.OpenLink,
+                    Payload = "{\"menu\":\"1\",\"act\":\"-1\"}"
+                })
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
                     Label = Constants.Labels.weekSchedule,
                     Payload = "{\"menu\":\"1\",\"act\":\"1\"}",
                     Type = KeyboardButtonActionType.Callback
