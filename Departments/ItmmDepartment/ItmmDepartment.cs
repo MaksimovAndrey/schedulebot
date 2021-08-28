@@ -1,3 +1,4 @@
+using Schedulebot.Commands;
 using Schedulebot.Mapping;
 using Schedulebot.Schedule.Relevance;
 using Schedulebot.Users;
@@ -16,8 +17,8 @@ namespace Schedulebot.Departments
     {
         private string Path { get; }
 
-        private readonly ConcurrentQueue<string> commandsQueue
-            = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<Command> commandsQueue
+            = new ConcurrentQueue<Command>();
         private readonly ConcurrentQueue<PhotoUploadProperties> photosQueue
             = new ConcurrentQueue<PhotoUploadProperties>();
         private readonly ConcurrentQueue<GroupUpdate> updatesQueue
@@ -103,6 +104,8 @@ namespace Schedulebot.Departments
             StartTime = DateTime.Now;
 
             EnqueueMessage(
+                sendAsNewMessage: true,
+                editingEnabled: false,
                 userId: vkStuff.AdminId,
                 message: StartTime.ToString() + " | Запустился"
             );
@@ -111,6 +114,8 @@ namespace Schedulebot.Departments
             {
                 tasks.Add(StartRelevanceModule());
                 EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: false,
                     userId: vkStuff.AdminId,
                     message: DateTime.Now.ToString() + " | Запустил RelevanceModule"
                 );

@@ -40,14 +40,36 @@ namespace Schedulebot.Users
             return stringBuilder.ToString();
         }
 
-        public void SetMessageId(long id, int messageId)
+        public void SetLastMessageId(long id, long lastMessageId)
         {
             for (int currentUser = 0; currentUser < users.Count; currentUser++)
             {
                 if (users[currentUser].Id == id)
                 {
-                    users[currentUser].MessageId = messageId;
+                    users[currentUser].LastMessageId = lastMessageId;
                     return;
+                }
+            }
+        }
+
+        public void SetLastMessageId(long[] userIds, long[] lastMessageIds)
+        {
+            for (int i = userIds.Length - 1; i >= 0; i--)
+            {
+                if (userIds[i] == 0)
+                    continue;
+
+                for (int j = 0; j < i; j++)
+                    if (userIds[j] != 0 && userIds[i] == userIds[j])
+                        userIds[j] = 0;
+
+                for (int currentUser = 0; currentUser < users.Count; currentUser++)
+                {
+                    if (users[currentUser].Id == userIds[i])
+                    {
+                        users[currentUser].LastMessageId = lastMessageIds[i];
+                        break;
+                    }
                 }
             }
         }
@@ -185,6 +207,50 @@ namespace Schedulebot.Users
                 }
             }
             return false;
+        }
+
+        public void RemoveLastMessageId(List<long> ids)
+        {
+            for (int i = 0; i < ids.Count; i++)
+                RemoveLastMessageId(ids[i]);
+        }
+
+        public void RemoveLastMessageId(long id)
+        {
+            for (int i = 0; i < users.Count; i++)
+            {
+                if (users[i].Id == id)
+                {
+                    users[i].LastMessageId = 0;
+                    return;
+                }
+            }
+        }
+
+        public long GetAndRemoveLastMessageId(long id)
+        {
+            for (int i = 0; i < users.Count; i++)
+            {
+                if (users[i].Id == id)
+                {
+                    long lastMessageId = users[i].LastMessageId;
+                    users[i].LastMessageId = 0;
+                    return lastMessageId;
+                }
+            }
+            return 0;
+        }
+
+        public long GetLastMessageId(long id)
+        {
+            for (int i = 0; i < users.Count; i++)
+            {
+                if (users[i].Id == id)
+                {
+                    return users[i].LastMessageId;
+                }
+            }
+            return 0;
         }
     }
 }

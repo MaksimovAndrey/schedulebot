@@ -1,4 +1,7 @@
 ﻿using HtmlAgilityPack;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Schedulebot.Commands;
 using Schedulebot.Users;
 using Schedulebot.Vk;
 using System;
@@ -120,11 +123,14 @@ namespace Schedulebot.Departments
 
         private async Task ExecuteMethodsAsync()
         {
-            Console.WriteLine("ExecuteMethodsAsync");
+            // "API.messages.sendMessageEventAnswer(" + JsonConvert.SerializeObject(vkParameters) + ");");
+            //"API.messages.send(" + JsonConvert.SerializeObject(vkParameters) + ");");
             int queueCommandsAmount;
             int commandsInRequestAmount = 0;
             int timer = 0;
-            StringBuilder stringBuilder = new StringBuilder();
+            StringBuilder executeCode = new StringBuilder();
+            StringBuilder codePartReturn = new StringBuilder();
+            List<long> returnMessageUserIds = new List<long>();
             while (true)
             {
                 queueCommandsAmount
@@ -132,9 +138,33 @@ namespace Schedulebot.Departments
                 ? commandsQueue.Count : 25 - commandsInRequestAmount;
                 for (int i = 0; i < queueCommandsAmount; ++i)
                 {
-                    if (commandsQueue.TryDequeue(out string command))
+                    if (commandsQueue.TryDequeue(out Command command))
                     {
-                        stringBuilder.Append(command);
+                        switch (command.Type)
+                        {
+                            case CommandType.SendMessage:
+                                executeCode.Append("API.messages.send(");
+                                executeCode.Append(JsonConvert.SerializeObject(command.VkParameters));
+                                executeCode.Append(");");
+                                break;
+                            case CommandType.SendMessageEventAnswer:
+                                executeCode.Append("API.messages.sendMessageEventAnswer(");
+                                executeCode.Append(JsonConvert.SerializeObject(command.VkParameters));
+                                executeCode.Append(");");
+                                break;
+                            case CommandType.SendMessageAndGetMessageId:
+                                returnMessageUserIds.Add(command.UserId.GetValueOrDefault());
+                                codePartReturn.Append("ids.push(");
+                                codePartReturn.Append("API.messages.send(");
+                                codePartReturn.Append(JsonConvert.SerializeObject(command.VkParameters));
+                                codePartReturn.Append("));");
+                                break;
+                            case CommandType.EditMessage:
+                                executeCode.Append("API.messages.edit(");
+                                executeCode.Append(JsonConvert.SerializeObject(command.VkParameters));
+                                executeCode.Append(");");
+                                break;
+                        }
                         ++commandsInRequestAmount;
                     }
                     else
@@ -152,13 +182,34 @@ namespace Schedulebot.Departments
                     }
                     else
                     {
+                        if (codePartReturn.Length > 0)
+                        {
+                            executeCode.Append("var ids = [];");
+                            executeCode.Append(codePartReturn.ToString());
+                            executeCode.Append("return {\"userIdsAndLastMessageIds\":[[");
+                            executeCode.Append(String.Join(", ", returnMessageUserIds.ToArray()));
+                            executeCode.Append("],ids]");
+                            executeCode.Append("};");
+                        }
 #if DEBUG
-                        Console.WriteLine(stringBuilder.ToString());
+                        Console.WriteLine(executeCode.ToString());
 #endif
-                        var response = vkStuff.Api.Execute.Execute(stringBuilder.ToString());
+                        var response = vkStuff.Api.Execute.Execute(executeCode.ToString());
+
+                        ProcessExecutionResponse(response);
+
+
+                        var json = JObject.Parse("{\"response\":[[133040900,133040900,133040900,133040900],[6871,6872,6873,6874]]}");
+
+                        var rawResponse = json["response"];
+                        var count1 = rawResponse[0].Count();
+                        var count2 = rawResponse[1].Count();
+
                         timer = 0;
                         commandsInRequestAmount = 0;
-                        stringBuilder.Clear();
+                        executeCode.Clear();
+                        codePartReturn.Clear();
+                        returnMessageUserIds.Clear();
                     }
                 }
                 timer += 20;

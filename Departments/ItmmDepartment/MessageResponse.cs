@@ -22,8 +22,14 @@ namespace Schedulebot.Departments
     {
         private void ResponseMessageEvent(MessageEvent messageEvent)
         {
-            EnqueueEventAnswer(messageEvent.EventId, messageEvent.UserId.Value, messageEvent.PeerId.Value);
-            ButtonMessageResponse(true, messageEvent: messageEvent);
+            EnqueueEventAnswer(
+                eventId: messageEvent.EventId,
+                userId: messageEvent.UserId.Value,
+                peerId: messageEvent.PeerId.Value);
+            ButtonMessageResponse(
+                messageEvent: messageEvent,
+                callbackSupported: true,
+                isEvent: true);
         }
 
         private void ResponseMessage(Message message, bool callbackSupported)
@@ -33,13 +39,15 @@ namespace Schedulebot.Departments
                 if (message.PeerId == vkStuff.AdminId)
                     AdminMessageResponse(message);
                 else if (message.Attachments.Count != 0)
-                    AttachmentsMessageResponse(message);
+                    AttachmentsMessageResponse(message, callbackSupported);
                 else
-                    TextMessageResponse(message);
+                    TextMessageResponse(message, callbackSupported);
             }
             else
             {
-                ButtonMessageResponse(callbackSupported, message: message);
+                ButtonMessageResponse(
+                    message: message,
+                    callbackSupported: callbackSupported);
             }
         }
 
@@ -49,7 +57,11 @@ namespace Schedulebot.Departments
 
             if (Constants.textHelpCommand.Contains(messageStr))
             {
-                EnqueueMessage(userId: message.PeerId, message: Constants.adminHelp);
+                EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: false,
+                    userId: message.PeerId,
+                    message: Constants.adminHelp);
             }
             else if (message.Text.IndexOf("Рассылка") == 0 || message.Text.IndexOf("Distribution") == 0)
             {
@@ -58,9 +70,13 @@ namespace Schedulebot.Departments
                 if (toWhom == "всем" || toWhom == "all")
                 {
                     EnqueueMessage(
+                        sendAsNewMessage: true,
+                        editingEnabled: false,
                         userIds: userRepository.GetIds(),
                         message: temp.Substring(temp.IndexOf(' ') + 1));
                     EnqueueMessage(
+                        sendAsNewMessage: true,
+                        editingEnabled: false,
                         userId: message.PeerId,
                         message: "Выполнено");
                 }
@@ -70,23 +86,33 @@ namespace Schedulebot.Departments
                     {
                         --toCourse;
                         EnqueueMessage(
+                            sendAsNewMessage: true,
+                            editingEnabled: false,
                             userIds: userRepository.GetIds(mapper.GetGroupNames(toCourse)),
                             message: temp.Substring(temp.IndexOf(' ') + 1));
                         EnqueueMessage(
+                            sendAsNewMessage: true,
+                            editingEnabled: false,
                             userId: message.PeerId,
                             message: "Выполнено");
                         return;
                     }
                     EnqueueMessage(
+                        sendAsNewMessage: true,
+                        editingEnabled: false,
                         userId: message.PeerId,
                         message: "Ошибка рассылки:\nневерный курс: " + toWhom + "\nВведите значение от 1 до 4");
                 }
                 else
                 {
                     EnqueueMessage(
+                        sendAsNewMessage: true,
+                        editingEnabled: false,
                         userIds: userRepository.GetIds(toWhom),
                         message: temp.Substring(temp.IndexOf(' ') + 1));
                     EnqueueMessage(
+                        sendAsNewMessage: true,
+                        editingEnabled: false,
                         userId: message.PeerId,
                         message: "Выполнено");
                 }
@@ -99,6 +125,8 @@ namespace Schedulebot.Departments
                 sb.Append("\nАптайм: ");
                 sb.Append((DateTime.Now - StartTime).ToString());
                 EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: false,
                     userId: message.PeerId,
                     message: sb.ToString());
                 return;
@@ -107,6 +135,8 @@ namespace Schedulebot.Departments
             {
                 // TODO: update command
                 EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: false,
                     userId: message.PeerId,
                     message: "todo");
                 return;
@@ -118,13 +148,15 @@ namespace Schedulebot.Departments
             }
         }
 
-        private void PayloadMessageResponse(PayloadStuff payload, long userId, bool callbackSupported)
+        private void PayloadMessageResponse(PayloadStuff payload, long userId, bool callbackSupported, bool isEvent = false)
         {
             switch (payload.Menu)
             {
                 case null:
                 {
                     EnqueueMessage(
+                        sendAsNewMessage: !isEvent,
+                        editingEnabled: isEvent,
                         userId: userId,
                         message: Constants.unknownError,
                         keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
@@ -136,24 +168,35 @@ namespace Schedulebot.Departments
                     {
                         case 1:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 keyboardId: callbackSupported ? 1 + Constants.keyboardsCount : 1);
                             return;
                         case 2:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Converter.WeekToString(CurrentWeek()));
                             return;
                         case 3:
-                            SettingsResponse(userId, callbackSupported);
+                            SettingsResponse(
+                                peerId: userId,
+                                callbackSupported: callbackSupported,
+                                isEvent: isEvent);
                             return;
                         case 4:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.about);
                             return;
                         default:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.oldKeyboardMessage,
                                 keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
@@ -166,23 +209,45 @@ namespace Schedulebot.Departments
                     {
                         case 0:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
                             return;
                         case 1:
-                            InfoResponse(userId);
+                            InfoResponse(
+                                userId: userId,
+                                messageFromKeyboard: true,
+                                isEvent: isEvent);
                             return;
                         case 2:
-                            ScheduleResponse(ScheduleResponseType.Week, userId, callbackSupported, true);
+                            ScheduleResponse(
+                                type: ScheduleResponseType.Week,
+                                userId: userId,
+                                callbackSupported: callbackSupported,
+                                messageFromKeyboard: true,
+                                isEvent: isEvent);
                             return;
                         case 3:
-                            ScheduleResponse(ScheduleResponseType.Today, userId, callbackSupported, true);
+                            ScheduleResponse(
+                                type: ScheduleResponseType.Today,
+                                userId: userId,
+                                callbackSupported: callbackSupported,
+                                messageFromKeyboard: true,
+                                isEvent: isEvent);
                             return;
                         case 4:
-                            ScheduleResponse(ScheduleResponseType.Tomorrow, userId, callbackSupported, true);
+                            ScheduleResponse(
+                                type: ScheduleResponseType.Tomorrow,
+                                userId: userId,
+                                callbackSupported: callbackSupported,
+                                messageFromKeyboard: true,
+                                isEvent: isEvent);
                             return;
                         default:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.oldKeyboardMessage,
                                 keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
@@ -195,30 +260,46 @@ namespace Schedulebot.Departments
                     {
                         case 0:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
                             return;
                         case 1:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.pressAnotherButton);
                             return;
                         case 2:
-                            UnsubscribeResponse(userId, true, callbackSupported);
+                            UnsubscribeResponse(
+                                userId: userId,
+                                messageFromKeyboard: true,
+                                callbackSupported: callbackSupported,
+                                isEvent: isEvent);
                             return;
                         case 3:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 keyboardId: callbackSupported ? 4 + Constants.keyboardsCount : 4);
                             return;
                         case 4:
-                            ChangeSubgroupResponse(userId, callbackSupported, true);
+                            ChangeSubgroupResponse(
+                                userId: userId,
+                                callbackSupported: callbackSupported,
+                                messageFromKeyboard: true,
+                                isEvent: isEvent);
                             return;
                         default:
                             EnqueueMessage(
+                                sendAsNewMessage: !callbackSupported,
                                 userId: userId,
                                 message: Constants.oldKeyboardMessage,
-                                keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
+                                keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0,
+                                editingEnabled: callbackSupported);
                             return;
                     }
                 }
@@ -227,21 +308,30 @@ namespace Schedulebot.Departments
                     switch (payload.Act)
                     {
                         case 0:
-                            SettingsResponse(userId, callbackSupported);
+                            SettingsResponse(
+                                peerId: userId,
+                                callbackSupported: callbackSupported,
+                                isEvent: isEvent);
                             return;
                         case 1:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.pressAnotherButton);
                             return;
                         case 2:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: "Выберите группу",
                                 customKeyboard: CoursesKeyboards[payload.Course, callbackSupported ? 1 : 0][0]);
                             return;
                         default:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.oldKeyboardMessage,
                                 keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
@@ -254,14 +344,24 @@ namespace Schedulebot.Departments
                     {
                         case 0:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 customKeyboard: CoursesKeyboards[payload.Course, callbackSupported ? 1 : 0][0]);
                             return;
                         case 1:
-                            SubscribeResponse(userId, payload.Group, payload.Subgroup, true, callbackSupported);
+                            SubscribeResponse(
+                                userId: userId,
+                                group: payload.Group,
+                                subgroup: payload.Subgroup,
+                                messageFromKeyboard: true,
+                                callbackSupported: callbackSupported,
+                                isEvent: isEvent);
                             return;
                         default:
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.oldKeyboardMessage,
                                 keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
@@ -288,7 +388,10 @@ namespace Schedulebot.Departments
                                 = stringBuilder.ToString() + 2 + "\"}";
                             customKeyboard.Buttons.ElementAt(1).First().Action.Payload
                                 = "{\"menu\":\"5\",\"act\":\"0\",\"course\":\"" + payload.Course + "\"}";
+
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.Messages.Menu.chooseSubgroup,
                                 customKeyboard: customKeyboard);
@@ -299,12 +402,16 @@ namespace Schedulebot.Departments
                             if (payload.Page == 0)
                             {
                                 EnqueueMessage(
+                                    sendAsNewMessage: !isEvent,
+                                    editingEnabled: isEvent,
                                     userId: userId,
                                     keyboardId: callbackSupported ? 4 + Constants.keyboardsCount : 4);
                             }
                             else
                             {
                                 EnqueueMessage(
+                                    sendAsNewMessage: !isEvent,
+                                    editingEnabled: isEvent,
                                     userId: userId,
                                     customKeyboard: CoursesKeyboards[payload.Course, callbackSupported ? 1 : 0][payload.Page - 1]);
                             }
@@ -313,6 +420,8 @@ namespace Schedulebot.Departments
                         case 3:
                         {
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.Messages.Menu.currentPage);
                             return;
@@ -324,7 +433,10 @@ namespace Schedulebot.Departments
                                 customKeyboard = CoursesKeyboards[payload.Course, callbackSupported ? 1 : 0][0];
                             else
                                 customKeyboard = CoursesKeyboards[payload.Course, callbackSupported ? 1 : 0][payload.Page + 1];
+
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 customKeyboard: customKeyboard);
                             return;
@@ -332,6 +444,8 @@ namespace Schedulebot.Departments
                         default:
                         {
                             EnqueueMessage(
+                                sendAsNewMessage: !isEvent,
+                                editingEnabled: isEvent,
                                 userId: userId,
                                 message: Constants.oldKeyboardMessage,
                                 keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
@@ -342,7 +456,7 @@ namespace Schedulebot.Departments
             }
         }
 
-        private void ButtonMessageResponse(bool callbackSupported, Message message = null, MessageEvent messageEvent = null)
+        private void ButtonMessageResponse(bool callbackSupported, bool isEvent = false, Message message = null, MessageEvent messageEvent = null)
         {
             const string startPayloadCommand = "start";
 
@@ -354,6 +468,8 @@ namespace Schedulebot.Departments
             catch
             {
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: true,
                     userId: message.PeerId,
                     message: Constants.oldKeyboardMessage,
                     keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
@@ -363,6 +479,8 @@ namespace Schedulebot.Departments
             if (payload.Command == startPayloadCommand)
             {
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: true,
                     userId: message.PeerId,
                     message: Constants.startMessage,
                     keyboardId: 0);
@@ -370,16 +488,19 @@ namespace Schedulebot.Departments
             }
 
             PayloadMessageResponse(
-                payload,
-                (message != null ? message.PeerId : messageEvent.PeerId).Value,
-                callbackSupported);
+                payload: payload,
+                userId: (message != null ? message.PeerId : messageEvent.PeerId).Value,
+                callbackSupported: callbackSupported,
+                isEvent: isEvent);
         }
 
-        private void AttachmentsMessageResponse(Message message)
+        private void AttachmentsMessageResponse(Message message, bool callbackSupported)
         {
             if (message.Attachments.Single().ToString() == "Sticker")
             {
                 EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: callbackSupported,
                     userId: message.PeerId,
                     message: "🤡");
                 return;
@@ -387,31 +508,44 @@ namespace Schedulebot.Departments
             else
             {
                 EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: callbackSupported,
                     userId: message.PeerId,
                     message: "Я не умею читать файлы");
                 return;
             }
         }
 
-        private void TextMessageResponse(Message message)
+        private void TextMessageResponse(Message message, bool callbackSupported)
         {
             string uppercaseMessage = message.Text.ToUpper();
 
             if (uppercaseMessage.IndexOf(Constants.subscribeSign) == 0)
             {
-                TextCommandSubscribeResponse(message.Text, message.PeerId.Value);
+                TextCommandSubscribeResponse(
+                    message: message.Text,
+                    userId: message.PeerId.Value);
             }
             else if (Constants.textInfoCommand.Contains(uppercaseMessage))
             {
-                InfoResponse(message.PeerId.Value);
+                InfoResponse(
+                    userId: message.PeerId.Value,
+                    messageFromKeyboard: false,
+                    isEvent: false);
             }
             else if (Constants.textUnsubscribeCommand.Contains(uppercaseMessage))
             {
-                UnsubscribeResponse(message.PeerId.Value);
+                UnsubscribeResponse(
+                    userId: message.PeerId.Value,
+                    messageFromKeyboard: false,
+                    callbackSupported: false,
+                    isEvent: false);
             }
             else if (Constants.textSubscribeCommand.Contains(uppercaseMessage))
             {
                 EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: false,
                     userId: message.PeerId,
                     attachments: vkStuff.SubscribeInfoAttachments,
                     message: null);
@@ -419,32 +553,51 @@ namespace Schedulebot.Departments
             else if (Constants.textCurrentWeekCommand.Contains(uppercaseMessage))
             {
                 EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: false,
                     userId: message.PeerId,
                     message: Converter.WeekToString(CurrentWeek()));
             }
             else if (Constants.textTodayCommand.Contains(uppercaseMessage))
             {
-                ScheduleResponse(ScheduleResponseType.Today, message.PeerId.Value, false);
+                ScheduleResponse(
+                    type: ScheduleResponseType.Today,
+                    userId: message.PeerId.Value,
+                    callbackSupported: false,
+                    messageFromKeyboard: false,
+                    isEvent: false);
             }
             else if (Constants.textTomorrowCommand.Contains(uppercaseMessage))
             {
-                ScheduleResponse(ScheduleResponseType.Tomorrow, message.PeerId.Value, false);
+                ScheduleResponse(
+                    type: ScheduleResponseType.Tomorrow,
+                    userId: message.PeerId.Value,
+                    callbackSupported: false,
+                    messageFromKeyboard: false,
+                    isEvent: false);
             }
             else if (Constants.textWeekCommand.Contains(uppercaseMessage))
             {
-                ScheduleResponse(ScheduleResponseType.Week, message.PeerId.Value, false);
+                ScheduleResponse(
+                    type: ScheduleResponseType.Week,
+                    userId: message.PeerId.Value,
+                    callbackSupported: false,
+                    messageFromKeyboard: false,
+                    isEvent: false);
             }
             else
             {
                 EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: true,
                     userId: message.PeerId,
                     attachments: vkStuff.TextCommandsAttachments,
                     message: null,
-                    keyboardId: 0);
+                    keyboardId: callbackSupported ? 0 + Constants.keyboardsCount : 0);
             }
         }
 
-        private void SubscribeResponse(long userId, string group, int subgroup = 1, bool messageFromKeyboard = false, bool callbackSupported = false)
+        private void SubscribeResponse(long userId, string group, bool messageFromKeyboard, bool callbackSupported, bool isEvent, int subgroup = 1)
         {
             StringBuilder messageBuilder = new StringBuilder();
             switch (userRepository.AddOrEdit(userId, group, subgroup))
@@ -459,22 +612,28 @@ namespace Schedulebot.Departments
             messageBuilder.Append(Utils.Utils.ConstructGroupSubgroup(group, subgroup));
 
             EnqueueMessage(
+                sendAsNewMessage: !isEvent,
+                editingEnabled: isEvent,
                 userId: userId,
                 message: messageBuilder.ToString(),
                 keyboardId: messageFromKeyboard ? (int?)(callbackSupported ? 0 + Constants.keyboardsCount : 0) : null);
         }
 
-        private void SubscribeMessageResponse(long userId, bool messageFromKeyboard = false, bool callbackSupported = false)
+        private void SubscribeMessageResponse(long userId, bool messageFromKeyboard, bool callbackSupported, bool isEvent)
         {
             if (messageFromKeyboard)
             {
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: isEvent,
                     userId: userId,
                     keyboardId: callbackSupported ? 4 + Constants.keyboardsCount : 4);
             }
             else
             {
                 EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: false,
                     userId: userId,
                     attachments: vkStuff.SubscribeInfoAttachments,
                     message: null);
@@ -489,47 +648,66 @@ namespace Schedulebot.Departments
 
             if (!message.Contains(' '))
             {
-                SubscribeResponse(userId, message);
+                SubscribeResponse(
+                    userId: userId,
+                    group: message,
+                    callbackSupported: false,
+                    messageFromKeyboard: false,
+                    isEvent: false);
                 return;
             }
             if (message.Length == message.IndexOf(' ') + 2
                 && int.TryParse(message.Substring(message.Length - 1), out int subgroup)
                 && (subgroup == 1 || subgroup == 2))
             {
-                SubscribeResponse(userId, message[0..^2], subgroup);
+                SubscribeResponse(
+                    userId: userId,
+                    group: message[0..^2],
+                    subgroup: subgroup,
+                    callbackSupported: false,
+                    messageFromKeyboard: false,
+                    isEvent: false);
                 return;
             }
             EnqueueMessage(
+                sendAsNewMessage: true,
+                editingEnabled: false,
                 userId: userId,
                 attachments: vkStuff.SubscribeInfoAttachments,
                 message: "Некорректный ввод настроек");
         }
 
-        private void UnsubscribeResponse(long userId, bool messageFromKeyboard = false, bool callbackSupported = false)
+        private void UnsubscribeResponse(long userId, bool messageFromKeyboard, bool callbackSupported, bool isEvent)
         {
             const string cantUnsubscribe = "Вы не можете отписаться, так как Вы не подписаны";
             const string unsubscribeSuccess = "Отменена подписка на расписание";
 
             EnqueueMessage(
+                sendAsNewMessage: !isEvent,
+                editingEnabled: isEvent,
                 userId: userId,
                 message: userRepository.Delete(userId) ? unsubscribeSuccess : cantUnsubscribe,
                 keyboardId: messageFromKeyboard ? (int?)(callbackSupported ? (2 + Constants.keyboardsCount) : 2) : null);
         }
 
-        private void InfoResponse(long userId)
+        private void InfoResponse(long userId, bool messageFromKeyboard, bool isEvent)
         {
             EnqueueMessage(
+                sendAsNewMessage: !isEvent,
+                editingEnabled: isEvent,
                 userId: userId,
                 message: importantInfo);
         }
 
-        private bool CheckUser(long userId, out UserMapping userMapping, bool callbackSupported, bool buttonMessage)
+        private bool CheckUser(long userId, out UserMapping userMapping, bool callbackSupported, bool messageFromKeyboard, bool isEvent)
         {
             if (!userRepository.Get(userId, out Users.User user))
             {
-                if (buttonMessage)
+                if (messageFromKeyboard)
                 {
                     EnqueueMessage(
+                        sendAsNewMessage: !isEvent,
+                        editingEnabled: isEvent,
                         userId: userId,
                         message: Constants.unknownUserWithPayloadMessage,
                         keyboardId: callbackSupported ? 2 + Constants.keyboardsCount : 2);
@@ -537,6 +715,8 @@ namespace Schedulebot.Departments
                 else
                 {
                     EnqueueMessage(
+                        sendAsNewMessage: true,
+                        editingEnabled: false,
                         userId: userId,
                         attachments: vkStuff.SubscribeInfoAttachments,
                         message: Constants.unknownUserMessage);
@@ -552,6 +732,8 @@ namespace Schedulebot.Departments
                     Constants.youAreSubscribed + Utils.Utils.ConstructGroupSubgroup(user.Group, user.Subgroup);
 
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: isEvent,
                     userId: userId,
                     message: Constants.userGroupUnknownMessage,
                     customKeyboard: customKeyboard);
@@ -573,7 +755,7 @@ namespace Schedulebot.Departments
             return true;
         }
 
-        private void ChangeSubgroupResponse(long userId, bool callbackSupported, bool buttonMessage = false)
+        private void ChangeSubgroupResponse(long userId, bool callbackSupported, bool messageFromKeyboard, bool isEvent)
         {
             if (userRepository.ChangeSubgroup(userId, out Users.User user))
             {
@@ -583,6 +765,8 @@ namespace Schedulebot.Departments
                     Constants.youAreSubscribed + Utils.Utils.ConstructGroupSubgroup(user.Group, user.Subgroup);
 
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: isEvent,
                     userId: userId,
                     message: Constants.yourSubgroup + user.Subgroup.ToString(),
                     customKeyboard: keyboardCustom);
@@ -590,13 +774,15 @@ namespace Schedulebot.Departments
             else
             {
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: isEvent,
                     userId: userId,
                     message: Constants.unknownUserWithPayloadMessage,
                     keyboardId: callbackSupported ? 2 + Constants.keyboardsCount : 2);
             }
         }
 
-        private void SettingsResponse(long? peerId, bool callbackSupported)
+        private void SettingsResponse(long? peerId, bool callbackSupported, bool isEvent)
         {
             if (userRepository.Get(peerId, out Users.User user))
             {
@@ -605,25 +791,31 @@ namespace Schedulebot.Departments
                      Constants.youAreSubscribed + Utils.Utils.ConstructGroupSubgroup(user.Group, user.Subgroup);
 
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: isEvent,
                     userId: peerId,
                     customKeyboard: keyboardCustom);
             }
             else
             {
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: isEvent,
                     userId: peerId,
                     keyboardId: callbackSupported ? 2 + Constants.keyboardsCount : 2);
             }
         }
 
-        private void ScheduleResponse(ScheduleResponseType type, long userId, bool callbackSupported, bool buttonMessage = false)
+        private void ScheduleResponse(ScheduleResponseType type, long userId, bool callbackSupported, bool messageFromKeyboard, bool isEvent)
         {
-            if (!CheckUser(userId, out UserMapping userMapping, callbackSupported, buttonMessage))
+            if (!CheckUser(userId, out UserMapping userMapping, callbackSupported: callbackSupported, messageFromKeyboard: messageFromKeyboard, isEvent: isEvent))
                 return;
 
             if (!CheckUpdates(userMapping).Result)
             {
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: isEvent,
                     userId: userId,
                     message: Constants.unnAPIError);
             }
@@ -631,18 +823,30 @@ namespace Schedulebot.Departments
             switch (type)
             {
                 case ScheduleResponseType.Today:
-                    ForTodayResponse(userId, userMapping.Course, userMapping.GroupIndex);
+                    ForTodayResponse(
+                        userId: userId,
+                        course: userMapping.Course,
+                        groupIndex: userMapping.GroupIndex,
+                        isEvent: isEvent);
                     return;
                 case ScheduleResponseType.Tomorrow:
-                    ForTomorrowResponse(userId, userMapping.Course, userMapping.GroupIndex);
+                    ForTomorrowResponse(
+                        userId: userId,
+                        course: userMapping.Course,
+                        groupIndex: userMapping.GroupIndex,
+                        isEvent: isEvent);
                     return;
                 case ScheduleResponseType.Week:
-                    ForWeekResponse(userId, userMapping.Course, userMapping.GroupIndex);
+                    ForWeekResponse(
+                        userId: userId,
+                        course: userMapping.Course,
+                        groupIndex: userMapping.GroupIndex,
+                        isEvent: isEvent);
                     return;
             }
         }
 
-        private void ForWeekResponse(long userId, int course, int groupIndex)
+        private void ForWeekResponse(long userId, int course, int groupIndex, bool isEvent)
         {
             StringBuilder msg = new StringBuilder();
 
@@ -654,10 +858,14 @@ namespace Schedulebot.Departments
                 msg.Append(courses[course].groups[groupIndex].days[i].ToString());
             }
 
-            EnqueueMessage(userId: userId, message: msg.ToString());
+            EnqueueMessage(
+                sendAsNewMessage: !isEvent,
+                editingEnabled: false,
+                userId: userId,
+                message: msg.ToString());
         }
 
-        private void ForTomorrowResponse(long userId, int course, int groupIndex)
+        private void ForTomorrowResponse(long userId, int course, int groupIndex, bool isEvent)
         {
             DateTime tomorrow = DateTime.Today.AddDays(1);
             string addBeforeMsg = Constants.scheduleForTomorrow;
@@ -675,7 +883,13 @@ namespace Schedulebot.Departments
                 {
                     if (courses[course].groups[groupIndex].days[curDay].Date == tomorrow)
                     {
-                        DayScheduleResponse(addBeforeMsg, course, groupIndex, curDay, userId);
+                        DayScheduleResponse(
+                            message: addBeforeMsg,
+                            course: course,
+                            groupIndex: groupIndex,
+                            dayIndex: curDay,
+                            id: userId,
+                            isEvent: isEvent);
                         return;
                     }
                 }
@@ -684,19 +898,23 @@ namespace Schedulebot.Departments
                 tomorrow = tomorrow.AddDays(1);
             }
             EnqueueMessage(
+                sendAsNewMessage: !isEvent,
+                editingEnabled: false,
                 userId: userId,
                 message: "Нет информации или Вы не учитесь");
             return;
         }
 
-        private void ForTodayResponse(long userId, int course, int groupIndex)
+        private void ForTodayResponse(long userId, int course, int groupIndex, bool isEvent)
         {
             DateTime today = DateTime.Today;
             if (today.DayOfWeek == DayOfWeek.Sunday)
             {
                 EnqueueMessage(
-                userId: userId,
-                message: Constants.todayIsSunday);
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: false,
+                    userId: userId,
+                    message: Constants.todayIsSunday);
                 return;
             }
 
@@ -704,17 +922,25 @@ namespace Schedulebot.Departments
             {
                 if (courses[course].groups[groupIndex].days[curDay].Date == today)
                 {
-                    DayScheduleResponse(Constants.scheduleForToday, course, groupIndex, curDay, userId);
+                    DayScheduleResponse(
+                        message: Constants.scheduleForToday,
+                        course: course,
+                        groupIndex: groupIndex,
+                        dayIndex: curDay,
+                        id: userId,
+                        isEvent: isEvent);
                     return;
                 }
             }
             EnqueueMessage(
+                sendAsNewMessage: !isEvent,
+                editingEnabled: false,
                 userId: userId,
                 message: "Нет информации или Вы сегодня не учитесь");
             return;
         }
 
-        private void DayScheduleResponse(string message, int course, int groupIndex, int dayIndex, long id)
+        private void DayScheduleResponse(string message, int course, int groupIndex, int dayIndex, long id, bool isEvent)
         {
             bool sendPhoto = true;
             if (courses[course].groups[groupIndex].days[dayIndex].PhotoId == 0
@@ -733,6 +959,7 @@ namespace Schedulebot.Departments
                 {
                     UploadingSchedule = UploadingSchedule.Day,
                     ToSend = true,
+                    SendAsNewMessage = !isEvent,
                     AlbumId = vkStuff.MainAlbumId,
                     Course = course,
                     GroupIndex = groupIndex,
@@ -765,13 +992,21 @@ namespace Schedulebot.Departments
                     {
                         await Task.Delay(Constants.waitPhotoUploadingDelay);
                     }
-                    DayScheduleResponse(message, course, groupIndex, dayIndex, id);
+                    DayScheduleResponse(
+                        message: message,
+                        course: course,
+                        groupIndex: groupIndex,
+                        dayIndex: dayIndex,
+                        id: id,
+                        isEvent: isEvent);
                 });
                 return;
             }
             if (sendPhoto)
             {
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: false,
                     userId: id,
                     message: "Обновлено "
                         + courses[course].groups[groupIndex].LastTimeUpdated.ToString("dd'.'MM'.'yyyy HH:mm")
@@ -779,18 +1014,19 @@ namespace Schedulebot.Departments
                         + courses[course].groups[groupIndex].days[dayIndex].GetDateString(),
                     attachments: new List<MediaAttachment>
                     {
-                    new Photo() { AlbumId = vkStuff.MainAlbumId, OwnerId = -vkStuff.GroupId, Id = courses[course].groups[groupIndex].days[dayIndex].PhotoId }
+                        new Photo() { AlbumId = vkStuff.MainAlbumId, OwnerId = -vkStuff.GroupId, Id = courses[course].groups[groupIndex].days[dayIndex].PhotoId }
                     });
             }
             else
             {
                 EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: false,
                     userId: id,
                     message: "Обновлено "
                         + courses[course].groups[groupIndex].LastTimeUpdated.ToString("dd'.'MM'.'yyyy HH:mm")
                         + "\n\n" + message + '\n'
-                        + courses[course].groups[groupIndex].days[dayIndex].ToString()
-                );
+                        + courses[course].groups[groupIndex].days[dayIndex].ToString());
             }
         }
 
@@ -806,6 +1042,8 @@ namespace Schedulebot.Departments
                     if (photo.ToSend && photo.PeerId != 0)
                     {
                         EnqueueMessage(
+                            sendAsNewMessage: photo.SendAsNewMessage,
+                            editingEnabled: false,
                             userId: photo.PeerId,
                             message: photo.Message,
                             attachments: new List<MediaAttachment>

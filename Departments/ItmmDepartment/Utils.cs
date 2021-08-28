@@ -1,4 +1,6 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Schedulebot.Commands;
 using Schedulebot.Parsing;
 using Schedulebot.Schedule;
 using System;
@@ -52,7 +54,7 @@ namespace Schedulebot.Departments
         }
 
         private void EnqueueEventAnswer(
-            string evendId,
+            string eventId,
             long userId,
             long peerId,
             bool haveEventData = false,
@@ -61,7 +63,7 @@ namespace Schedulebot.Departments
         {
             VkParameters vkParameters = new VkParameters
             {
-                { "event_id", evendId },
+                { "event_id", eventId },
                 { "user_id", userId },
                 { "peer_id", peerId }
             };
@@ -77,10 +79,12 @@ namespace Schedulebot.Departments
                 );
             }
 
-            commandsQueue.Enqueue("API.messages.sendMessageEventAnswer(" + JsonConvert.SerializeObject(vkParameters) + ");");
+            commandsQueue.Enqueue(new Command(CommandType.SendMessageEventAnswer, vkParameters));
         }
 
         private void EnqueueMessage(
+            bool sendAsNewMessage,
+            bool editingEnabled,
             long? userId = null,
             List<long> userIds = null,
             string message = Constants.defaultMessage,
@@ -93,16 +97,24 @@ namespace Schedulebot.Departments
                 { "message", message },
                 { "random_id", (int)DateTime.Now.Ticks }
             };
+            CommandType type;
 
             if (userIds != null)
             {
                 if (userIds.Count == 0)
                     return;
-                else if (userIds.Count > 100)
+
+                type = CommandType.SendMessage;
+                if (sendAsNewMessage)
+                    userRepository.RemoveLastMessageId(userIds);
+
+                if (userIds.Count > 100)
                 {
                     vkParameters.Add("user_ids", JsonConvert.SerializeObject(userIds.GetRange(0, 100)));
                     userIds.RemoveRange(0, 100);
                     EnqueueMessage(
+                        sendAsNewMessage: true,
+                        editingEnabled: false,
                         userIds: userIds,
                         message: message,
                         attachments: attachments,
@@ -112,6 +124,25 @@ namespace Schedulebot.Departments
                 else
                 {
                     vkParameters.Add("user_ids", JsonConvert.SerializeObject(userIds));
+                }
+            }
+            else
+            {
+                long lastMessageId = (sendAsNewMessage || !editingEnabled) ? userRepository.GetAndRemoveLastMessageId(userId.GetValueOrDefault())
+                    : userRepository.GetLastMessageId(userId.GetValueOrDefault());
+
+                if (lastMessageId != 0 && !sendAsNewMessage)
+                {
+                    vkParameters.Add("message_id", lastMessageId);
+                    type = CommandType.EditMessage;
+                }
+                else if (editingEnabled)
+                {
+                    type = CommandType.SendMessageAndGetMessageId;
+                }
+                else
+                {
+                    type = CommandType.SendMessage;
                 }
             }
 
@@ -137,7 +168,30 @@ namespace Schedulebot.Departments
             {
                 vkParameters.Add("keyboard", JsonConvert.SerializeObject(vkStuff.MenuKeyboards[keyboardId.Value]));
             }
-            commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(vkParameters) + ");");
+
+            commandsQueue.Enqueue(new Command(type, vkParameters, userId));
+        }
+
+        private void ProcessExecutionResponse(VkResponse response)
+        {
+            if (!response.HasToken())
+                return;
+
+            if (response.ContainsKey("userIdsAndLastMessageIds"))
+            {
+                var jsonArray = JArray.Parse(response["userIdsAndLastMessageIds"].ToString());
+                if (jsonArray.Count != 2)
+                    return;
+
+                var userIds = ((JArray)jsonArray[0]).ToObject<long[]>();
+                var lastMessageIds = ((JArray)jsonArray[1]).ToObject<long[]>();
+                if (userIds.Length == 0 || userIds.Length != lastMessageIds.Length)
+                    return;
+
+                userRepository.SetLastMessageId(userIds, lastMessageIds);
+
+                Console.WriteLine("TEST + " + userRepository.GetLastMessageId(userIds[0]));
+            }
         }
 
         private int CurrentWeek() // Определение недели (верхняя или нижняя)
