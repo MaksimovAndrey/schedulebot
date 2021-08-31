@@ -1,4 +1,6 @@
 using Schedulebot.Users.Enums;
+using Schedulebot.Users.Utils;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -75,6 +77,43 @@ namespace Schedulebot.Users
             }
         }
 
+        public void SetLastMessageInfo(long id, long lastMessageId, DateTime lastMessageTime)
+        {
+            for (int currentUser = 0; currentUser < users.Count; currentUser++)
+            {
+                if (users[currentUser].Id == id)
+                {
+                    users[currentUser].LastMessageId = lastMessageId;
+                    users[currentUser].LastMessageTime = lastMessageTime;
+                    return;
+                }
+            }
+        }
+
+        public void SetLastMessageInfo(long[] userIds, long[] lastMessageIds, DateTime lastMessageTime)
+        {
+            for (int i = userIds.Length - 1; i >= 0; i--)
+            {
+                if (userIds[i] == 0)
+                    continue;
+
+                for (int j = 0; j < i; j++)
+                    if (userIds[j] != 0 && userIds[i] == userIds[j])
+                        userIds[j] = 0;
+
+                for (int currentUser = 0; currentUser < users.Count; currentUser++)
+                {
+                    if (users[currentUser].Id == userIds[i])
+                    {
+                        users[currentUser].LastMessageId = lastMessageIds[i];
+                        users[currentUser].LastMessageTime = lastMessageTime;
+                        break;
+                    }
+                }
+            }
+        }
+
+
         public bool TryGet(long? id, out User user)
         {
             for (int currentUser = 0; currentUser < users.Count; currentUser++)
@@ -139,7 +178,7 @@ namespace Schedulebot.Users
 
         public void Add(long id, string group, int subgroup, long lastMessageId = 0, bool isActive = true)
         {
-            users.Add(new User(id, group, subgroup, lastMessageId, isActive));
+            users.Add(new User(id, group, subgroup, lastMessageId, isActive: isActive));
         }
 
         /// <summary>
@@ -249,6 +288,32 @@ namespace Schedulebot.Users
                 }
             }
             return 0;
+        }
+
+        public MessageInfo GetAndRemoveLastMessageInfo(long id)
+        {
+            for (int i = 0; i < users.Count; i++)
+            {
+                if (users[i].Id == id)
+                {
+                    long lastMessageId = users[i].LastMessageId;
+                    users[i].LastMessageId = 0;
+                    return new MessageInfo(lastMessageId, users[i].LastMessageTime);
+                }
+            }
+            return default;
+        }
+
+        public MessageInfo GetLastMessageInfo(long id)
+        {
+            for (int i = 0; i < users.Count; i++)
+            {
+                if (users[i].Id == id)
+                {
+                    return new MessageInfo(users[i].LastMessageId, users[i].LastMessageTime);
+                }
+            }
+            return default;
         }
     }
 }

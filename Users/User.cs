@@ -10,14 +10,16 @@ namespace Schedulebot.Users
         public string Group { get; set; }
         public int Subgroup { get; set; }
         public long LastMessageId { get; set; }
+        public DateTime LastMessageTime { get; set; }
 
-        public User(long id, string group, int subgroup, long lastMessageId = 0, bool isActive = true)
+        public User(long id, string group, int subgroup, long lastMessageId = 0, DateTime lastMessageTime = default, bool isActive = true)
         {
             Id = id;
             IsActive = isActive;
             Group = group;
             Subgroup = subgroup;
             LastMessageId = lastMessageId;
+            LastMessageTime = lastMessageTime;
         }
 
         public override string ToString()
@@ -30,6 +32,8 @@ namespace Schedulebot.Users
             stringBuilder.Append(Subgroup);
             stringBuilder.Append(':');
             stringBuilder.Append(LastMessageId);
+            stringBuilder.Append(':');
+            stringBuilder.Append(LastMessageTime.ToString());
             stringBuilder.Append(':');
             stringBuilder.Append(IsActive);
             return stringBuilder.ToString();
@@ -51,9 +55,12 @@ namespace Schedulebot.Users
                 index = rawUserLine.IndexOf(':');
                 long lastMessageId = long.Parse(rawUserLine.Substring(0, index));
                 rawUserLine = rawUserLine.Substring(index + 1);
+                index = rawUserLine.LastIndexOf(':');
+                DateTime lastMessageTime = DateTime.Parse(rawUserLine.Substring(0, index));
+                rawUserLine = rawUserLine.Substring(index + 1);
                 bool isActive = bool.Parse(rawUserLine);
 
-                user = new User(id, group, subgroup, lastMessageId, isActive);
+                user = new User(id, group, subgroup, lastMessageId, lastMessageTime, isActive);
                 return true;
             }
             catch

@@ -1,4 +1,6 @@
 using Schedulebot.Users.Enums;
+using Schedulebot.Users.Utils;
+using System;
 using System.Collections.Generic;
 
 
@@ -23,8 +25,12 @@ namespace Schedulebot.Users
         void RemoveLastMessageId(List<long> ids);
         long GetAndRemoveLastMessageId(long id);
         long GetLastMessageId(long id);
+        MessageInfo GetAndRemoveLastMessageInfo(long id);
+        MessageInfo GetLastMessageInfo(long id);
 
         void SetLastMessageId(long id, long messageId);
         void SetLastMessageId(long[] ids, long[] lastMessageIds);
+        void SetLastMessageInfo(long id, long messageId, DateTime time);
+        void SetLastMessageInfo(long[] ids, long[] lastMessageIds, DateTime time);
     }
 }

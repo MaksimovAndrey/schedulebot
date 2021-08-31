@@ -176,6 +176,7 @@ namespace Schedulebot.Departments
                         case 2:
                             InfoResponse(
                                 userId: userId,
+                                callbackSupported: callbackSupported,
                                 messageFromKeyboard: true,
                                 isEvent: isEvent);
                             return;
@@ -520,34 +521,40 @@ namespace Schedulebot.Departments
 
         private void TextMessageResponse(Message message, bool callbackSupported)
         {
+            const bool messageFromKeyboard = false;
+            const bool isEvent = false;
+            const bool sendAsNewMessage = !isEvent;
+
             string uppercaseMessage = message.Text.ToUpper();
 
             if (uppercaseMessage.IndexOf(Constants.subscribeSign) == 0)
             {
                 TextCommandSubscribeResponse(
                     message: message.Text,
-                    userId: message.PeerId.Value);
+                    userId: message.PeerId.Value,
+                    callbackSupported: callbackSupported);
             }
             else if (Constants.textInfoCommand.Contains(uppercaseMessage))
             {
                 InfoResponse(
                     userId: message.PeerId.Value,
-                    messageFromKeyboard: false,
-                    isEvent: false);
+                    callbackSupported: callbackSupported,
+                    messageFromKeyboard: messageFromKeyboard,
+                    isEvent: isEvent);
             }
             else if (Constants.textUnsubscribeCommand.Contains(uppercaseMessage))
             {
                 UnsubscribeResponse(
                     userId: message.PeerId.Value,
-                    messageFromKeyboard: false,
-                    callbackSupported: false,
-                    isEvent: false);
+                    messageFromKeyboard: messageFromKeyboard,
+                    callbackSupported: callbackSupported,
+                    isEvent: isEvent);
             }
             else if (Constants.textSubscribeCommand.Contains(uppercaseMessage))
             {
                 EnqueueMessage(
-                    sendAsNewMessage: true,
-                    editingEnabled: false,
+                    sendAsNewMessage: sendAsNewMessage,
+                    editingEnabled: callbackSupported,
                     userId: message.PeerId,
                     attachments: vkStuff.SubscribeInfoAttachments,
                     message: null);
@@ -555,8 +562,8 @@ namespace Schedulebot.Departments
             else if (Constants.textCurrentWeekCommand.Contains(uppercaseMessage))
             {
                 EnqueueMessage(
-                    sendAsNewMessage: true,
-                    editingEnabled: false,
+                    sendAsNewMessage: sendAsNewMessage,
+                    editingEnabled: callbackSupported,
                     userId: message.PeerId,
                     message: Converter.WeekToString(CurrentWeek()));
             }
@@ -565,33 +572,33 @@ namespace Schedulebot.Departments
                 ScheduleResponse(
                     type: ScheduleResponseType.Today,
                     userId: message.PeerId.Value,
-                    callbackSupported: false,
-                    messageFromKeyboard: false,
-                    isEvent: false);
+                    callbackSupported: callbackSupported,
+                    messageFromKeyboard: messageFromKeyboard,
+                    isEvent: isEvent);
             }
             else if (Constants.textTomorrowCommand.Contains(uppercaseMessage))
             {
                 ScheduleResponse(
                     type: ScheduleResponseType.Tomorrow,
                     userId: message.PeerId.Value,
-                    callbackSupported: false,
-                    messageFromKeyboard: false,
-                    isEvent: false);
+                    callbackSupported: callbackSupported,
+                    messageFromKeyboard: messageFromKeyboard,
+                    isEvent: isEvent);
             }
             else if (Constants.textWeekCommand.Contains(uppercaseMessage))
             {
                 ScheduleResponse(
                     type: ScheduleResponseType.Week,
                     userId: message.PeerId.Value,
-                    callbackSupported: false,
-                    messageFromKeyboard: false,
-                    isEvent: false);
+                    callbackSupported: callbackSupported,
+                    messageFromKeyboard: messageFromKeyboard,
+                    isEvent: isEvent);
             }
             else
             {
                 EnqueueMessage(
-                    sendAsNewMessage: true,
-                    editingEnabled: true,
+                    sendAsNewMessage: sendAsNewMessage,
+                    editingEnabled: callbackSupported,
                     userId: message.PeerId,
                     attachments: vkStuff.TextCommandsAttachments,
                     message: null,
@@ -641,7 +648,7 @@ namespace Schedulebot.Departments
             }
         }
 
-        private void TextCommandSubscribeResponse(string message, long userId)
+        private void TextCommandSubscribeResponse(string message, long userId, bool callbackSupported)
         {
             message = message.Substring(message.IndexOf(' ') + 1).Trim();
             if (message.ToUpper().IndexOf("НА ") == 0 && message.Length > 3)
@@ -652,7 +659,7 @@ namespace Schedulebot.Departments
                 SubscribeResponse(
                     userId: userId,
                     group: message,
-                    callbackSupported: false,
+                    callbackSupported: callbackSupported,
                     messageFromKeyboard: false,
                     isEvent: false);
                 return;
@@ -665,14 +672,14 @@ namespace Schedulebot.Departments
                     userId: userId,
                     group: message[0..^2],
                     subgroup: subgroup,
-                    callbackSupported: false,
+                    callbackSupported: callbackSupported,
                     messageFromKeyboard: false,
                     isEvent: false);
                 return;
             }
             EnqueueMessage(
                 sendAsNewMessage: true,
-                editingEnabled: false,
+                editingEnabled: callbackSupported,
                 userId: userId,
                 attachments: vkStuff.SubscribeInfoAttachments,
                 message: "Некорректный ввод настроек");
@@ -691,11 +698,11 @@ namespace Schedulebot.Departments
                 keyboardId: messageFromKeyboard ? (int?)(callbackSupported ? (2 + Constants.keyboardsCount) : 2) : null);
         }
 
-        private void InfoResponse(long userId, bool messageFromKeyboard, bool isEvent)
+        private void InfoResponse(long userId, bool callbackSupported, bool messageFromKeyboard, bool isEvent)
         {
             EnqueueMessage(
                 sendAsNewMessage: !isEvent,
-                editingEnabled: isEvent,
+                editingEnabled: callbackSupported,
                 userId: userId,
                 message: importantInfo);
         }

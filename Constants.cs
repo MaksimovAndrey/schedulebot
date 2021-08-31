@@ -171,6 +171,9 @@ namespace Schedulebot
         public const string unnScheduleUrl = "https://portal.unn.ru/ruz/main";
         public static readonly Uri unnScheduleUri = new(unnScheduleUrl);
 
+        // Невозможно отредактировать сообщение после 24 часов, поэтому ставим лимит
+        public static readonly TimeSpan allowableMessageEditTime = new(23, 50, 0);
+
         public const int responseMessagesTaskCount = 4;
         public const int keyboardsCount = 6;
 

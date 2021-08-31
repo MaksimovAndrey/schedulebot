@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using Schedulebot.Commands;
 using Schedulebot.Parsing;
 using Schedulebot.Schedule;
+using Schedulebot.Users.Utils;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -128,12 +129,12 @@ namespace Schedulebot.Departments
             }
             else
             {
-                long lastMessageId = (sendAsNewMessage || !editingEnabled) ? userRepository.GetAndRemoveLastMessageId(userId.GetValueOrDefault())
-                    : userRepository.GetLastMessageId(userId.GetValueOrDefault());
+                MessageInfo lastMessageInfo = (sendAsNewMessage || !editingEnabled) ? userRepository.GetAndRemoveLastMessageInfo(userId.GetValueOrDefault())
+                    : userRepository.GetLastMessageInfo(userId.GetValueOrDefault());
 
-                if (lastMessageId != 0 && !sendAsNewMessage)
+                if (lastMessageInfo.Id != 0 && DateTime.Now - lastMessageInfo.Time < Constants.allowableMessageEditTime && !sendAsNewMessage)
                 {
-                    vkParameters.Add("message_id", lastMessageId);
+                    vkParameters.Add("message_id", lastMessageInfo.Id);
                     type = CommandType.EditMessage;
                 }
                 else if (editingEnabled)
@@ -188,9 +189,7 @@ namespace Schedulebot.Departments
                 if (userIds.Length == 0 || userIds.Length != lastMessageIds.Length)
                     return;
 
-                userRepository.SetLastMessageId(userIds, lastMessageIds);
-
-                Console.WriteLine("TEST + " + userRepository.GetLastMessageId(userIds[0]));
+                userRepository.SetLastMessageInfo(userIds, lastMessageIds, DateTime.Now);
             }
         }
 
