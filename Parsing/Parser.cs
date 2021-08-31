@@ -1,14 +1,12 @@
-﻿using Schedulebot.Schedule;
+﻿using Newtonsoft.Json;
+using Schedulebot.Parsing.Utils;
+using Schedulebot.Schedule;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Newtonsoft.Json;
-
-using Schedulebot.Parsing.Utils;
 
 namespace Schedulebot.Parsing
 {
-    class Parser
+    public static class Parser
     {
         public static List<ScheduleDay> ParseScheduleFromJson(string jsonStr)
         {

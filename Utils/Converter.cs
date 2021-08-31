@@ -1,19 +1,41 @@
-using System.Drawing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using System;
 using System.IO;
 
 namespace Schedulebot.Utils
 {
     public static class Converter
     {
+
+        public static string LecturesCountToString(int lecturesCount)
+        {
+            if (lecturesCount >= 2 && lecturesCount <= 4)
+                return lecturesCount.ToString() + " пары";
+            else if (lecturesCount == 1)
+                return lecturesCount.ToString() + " пара";
+            else
+                return lecturesCount.ToString() + " пар";
+        }
+
+        public static string DayOfWeekToString(DayOfWeek dayOfWeek)
+        {
+            string day = ScheduleBot.cultureInfo.DateTimeFormat.GetDayName(dayOfWeek);
+            return char.ToUpper(day[0]) + day[1..];
+        }
+
         public static string WeekToString(int week) // Определение недели (верхняя или нижняя)
         {
-            return week == 0 ? "Верхняя" : "Нижняя";
+            return week == 0 ? Constants.upperWeek : Constants.downWeek;
         }
+
+        private static IImageEncoder ImageEncoder { get; } = new JpegEncoder();
 
         public static byte[] ImageToByteArray(Image image)
         {
             MemoryStream memoryStream = new MemoryStream();
-            image.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+            image.Save(memoryStream, ImageEncoder);
             return memoryStream.ToArray();
         }
 
@@ -27,9 +49,7 @@ namespace Schedulebot.Utils
         /// </returns>
         public static int TimeToInt(string time)
         {
-            if (time == "")
-                return 0;
-            if (time.Contains(':'))
+            if (time.Length >= 3 && time.Contains(':'))
             {
                 time = time.Replace(":", "");
                 if (int.TryParse(time, out int timeInt))

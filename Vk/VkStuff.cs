@@ -1,8 +1,5 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
 using VkNet;
-using VkNet.Enums;
 using VkNet.Enums.SafetyEnums;
 using VkNet.Model;
 using VkNet.Model.Attachments;
@@ -50,311 +47,390 @@ namespace Schedulebot.Vk
             this.TextCommandsAttachments = new List<MediaAttachment>() { this.TextCommands };
             this.SubscribeInfoAttachments = new List<MediaAttachment>() { this.SubscribeInfo };
 
-            this.MenuKeyboards = new MessageKeyboard[6]
-            {
-                // main
-                new MessageKeyboard
+            this.MenuKeyboards = new MessageKeyboard[12];
+
+            this.MenuKeyboards[0] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Расписание",
-                                    Payload = "{\"menu\": \"0\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Неделя",
-                                    Payload = "{\"menu\": \"0\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Настройки",
-                                    Payload = "{\"menu\": \"0\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Информация",
-                                    Payload = "{\"menu\": \"0\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                // schedule
-                new MessageKeyboard
+                    Label = Constants.Labels.schedule,
+                    Payload = "{\"menu\":\"0\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Важная информация",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "На неделю",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "На сегодня",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "На завтра",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Ссылка",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"1\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                // настройки когда НЕ подписан
-                new MessageKeyboard
+                    Label = Constants.Labels.info,
+                    Payload = "{\"menu\":\"0\",\"act\":\"2\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Вы не подписаны",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Positive,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Подписаться",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                 // настройки когда подписан
-                new MessageKeyboard
+                    Label = Constants.Labels.settings,
+                    Payload = "{\"menu\":\"0\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Negative,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Отписаться",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Positive,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Переподписаться",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Изменить подгруппу",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"2\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                // выбор курса
-                new MessageKeyboard
+                    Label = Constants.Labels.about,
+                    Payload = "{\"menu\":\"0\",\"act\":\"4\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[1] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Выберите курс",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "1",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "2",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "3",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "4",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"4\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                },
-                // выбор подгруппы
-                new MessageKeyboard
+                    Label = Constants.Labels.weekSchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Buttons = new List<List<MessageKeyboardButton>>
-                    {
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "1",
-                                    Payload = "{\"menu\": \"5\"}"
-                                }
-                            },
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Primary,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "2",
-                                    Payload = "{\"menu\": \"5\"}"
-                                }
-                            }
-                        },
-                        new List<MessageKeyboardButton> {
-                            new MessageKeyboardButton() {
-                                Color = KeyboardButtonColor.Default,
-                                Action = new MessageKeyboardButtonAction {
-                                    Type = KeyboardButtonActionType.Text,
-                                    Label = "Назад",
-                                    Payload = "{\"menu\": \"5\"}"
-                                }
-                            }
-                        }
-                    },
-                    OneTime = false
-                }
-            };
+                    Label = Constants.Labels.todaySchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"2\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.tomorrowSchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"1\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[2] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.youAreNotSubscribed,
+                    Payload = "{\"menu\":\"2\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.subscribe,
+                    Payload = "{\"menu\":\"2\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Positive)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"2\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[3] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    //Label = "",
+                    Payload = "{\"menu\":\"2\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.unsubscribe,
+                    Payload = "{\"menu\":\"2\",\"act\":\"2\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Negative)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.resubscribe,
+                    Payload = "{\"menu\":\"2\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Positive)
+                .AddLine()
+                /* ��������� ������ ��������� ���������
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.changeSubgroup,
+                    Payload = "{\"menu\":\"2\",\"act\":\"4\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                */
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"2\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[4] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.chooseCourse,
+                    Payload = "{\"menu\":\"4\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.first,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"0\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.second,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"1\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.third,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"2\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.fourth,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"3\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Primary)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"4\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[5] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.first,
+                    Payload = "{\"menu\":\"5\",\"act\":\"1\",\"subgroup\":\"1\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.second,
+                    Payload = "{\"menu\":\"5\",\"act\":\"1\",\"subgroup\":\"2\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Primary)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"5\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            // with callbacks
+            this.MenuKeyboards[6] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.schedule,
+                    Payload = "{\"menu\":\"0\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.info,
+                    Payload = "{\"menu\":\"0\",\"act\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.settings,
+                    Payload = "{\"menu\":\"0\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.about,
+                    Payload = "{\"menu\":\"0\",\"act\":\"4\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[7] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.openUNN,
+                    Link = Constants.unnScheduleUri,
+                    Type = KeyboardButtonActionType.OpenLink,
+                    Payload = "{\"menu\":\"1\",\"act\":\"-1\"}"
+                })
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.weekSchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.todaySchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.tomorrowSchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"1\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[8] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.youAreNotSubscribed,
+                    Payload = "{\"menu\":\"2\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.subscribe,
+                    Payload = "{\"menu\":\"2\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Positive)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"2\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[9] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    //Label = "",
+                    Payload = "{\"menu\":\"2\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.unsubscribe,
+                    Payload = "{\"menu\":\"2\",\"act\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Negative)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.resubscribe,
+                    Payload = "{\"menu\":\"2\",\"act\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Positive)
+                .AddLine()
+                /* ��������� ������ ��������� ���������
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.changeSubgroup,
+                    Payload = "{\"menu\":\"2\",\"act\":\"4\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                */
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"2\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[10] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.chooseCourse,
+                    Payload = "{\"menu\":\"4\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.first,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.second,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.third,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.fourth,
+                    Payload = "{\"menu\":\"4\",\"act\":\"2\",\"course\":\"3\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"4\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
+
+            this.MenuKeyboards[11] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(false)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.first,
+                    Payload = "{\"menu\":\"5\",\"act\":\"1\",\"subgroup\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.Courses.second,
+                    Payload = "{\"menu\":\"5\",\"act\":\"1\",\"subgroup\":\"2\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Primary)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.back,
+                    Payload = "{\"menu\":\"5\",\"act\":\"0\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .Build();
         }
     }
 }

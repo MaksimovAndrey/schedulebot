@@ -24,6 +24,8 @@ namespace Schedulebot.Vk
 
         public bool ToSend { get; set; } = true;
 
+        public bool SendAsNewMessage { get; set; } = true;
+
         public long Id { get; set; }
 
         public UploadingSchedule UploadingSchedule { get; set; }
@@ -43,6 +45,7 @@ namespace Schedulebot.Vk
             Message = photoUploadProperties.Message;
             PeerId = photoUploadProperties.PeerId;
             ToSend = photoUploadProperties.ToSend;
+            SendAsNewMessage = photoUploadProperties.SendAsNewMessage;
             Id = photoUploadProperties.Id;
             UploadingSchedule = photoUploadProperties.UploadingSchedule;
         }

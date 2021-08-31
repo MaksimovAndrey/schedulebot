@@ -1,39 +1,34 @@
-#define DONT_CHECK_CHANGES
-
-using Newtonsoft.Json;
-using Schedulebot.Schedule.Relevance;
+using Schedulebot.Commands;
 using Schedulebot.Mapping;
-using Schedulebot.Mapping.Utils;
+using Schedulebot.Schedule.Relevance;
 using Schedulebot.Users;
 using Schedulebot.Vk;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using VkNet.Model;
-using VkNet.Model.Keyboard;
 using System.Linq;
+using System.Threading.Tasks;
+using VkNet.Model.GroupUpdate;
+using VkNet.Model.Keyboard;
 
 namespace Schedulebot.Departments
 {
-    public partial class DepartmentItmm : IDepartment
+    public partial class DepartmentItmm : Department
     {
         private string Path { get; }
 
-        private readonly ConcurrentQueue<string> commandsQueue
-            = new ConcurrentQueue<string>();
+        private readonly ConcurrentQueue<Command> commandsQueue
+            = new ConcurrentQueue<Command>();
         private readonly ConcurrentQueue<PhotoUploadProperties> photosQueue
             = new ConcurrentQueue<PhotoUploadProperties>();
-        private readonly ConcurrentQueue<Message> messagesQueue
-            = new ConcurrentQueue<Message>();
+        private readonly ConcurrentQueue<GroupUpdate> updatesQueue
+            = new ConcurrentQueue<GroupUpdate>();
 
         private int CoursesCount { get; } = 4;
         private readonly Course[] courses = new Course[4];
         private List<Dictionary<string, long>> dictionaries;
 
-        private List<MessageKeyboard>[] CoursesKeyboards { get; set; }
+        private List<MessageKeyboard>[,] CoursesKeyboards { get; set; }
 
         private readonly VkStuff vkStuff;
         private readonly Mapper mapper;
@@ -52,16 +47,16 @@ namespace Schedulebot.Departments
             true, // 0 ExecuteMethodsAsync()
             true, // 1 GetMessagesAsync()
             true, // 2 ResponseMessagesAsync()
-            false, // 3 UploadPhotosAsync()
+            true, // 3 UploadPhotosAsync()
             true, // 4 SaveUsersAsync()
-            false  // 5 CheckRelevanceAsync()
+            true  // 5 CheckRelevanceAsync()
         };
 #else
         private static readonly bool[] loadModule = { 
             true, // 0 ExecuteMethodsAsync()
             true, // 1 GetMessagesAsync()
             true, // 2 ResponseMessagesAsync()
-            false, // 3 UploadPhotosAsync()
+            true, // 3 UploadPhotosAsync()
             true, // 4 SaveUsersAsync()
             true  // 5 CheckRelevanceAsync()
         };
@@ -89,7 +84,7 @@ namespace Schedulebot.Departments
 
             mapper = new Mapper(courses);
 
-            relevance = new RelevanceItmm(Path, Path + Constants.defaultDownloadFolder);
+            relevance = new RelevanceItmm(Path);
 
             LoadSettings(Path + Constants.settingsFilename);
 
@@ -100,26 +95,31 @@ namespace Schedulebot.Departments
             if (loadModule[1])
                 tasks.Add(Task.Run(() => GetMessages()));
             if (loadModule[2])
-                tasks.Add(Task.Run(() => ResponseMessagesAsync()));
-            //if (loadModule[3])
-            //    tasks.Add(Task.Run(() => UploadPhotosAsync()));
+                tasks.Add(CreateResponseMessagesTasks(Constants.responseMessagesTaskCount));
+            if (loadModule[3])
+                tasks.Add(Task.Run(() => UploadPhotosAsync()));
             if (loadModule[4])
                 tasks.Add(Task.Run(() => SaveUsersAsync()));
 
             StartTime = DateTime.Now;
 
             EnqueueMessage(
+                sendAsNewMessage: true,
+                editingEnabled: false,
                 userId: vkStuff.AdminId,
                 message: StartTime.ToString() + " | Запустился"
             );
 
-            //if (loadModule[5])
-            //    tasks.Add(StartRelevanceModule());
-
-            //EnqueueMessage(
-            //    userId: vkStuff.AdminId,
-            //    message: DateTime.Now.ToString() + " | Запустил CheckRelevance"
-            //);
+            if (loadModule[5])
+            {
+                tasks.Add(StartRelevanceModule());
+                EnqueueMessage(
+                    sendAsNewMessage: true,
+                    editingEnabled: false,
+                    userId: vkStuff.AdminId,
+                    message: DateTime.Now.ToString() + " | Запустил RelevanceModule"
+                );
+            }
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text;
-using Schedulebot.Parsing.Enums;
 
 namespace Schedulebot.Schedule
 {
@@ -37,14 +36,14 @@ namespace Schedulebot.Schedule
         }
 
         public ScheduleLecture(
-            Schedulebot.Parsing.Utils.ParsedLecture parsedLecture
+            Parsing.Utils.ParsedLecture parsedLecture
         )
         {
             TimeStart = parsedLecture.BeginLesson;
             TimeEnd = parsedLecture.EndLesson;
 
             Subject = parsedLecture.Discipline;
-            LectureHall = parsedLecture.Auditorium;
+            LectureHall = parsedLecture.Auditorium + " (" + parsedLecture.Building + ")";
             Lecturer = parsedLecture.Lecturer;
 
             Type = parsedLecture.KindOfWork;
@@ -62,12 +61,12 @@ namespace Schedulebot.Schedule
             str.Append("🏢");
             str.Append(LectureHall);
             str.Append(Constants.delimiter);
-            str.Append("👥");
+            str.Append(Type);
+            str.Append('\n');
+            str.Append("👤");
             str.Append(Lecturer);
             str.Append('\n');
             str.Append(Subject);
-            str.Append(Constants.delimiter);
-            str.Append(Type);
 
             return str.ToString();
         }

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Schedulebot.Parsing.Utils
+﻿namespace Schedulebot.Parsing.Utils
 {
     public class ParsedLecture
     {
@@ -13,5 +9,6 @@ namespace Schedulebot.Parsing.Utils
         public string KindOfWork { get; set; } = "";
         public string Lecturer { get; set; } = "";
         public string Date { get; set; } = "";
+        public string Building { get; set; } = "";
     }
 }

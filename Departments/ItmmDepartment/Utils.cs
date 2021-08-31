@@ -1,43 +1,33 @@
-﻿using HtmlAgilityPack;
-using Newtonsoft.Json;
-using Schedulebot.Schedule.Relevance;
-using Schedulebot.Mapping;
-using Schedulebot.Mapping.Utils;
-using Schedulebot.Users;
-using Schedulebot.Users.Enums;
-using Schedulebot.Departments.Utils;
-using Schedulebot.Utils;
-using Schedulebot.Vk;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Schedulebot.Commands;
+using Schedulebot.Parsing;
+using Schedulebot.Schedule;
+using Schedulebot.Users.Utils;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using VkNet.Enums.SafetyEnums;
-using VkNet.Exception;
 using VkNet.Model;
 using VkNet.Model.Attachments;
 using VkNet.Model.Keyboard;
-using VkNet.Model.RequestParams;
-using Schedulebot;
-using Schedulebot.Schedule;
-using Schedulebot.Parsing;
+using VkNet.Utils;
 
 namespace Schedulebot.Departments
 {
-    public partial class DepartmentItmm : IDepartment
+    public partial class DepartmentItmm : Department
     {
         private bool UpdateGroupSchedule(int course, int group)
         {
             courses[course].groups[group].IsUpdating = true;
             DateTime newUpdateTime = DateTime.Now;
+
             var newSchedule = GetNewSchedule(course, courses[course].groups[group].Name);
-            // TODO: check for changes
+            if (newSchedule is null)
+                return false;
+
             courses[course].groups[group].days = newSchedule;
+            courses[course].groups[group].CheckForUploadedDays();
             courses[course].groups[group].LastTimeUpdated = newUpdateTime;
             courses[course].groups[group].IsUpdating = false;
 
@@ -51,31 +41,81 @@ namespace Schedulebot.Departments
                 + "&finish=" + DateTime.Now.AddDays(8).ToString("yyyy'.'MM'.'dd")
                 + Constants.portalAPILangArg;
 
-            return Parser.ParseScheduleFromJson(ScheduleBot.client.GetStringAsync(url).Result);
+            string result;
+            try
+            {
+                result = ScheduleBot.client.GetStringAsync(url).Result;
+            }
+            catch
+            {
+                return null;
+            }
+
+            return Parser.ParseScheduleFromJson(result);
+        }
+
+        private void EnqueueEventAnswer(
+            string eventId,
+            long userId,
+            long peerId,
+            bool haveEventData = false,
+            string text = null,
+            MessageEventType messageEventType = null)
+        {
+            VkParameters vkParameters = new VkParameters
+            {
+                { "event_id", eventId },
+                { "user_id", userId },
+                { "peer_id", peerId }
+            };
+
+            if (haveEventData)
+            {
+                vkParameters.Add("event_data",
+                    JsonConvert.SerializeObject(new EventData()
+                    {
+                        Text = text,
+                        Type = messageEventType
+                    })
+                );
+            }
+
+            commandsQueue.Enqueue(new Command(CommandType.SendMessageEventAnswer, vkParameters));
         }
 
         private void EnqueueMessage(
+            bool sendAsNewMessage,
+            bool editingEnabled,
             long? userId = null,
             List<long> userIds = null,
-            string message = "Отправляю клавиатуру",
+            string message = null,
             List<MediaAttachment> attachments = null,
             int? keyboardId = null,
             MessageKeyboard customKeyboard = null)
         {
-            MessagesSendParams messageSendParams = new MessagesSendParams()
+            VkParameters vkParameters = new VkParameters
             {
-                Message = message,
-                RandomId = (int)DateTime.Now.Ticks
+                { "message", message is null ? Constants.defaultMessage : message },
+                { "random_id", (int)DateTime.Now.Ticks }
             };
+            CommandType type;
+
             if (userIds != null)
             {
                 if (userIds.Count == 0)
                     return;
-                else if (userIds.Count > 100)
+
+                type = CommandType.SendMessage;
+                if (sendAsNewMessage)
+                    userRepository.RemoveLastMessageId(userIds);
+
+                if (userIds.Count > 100)
                 {
-                    messageSendParams.UserIds = userIds.GetRange(0, 100);
+                    vkParameters.Add("user_ids", JsonConvert.SerializeObject(userIds.GetRange(0, 100)));
                     userIds.RemoveRange(0, 100);
                     EnqueueMessage(
+                        sendAsNewMessage: true,
+                        editingEnabled: false,
                         userIds: userIds,
                         message: message,
                         attachments: attachments,
@@ -83,85 +123,75 @@ namespace Schedulebot.Departments
                         customKeyboard: customKeyboard);
                 }
                 else
-                    messageSendParams.UserIds = userIds;
+                {
+                    vkParameters.Add("user_ids", JsonConvert.SerializeObject(userIds));
+                }
             }
-
-            messageSendParams.PeerId = userId;
-
-            messageSendParams.Attachments = attachments;
-
-            messageSendParams.Keyboard = customKeyboard;
-            switch (keyboardId)
+            else
             {
-                case null:
+                MessageInfo lastMessageInfo = (sendAsNewMessage || !editingEnabled) ? userRepository.GetAndRemoveLastMessageInfo(userId.GetValueOrDefault())
+                    : userRepository.GetLastMessageInfo(userId.GetValueOrDefault());
+
+                if (lastMessageInfo.Id != 0 && DateTime.Now - lastMessageInfo.Time < Constants.allowableMessageEditTime && !sendAsNewMessage)
                 {
-                    break;
+                    vkParameters.Add("message_id", lastMessageInfo.Id);
+                    type = CommandType.EditMessage;
                 }
-                case 0:
+                else if (editingEnabled)
                 {
-                    messageSendParams.Keyboard = vkStuff.MenuKeyboards[0];
-                    break;
+                    type = CommandType.SendMessageAndGetMessageId;
                 }
-                case 1:
+                else
                 {
-                    messageSendParams.Keyboard = vkStuff.MenuKeyboards[1];
-                    break;
-                }
-                case 2:
-                {
-                    messageSendParams.Keyboard = vkStuff.MenuKeyboards[2];
-                    break;
-                }
-                case 4:
-                {
-                    messageSendParams.Keyboard = vkStuff.MenuKeyboards[4];
-                    break;
+                    type = CommandType.SendMessage;
                 }
             }
-            commandsQueue.Enqueue("API.messages.send(" + JsonConvert.SerializeObject(MessagesSendParams.ToVkParameters(messageSendParams), Newtonsoft.Json.Formatting.Indented) + ");");
+
+            vkParameters.Add("peer_id", userId);
+
+            if (attachments != null)
+            {
+                StringBuilder atts = new StringBuilder();
+                atts.Append(attachments[0].ToString());
+                for (int i = 1; i < attachments.Count; i++)
+                {
+                    atts.Append(',');
+                    atts.Append(attachments[i].ToString());
+                }
+                vkParameters.Add("attachment", atts.ToString());
+            }
+
+            if (keyboardId == null && customKeyboard != null)
+            {
+                vkParameters.Add("keyboard", JsonConvert.SerializeObject(customKeyboard));
+            }
+            else if (keyboardId != null)
+            {
+                vkParameters.Add("keyboard", JsonConvert.SerializeObject(vkStuff.MenuKeyboards[keyboardId.Value]));
+            }
+
+            commandsQueue.Enqueue(new Command(type, vkParameters, userId));
         }
 
-//        private bool UploadWeekSchedule()
-//        {
-//            bool result = false;
-//            for (int currentCourse = 0; currentCourse < CoursesCount; currentCourse++)
-//            {
-//                for (int currentGroup = 0; currentGroup < courses[currentCourse].groups.Count; currentGroup++)
-//                {
-//                    for (int currentSubgroup = 0; currentSubgroup < 2; currentSubgroup++)
-//                    {
-//                        if (courses[currentCourse].groups[currentGroup].subgroups[currentSubgroup].PhotoId == 0)
-//                        {
-//                            UpdateProperties updateProperties = new UpdateProperties();
+        private void ProcessExecutionResponse(VkResponse response)
+        {
+            if (!response.HasToken())
+                return;
 
-//                            updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
-//                            updateProperties.drawingStandartScheduleInfo.date
-//                                = relevance.DatesAndUrls.dates[currentCourse];
-//                            updateProperties.drawingStandartScheduleInfo.weeks
-//                                = courses[currentCourse].groups[currentGroup].subgroups[currentSubgroup].weeks;
-//                            updateProperties.drawingStandartScheduleInfo.group
-//                                = courses[currentCourse].groups[currentGroup].name;
+            if (response.ContainsKey("userIdsAndLastMessageIds"))
+            {
+                var jsonArray = JArray.Parse(response["userIdsAndLastMessageIds"].ToString());
+                if (jsonArray.Count != 2)
+                    return;
 
-//                            courses[currentCourse].groups[currentGroup]
-//                                .DrawSubgroupSchedule(currentSubgroup, ref updateProperties);
+                var userIds = ((JArray)jsonArray[0]).ToObject<long[]>();
+                var lastMessageIds = ((JArray)jsonArray[1]).ToObject<long[]>();
+                if (userIds.Length == 0 || userIds.Length != lastMessageIds.Length)
+                    return;
 
-//                            updateProperties.photoUploadProperties.GroupName
-//                                = courses[currentCourse].groups[currentGroup].name;
-//                            updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
-//                            updateProperties.photoUploadProperties.Course = currentCourse;
-//                            updateProperties.photoUploadProperties.GroupIndex = currentGroup;
-//                            updateProperties.photoUploadProperties.ToSend = false;
-
-//#if !DONT_UPLOAD_WEEK_SCHEDULE
-//                            photosQueue.Enqueue(new PhotoUploadProperties(updateProperties.photoUploadProperties));
-//#endif
-//                            result = true;
-//                        }
-//                    }
-//                }
-//            }
-//            return result;
-//        }
+                userRepository.SetLastMessageInfo(userIds, lastMessageIds, DateTime.Now);
+            }
+        }
 
         private int CurrentWeek() // Определение недели (верхняя или нижняя)
         {

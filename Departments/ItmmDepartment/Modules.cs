@@ -1,6 +1,6 @@
 ﻿using HtmlAgilityPack;
-using Schedulebot.Schedule.Relevance;
-using Schedulebot.Mapping.Utils;
+using Newtonsoft.Json;
+using Schedulebot.Commands;
 using Schedulebot.Users;
 using Schedulebot.Vk;
 using System;
@@ -13,17 +13,14 @@ using VkNet.Enums.SafetyEnums;
 using VkNet.Exception;
 using VkNet.Model;
 using VkNet.Model.Attachments;
+using VkNet.Model.GroupUpdate;
 using VkNet.Model.RequestParams;
+using VkNet.Utils;
 
 namespace Schedulebot.Departments
 {
-    public partial class DepartmentItmm : IDepartment
+    public partial class DepartmentItmm : Department
     {
-        public void SaveUsers()
-        {
-            IUserRepositorySaver.Save(userRepository, Path + Constants.userRepositoryFilename);
-        }
-
         private async Task SaveUsersAsync()
         {
             string filename = Path + Constants.userRepositoryFilename;
@@ -52,7 +49,8 @@ namespace Schedulebot.Departments
 #if DEBUG
                     Console.WriteLine(DateTime.Now.ToString() + " Получаю сообщения");
                     Console.WriteLine("commandsQueue count = {0}", commandsQueue.Count);
-                    Console.WriteLine("messagesQueue count = {0}", messagesQueue.Count);
+                    Console.WriteLine("messagesQueue count = {0}", updatesQueue.Count);
+                    Console.WriteLine("photosQueue count = {0}", photosQueue.Count);
 #endif
                     historyResponse = vkStuff.Api.Groups.GetBotsLongPollHistory(botsLongPollHistoryParams);
                     if (historyResponse == null)
@@ -60,10 +58,9 @@ namespace Schedulebot.Departments
                     botsLongPollHistoryParams.Ts = historyResponse.Ts;
                     if (!historyResponse.Updates.Any())
                         continue;
-                    foreach (var update in historyResponse.Updates)
+                    for (int i = 0; i < historyResponse.Updates.Count(); i++)
                     {
-                        if (update.Type == GroupUpdateType.MessageNew)
-                            messagesQueue.Enqueue(update.Message);
+                        updatesQueue.Enqueue(historyResponse.Updates.ElementAt(i));
                     }
                     historyResponse = null;
                 }
@@ -89,32 +86,49 @@ namespace Schedulebot.Departments
             }
         }
 
-        private async Task ResponseMessagesAsync()
+        private Task CreateResponseMessagesTasks(int tasksCount)
         {
-            Console.WriteLine("ResponseMessagesAsync");
-            const int delay = 100;
-            while (true)
+            List<Task> tasks = new List<Task>();
+            for (int i = 0; i < tasksCount; i++)
             {
-                while (!messagesQueue.IsEmpty)
+                tasks.Add(Task.Run(async () =>
                 {
-                    if (messagesQueue.TryDequeue(out Message message))
+                    while (true)
                     {
-                        ResponseMessage(message);
+                        while (!updatesQueue.IsEmpty)
+                        {
+                            if (updatesQueue.TryDequeue(out GroupUpdate update))
+                            {
+                                if (update.Type == GroupUpdateType.MessageNew)
+                                {
+                                    ResponseMessage(update.MessageNew.Message,
+                                        update.MessageNew.ClientInfo.ButtonActions.Contains(KeyboardButtonActionType.Callback));
+                                }
+                                else if (update.Type == GroupUpdateType.MessageEvent)
+                                {
+                                    ResponseMessageEvent(update.MessageEvent);
+                                }
+                            }
+                            else
+                            {
+                                await Task.Delay(1);
+                            }
+                        }
+                        await Task.Delay(Constants.noMessagesDelay);
                     }
-                    else
-                        await Task.Delay(1);
-                }
-                await Task.Delay(delay);
+                }));
             }
+            return Task.WhenAny(tasks);
         }
 
         private async Task ExecuteMethodsAsync()
         {
-            Console.WriteLine("ExecuteMethodsAsync");
             int queueCommandsAmount;
             int commandsInRequestAmount = 0;
             int timer = 0;
-            StringBuilder stringBuilder = new StringBuilder();
+            StringBuilder executeCode = new StringBuilder();
+            StringBuilder codePartReturn = new StringBuilder();
+            List<long> returnMessageUserIds = new List<long>();
             while (true)
             {
                 queueCommandsAmount
@@ -122,9 +136,33 @@ namespace Schedulebot.Departments
                 ? commandsQueue.Count : 25 - commandsInRequestAmount;
                 for (int i = 0; i < queueCommandsAmount; ++i)
                 {
-                    if (commandsQueue.TryDequeue(out string command))
+                    if (commandsQueue.TryDequeue(out Command command))
                     {
-                        stringBuilder.Append(command);
+                        switch (command.Type)
+                        {
+                            case CommandType.SendMessage:
+                                executeCode.Append("API.messages.send(");
+                                executeCode.Append(JsonConvert.SerializeObject(command.VkParameters));
+                                executeCode.Append(");");
+                                break;
+                            case CommandType.SendMessageEventAnswer:
+                                executeCode.Append("API.messages.sendMessageEventAnswer(");
+                                executeCode.Append(JsonConvert.SerializeObject(command.VkParameters));
+                                executeCode.Append(");");
+                                break;
+                            case CommandType.SendMessageAndGetMessageId:
+                                returnMessageUserIds.Add(command.UserId.GetValueOrDefault());
+                                codePartReturn.Append("ids.push(");
+                                codePartReturn.Append("API.messages.send(");
+                                codePartReturn.Append(JsonConvert.SerializeObject(command.VkParameters));
+                                codePartReturn.Append("));");
+                                break;
+                            case CommandType.EditMessage:
+                                executeCode.Append("API.messages.edit(");
+                                executeCode.Append(JsonConvert.SerializeObject(command.VkParameters));
+                                executeCode.Append(");");
+                                break;
+                        }
                         ++commandsInRequestAmount;
                     }
                     else
@@ -142,13 +180,36 @@ namespace Schedulebot.Departments
                     }
                     else
                     {
+                        if (codePartReturn.Length > 0)
+                        {
+                            executeCode.Append("var ids = [];");
+                            executeCode.Append(codePartReturn.ToString());
+                            executeCode.Append("return {\"userIdsAndLastMessageIds\":[[");
+                            executeCode.Append(String.Join(", ", returnMessageUserIds.ToArray()));
+                            executeCode.Append("],ids]");
+                            executeCode.Append("};");
+                        }
 #if DEBUG
-                        Console.WriteLine(stringBuilder.ToString());
+                        Console.WriteLine(executeCode.ToString());
 #endif
-                        var response = vkStuff.Api.Execute.Execute(stringBuilder.ToString());
+                        VkResponse response;
+                        try
+                        {
+                            response = vkStuff.Api.Execute.Execute(executeCode.ToString());
+                        }
+                        catch
+                        {
+                            response = null;
+                        }
+
+                        if (response != null)
+                            ProcessExecutionResponse(response);
+
                         timer = 0;
                         commandsInRequestAmount = 0;
-                        stringBuilder.Clear();
+                        executeCode.Clear();
+                        codePartReturn.Clear();
+                        returnMessageUserIds.Clear();
                     }
                 }
                 timer += 20;
@@ -156,229 +217,105 @@ namespace Schedulebot.Departments
             }
         }
 
-        //private async Task StartRelevanceModule()
-        //{
-            //while (true)
-            //{
-            //    HtmlDocument htmlDocument = await relevance.DownloadHtmlDocument(Constants.websiteUrl);
+        private async Task StartRelevanceModule()
+        {
+            HtmlDocument htmlDocument;
+            while (true)
+            {
+                htmlDocument = await relevance.DownloadHtmlDocument(Constants.websiteUrl);
 
-            //    DateTime dt = DateTime.Now;
-            //    importantInfo = "От " + dt.ToString() + "\n\n" + relevance.ParseInformation(htmlDocument);
+                DateTime dt = DateTime.Now;
+                importantInfo = "От " + dt.ToString() + "\n\n" + relevance.ParseInformation(htmlDocument);
 
-            //    List<(int, List<int>)> toUpdate = relevance.UpdateDatesAndUrls(htmlDocument);
+                htmlDocument = null;
+                await Task.Delay(Constants.loadWebsiteDelay);
+            }
+        }
 
-            //    if (toUpdate == null || toUpdate.Count == 0)
-            //    {
-            //        await Task.Delay(Constants.loadWebsiteDelay);
-            //        continue;
-            //    }
-
-            //    List<PhotoUploadProperties> photosToUpload = new List<PhotoUploadProperties>();
-            //    List<int> updatingCourses = new List<int>();
-
-            //    UpdateProperties updateProperties = new UpdateProperties();
-            //    updateProperties.drawingStandartScheduleInfo.vkGroupUrl = vkStuff.GroupUrl;
-            //    updateProperties.photoUploadProperties.AlbumId = vkStuff.MainAlbumId;
-            //    updateProperties.photoUploadProperties.ToSend = true;
-            //    updateProperties.photoUploadProperties.UploadingSchedule = UploadingSchedule.Week;
-
-            //    for (int i = 0; i < toUpdate.Count; ++i)
-            //    {
-            //        int courseIndex = toUpdate[i].Item1;
-
-            //        List<string> pathsToFile = new List<string>();
-            //        for (int j = 0; j < relevance.DatesAndUrls.urls[courseIndex].Count; j++)
-            //            pathsToFile.Add(Path + Constants.defaultDownloadFolder + j.ToString() + '_' + courseIndex.ToString() + IRelevance.defaultFilenameBody);
-            //        courses[courseIndex].PathsToFile = pathsToFile;
-
-            //        StringBuilder stringBuilder = new StringBuilder();
-            //        stringBuilder.Append(Constants.newSchedule);
-            //        stringBuilder.Append(relevance.DatesAndUrls.dates[courseIndex]);
-            //        stringBuilder.Append(Constants.waitScheduleUpdatingResult);
-
-            //        EnqueueMessage(
-            //            userIds: userRepository.GetIds(courseIndex, mapper),
-            //            message: stringBuilder.ToString());
-
-            //        if (!await relevance.DownloadScheduleFiles(courseIndex, toUpdate[i].Item2))
-            //        {
-            //            courses[courseIndex].isBroken = true;
-
-            //            StringBuilder errorMessageBuilder = new StringBuilder();
-            //            errorMessageBuilder.Append(Constants.loadScheduleError);
-            //            errorMessageBuilder.Append(relevance.DatesAndUrls.dates[courseIndex]);
-            //            errorMessageBuilder.Append(Constants.newScheduleHere);
-            //            errorMessageBuilder.Append(Constants.websiteUrl);
-
-            //            EnqueueMessage(
-            //                userIds: userRepository.GetIds(courseIndex, mapper),
-            //                message: errorMessageBuilder.ToString());
-
-            //            continue;
-            //        }
-
-            //        updateProperties.drawingStandartScheduleInfo.date = relevance.DatesAndUrls.dates[courseIndex];
-
-            //        var coursePhotosToUpload = courses[courseIndex].Update(updateProperties, dictionaries);
-            //        if (coursePhotosToUpload != null)
-            //        {
-            //            photosToUpload.AddRange(coursePhotosToUpload);
-            //            updatingCourses.Add(courseIndex);
-            //        }
-            //    }
-            //    if (updatingCourses.Count != 0)
-            //    {
-            //        mapper.CreateMaps(courses);
-
-            //        for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
-            //        {
-            //            if (courses[updatingCourses[currentUpdatingCourse]].isBroken)
-            //            {
-            //                StringBuilder stringBuilder = new StringBuilder();
-            //                stringBuilder.Append(Constants.updateScheduleError);
-            //                stringBuilder.Append(relevance.DatesAndUrls.dates[currentUpdatingCourse]);
-            //                stringBuilder.Append(Constants.newScheduleHere);
-            //                stringBuilder.Append(Constants.websiteUrl);
-
-            //                EnqueueMessage(
-            //                    userIds: userRepository.GetIds(updatingCourses[currentUpdatingCourse], mapper),
-            //                    message: stringBuilder.ToString());
-            //            }
-            //        }
-
-            //        for (int photoIndex = 0; photoIndex < photosToUpload.Count; photoIndex++)
-            //        {
-            //            if (mapper.TryGetCourseAndGroupIndex(photosToUpload[photoIndex].GroupName, out UserMapping mapping))
-            //            {
-            //                photosToUpload[photoIndex].Course = mapping.Course;
-            //                photosToUpload[photoIndex].GroupIndex = mapping.GroupIndex;
-
-            //                photosQueue.Enqueue(photosToUpload[photoIndex]);
-            //            }
-            //        }
-
-            //        List<(string, int)> newGroupSubgroupList = new List<(string, int)>();
-            //        for (int currentPhoto = 0; currentPhoto < photosToUpload.Count; currentPhoto++)
-            //            newGroupSubgroupList.Add((photosToUpload[currentPhoto].GroupName, photosToUpload[currentPhoto].Subgroup + 1));
-
-            //        EnqueueMessage(
-            //            message: Constants.noChanges,
-            //            userIds: userRepository.GetIds(mapper.GetOldGroupSubgroupList(newGroupSubgroupList, updatingCourses)));
-
-            //        CoursesKeyboards = Utils.Utils.ConstructKeyboards(in mapper, CoursesCount);
-            //        Utils.Utils.SaveCoursesFilePaths(in courses, CoursesCount, Path + Constants.coursesPathsFilename);
-
-            //        while (true)
-            //        {
-            //            if (photosQueue.IsEmpty)
-            //            {
-            //                await Task.Delay(Constants.waitPhotosUploadingDelay);
-            //                for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
-            //                    courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
-            //                break;
-            //            }
-            //            await Task.Delay(Constants.checkPhotosQueueDelay);
-            //        }
-
-            //        SaveUploadedSchedule(Path + Constants.uploadedScheduleFilename);
-
-            //        for (int currentUpdatingCourse = 0; currentUpdatingCourse < updatingCourses.Count; currentUpdatingCourse++)
-            //            courses[updatingCourses[currentUpdatingCourse]].isUpdating = false;
-
-            //        relevance.DatesAndUrls.Save();
-            //    }
-            //    await Task.Delay(Constants.loadWebsiteDelay);
-            //}
-        //}
-
-        /// <summary>
-        /// !!! НЕ РАБОТАЕТ !!!
-        /// </summary>
-        /// <returns></returns>
-        //private async Task UploadPhotosAsync()
-        //{
-        //    int queuePhotosAmount;
-        //    int photosInRequestAmount = 0;
-        //    int timer = 0;
-        //    MultipartFormDataContent form = new MultipartFormDataContent();
-        //    List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
-        //    while (true)
-        //    {
-        //        queuePhotosAmount = photosQueue.Count;
-        //        if (queuePhotosAmount > 5 - photosInRequestAmount)
-        //        {
-        //            queuePhotosAmount = 5 - photosInRequestAmount;
-        //        }
-        //        for (int i = 0; i < queuePhotosAmount; ++i)
-        //        {
-        //            if (photosQueue.TryDequeue(out PhotoUploadProperties photoUploadProperties))
-        //            {
-        //                photosUploadProperties.Add(photoUploadProperties);
-        //                form.Add(new ByteArrayContent(photosUploadProperties[i].Photo), "file" + i.ToString(), i.ToString() + ".png");
-        //                ++photosInRequestAmount;
-        //            }
-        //            else
-        //            {
-        //                --i;
-        //                timer += 1;
-        //                await Task.Delay(1);
-        //            }
-        //        }
-        //        if (photosInRequestAmount == 5 || timer >= 333)
-        //        {
-        //            if (photosInRequestAmount == 0)
-        //            {
-        //                timer = 0;
-        //            }
-        //            else
-        //            {
-        //                bool success = false;
-        //                HttpResponseMessage response;
-        //                while (!success)
-        //                {
-        //                    try
-        //                    {
-        //                        var uploadServer = vkStuff.ApiPhotos.Photo.GetUploadServer(vkStuff.MainAlbumId, vkStuff.GroupId);
-        //                        response = null;
-        //                        response = await ScheduleBot.client.PostAsync(new Uri(uploadServer.UploadUrl), form);
-        //                        if (response != null)
-        //                        {
-        //                            IReadOnlyCollection<Photo> photos = vkStuff.ApiPhotos.Photo.Save(new PhotoSaveParams
-        //                            {
-        //                                SaveFileResponse = Encoding.ASCII.GetString(await response.Content.ReadAsByteArrayAsync()),
-        //                                AlbumId = vkStuff.MainAlbumId,
-        //                                GroupId = vkStuff.GroupId
-        //                            });
-        //                            if (photos.Count == photosInRequestAmount)
-        //                            {
-        //                                for (int currentPhoto = 0; currentPhoto < photosInRequestAmount; currentPhoto++)
-        //                                {
-        //                                    photosUploadProperties[currentPhoto].Id = (long)photos.ElementAt(currentPhoto).Id;
-        //                                    UploadedPhotoResponse(photosUploadProperties[currentPhoto]);
-        //                                }
-        //                                success = true;
-        //                            }
-        //                            else
-        //                            {
-        //                                await Task.Delay(1000);
-        //                            }
-        //                        }
-        //                    }
-        //                    catch
-        //                    {
-        //                        await Task.Delay(1000);
-        //                    }
-        //                }
-        //                timer = 0;
-        //                photosInRequestAmount = 0;
-        //                form.Dispose();
-        //                form = new MultipartFormDataContent();
-        //                photosUploadProperties.Clear();
-        //            }
-        //        }
-        //        timer += 333;
-        //        await Task.Delay(333);
-        //    }
-        //}
+        private async Task UploadPhotosAsync()
+        {
+            int queuePhotosAmount;
+            int photosInRequestAmount = 0;
+            int timer = 0;
+            MultipartFormDataContent form = new MultipartFormDataContent();
+            List<PhotoUploadProperties> photosUploadProperties = new List<PhotoUploadProperties>();
+            while (true)
+            {
+                queuePhotosAmount = photosQueue.Count;
+                if (queuePhotosAmount > 5 - photosInRequestAmount)
+                {
+                    queuePhotosAmount = 5 - photosInRequestAmount;
+                }
+                for (int i = 0; i < queuePhotosAmount; ++i)
+                {
+                    if (photosQueue.TryDequeue(out PhotoUploadProperties photoUploadProperties))
+                    {
+                        photosUploadProperties.Add(photoUploadProperties);
+                        form.Add(new ByteArrayContent(photosUploadProperties[i].Photo), "file" + i.ToString(), i.ToString() + ".png");
+                        ++photosInRequestAmount;
+                    }
+                    else
+                    {
+                        --i;
+                        timer += 1;
+                        await Task.Delay(1);
+                    }
+                }
+                if (photosInRequestAmount == 5 || timer >= 333)
+                {
+                    if (photosInRequestAmount == 0)
+                    {
+                        timer = 0;
+                    }
+                    else
+                    {
+                        bool success = false;
+                        HttpResponseMessage response;
+                        while (!success)
+                        {
+                            try
+                            {
+                                var uploadServer = vkStuff.ApiPhotos.Photo.GetUploadServer(vkStuff.MainAlbumId, vkStuff.GroupId);
+                                response = null;
+                                response = await ScheduleBot.client.PostAsync(new Uri(uploadServer.UploadUrl), form);
+                                if (response != null)
+                                {
+                                    IReadOnlyCollection<Photo> photos = vkStuff.ApiPhotos.Photo.Save(new PhotoSaveParams
+                                    {
+                                        SaveFileResponse = Encoding.ASCII.GetString(await response.Content.ReadAsByteArrayAsync()),
+                                        AlbumId = vkStuff.MainAlbumId,
+                                        GroupId = vkStuff.GroupId
+                                    });
+                                    if (photos.Count == photosInRequestAmount)
+                                    {
+                                        for (int currentPhoto = 0; currentPhoto < photosInRequestAmount; currentPhoto++)
+                                        {
+                                            photosUploadProperties[currentPhoto].Id = (long)photos.ElementAt(currentPhoto).Id;
+                                            UploadedPhotoResponse(photosUploadProperties[currentPhoto]);
+                                        }
+                                        success = true;
+                                    }
+                                    else
+                                    {
+                                        await Task.Delay(1000);
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                await Task.Delay(1000);
+                            }
+                        }
+                        timer = 0;
+                        photosInRequestAmount = 0;
+                        form.Dispose();
+                        form = new MultipartFormDataContent();
+                        photosUploadProperties.Clear();
+                    }
+                }
+                timer += 333;
+                await Task.Delay(333);
+            }
+        }
     }
 }

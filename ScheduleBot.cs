@@ -1,8 +1,10 @@
+using Schedulebot.Departments;
+using SixLabors.ImageSharp;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Schedulebot.Departments;
 
 namespace Schedulebot
 {
@@ -14,12 +16,19 @@ namespace Schedulebot
         private const string с_path = @"/media/projects/sbtest/";
 #endif
 
+        public static readonly Configuration configuration = new Configuration()
+        {
+            MaxDegreeOfParallelism = 2
+        };
+        public static readonly CultureInfo cultureInfo = CultureInfo.GetCultureInfo("ru-RU");
         public static readonly HttpClient client = new HttpClient();
         public const int departmentsCount = 1;
         public IDepartment[] departments;
 
         public ScheduleBot(ref List<Task> _tasks)
         {
+            client.Timeout = TimeSpan.FromSeconds(20);
+
             //! Пока один департамент будет так
             // TODO: переписать с restart department
             List<Task> tasks = new List<Task>();

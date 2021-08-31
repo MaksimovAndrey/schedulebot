@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 
 namespace Schedulebot.Schedule
@@ -9,8 +8,8 @@ namespace Schedulebot.Schedule
     {
         public List<ScheduleLecture> lectures;
         public DateTime Date { get; }
-        public long PhotoId { get; set; } = 0; // вынести 
-        public bool IsStudying => lectures.Count != 0;
+        public long PhotoId { get; set; } = 0;
+        public bool IsPhotoUploading = false;
 
         public ScheduleDay(DateTime date)
         {
@@ -25,6 +24,11 @@ namespace Schedulebot.Schedule
             Date = day.Date;
         }
 
+        public string GetDateString()
+        {
+            return Date.ToString("dd'.'MM'.'yyyy");
+        }
+
         public override string ToString()
         {
             StringBuilder str = new StringBuilder();
@@ -32,7 +36,7 @@ namespace Schedulebot.Schedule
             str.Append("📅");
             str.Append(Date.ToString("dd'.'MM'.'yyyy"));
             str.Append(Constants.delimiter);
-            str.Append(CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetDayName(Date.DayOfWeek));
+            str.Append(Utils.Converter.DayOfWeekToString(Date.DayOfWeek));
             for (int i = 0; i < lectures.Count; i++)
             {
                 str.Append("\n\n");
@@ -40,45 +44,6 @@ namespace Schedulebot.Schedule
             }
 
             return str.ToString();
-        }
-
-        /// <summary>
-        /// !!!НЕ ИСПОЛЬЗОВАТЬ, НЕ РАБОТАЕТ!!!
-        /// Ищет изменения в расписании в этот день
-        /// <br>Обращаемся к новому дню, передаем устаревшие пары</br>
-        /// </summary>
-        /// <param name="oldLectures">Устаревшие пары</param>
-        /// <returns>Строка с изменениями</returns>
-        public string GetChanges(List<ScheduleLecture> oldLectures)
-        {
-            int minOfOldNewLectures = Math.Min(lectures.Count, oldLectures.Count);
-            StringBuilder changesBuilder = new StringBuilder();
-
-            for (int currentLecture = 0; currentLecture < minOfOldNewLectures; currentLecture++)
-            {
-                if (lectures[currentLecture] != oldLectures[currentLecture])
-                {
-                    changesBuilder.Append('-');
-                    changesBuilder.Append(oldLectures[currentLecture].ToString());
-                    changesBuilder.Append("\n+");
-                    changesBuilder.Append(lectures[currentLecture].ToString());
-                    changesBuilder.Append('\n');
-                }
-            }
-            for (int lectureIndex = minOfOldNewLectures; lectureIndex < oldLectures.Count; lectureIndex++)
-            {
-                changesBuilder.Append('-');
-                changesBuilder.Append(oldLectures[lectureIndex].ToString());
-                changesBuilder.Append('\n');
-            }
-            for (int lectureIndex = minOfOldNewLectures; lectureIndex < lectures.Count; lectureIndex++)
-            {
-                changesBuilder.Append('+');
-                changesBuilder.Append(lectures[lectureIndex].ToString());
-                changesBuilder.Append('\n');
-            }
-
-            return changesBuilder.ToString();
         }
 
         public override bool Equals(object obj)
@@ -98,9 +63,22 @@ namespace Schedulebot.Schedule
             return HashCode.Combine(lectures, Date);
         }
 
+        public bool EqualDay(ScheduleDay other)
+        {
+            if (this.lectures.Count != other.lectures.Count
+                || this.Date.DayOfWeek != other.Date.DayOfWeek)
+                return false;
+            for (int i = 0; i < this.lectures.Count; ++i)
+            {
+                if (this.lectures[i] != other.lectures[i])
+                    return false;
+            }
+            return true;
+        }
+
         public static bool operator ==(ScheduleDay day1, ScheduleDay day2)
         {
-            if (day1.Date != day2.Date 
+            if (day1.Date != day2.Date
                 || day1.lectures.Count != day2.lectures.Count)
                 return false;
             for (int i = 0; i < day1.lectures.Count; ++i)
