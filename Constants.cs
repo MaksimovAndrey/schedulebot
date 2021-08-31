@@ -102,9 +102,9 @@ namespace Schedulebot
         public const string name = "schedulebot";
         public const string groupUrl = "vk.com/unnbot";
 #if DEBUG
-        public const string version = "v2.4 DEV";
+        public const string version = "v2.5 DEV";
 #else
-        public const string version = "v2.4";
+        public const string version = "v2.5";
 #endif
         public const string delimiter = " · ";
         #endregion
