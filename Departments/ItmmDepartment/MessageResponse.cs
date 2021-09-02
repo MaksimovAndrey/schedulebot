@@ -499,7 +499,7 @@ namespace Schedulebot.Departments
 
         private void AttachmentsMessageResponse(Message message, bool callbackSupported)
         {
-            if (message.Attachments.Single().ToString() == "Sticker")
+            if (message.Attachments[0].ToString() == "Sticker")
             {
                 EnqueueMessage(
                     sendAsNewMessage: true,
