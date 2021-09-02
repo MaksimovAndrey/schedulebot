@@ -158,6 +158,13 @@ namespace Schedulebot
         public const string unknownError = "Что-то пошло не так";
         public const string unnAPIError = "API лобача не отвечает на запросы, информация может быть не актуальна!";
 
+        public struct Updating
+        {
+            public const string unnApiError = "При обновлении расписания возникла ошибка. Ответ от сайта не был получен.";
+            public const string parseError = "При обновлении расписания возникла ошибка. Не получилось спарсить расписание.";
+            public const string unknownError = "При обновлении расписания возникла неизвестная ошибка.";
+        }
+
         public const string scheduleUpdatingMessage =
             "Происходит обновление расписания, попробуйте через несколько минут";
         public const string unknownUserWithPayloadMessage =
@@ -173,6 +180,8 @@ namespace Schedulebot
 
         // Невозможно отредактировать сообщение после 24 часов, поэтому ставим лимит
         public static readonly TimeSpan allowableMessageEditTime = new(23, 50, 0);
+
+        public static readonly TimeSpan ScheduleValidity = TimeSpan.FromMinutes(60);
 
         public const int responseMessagesTaskCount = 4;
         public const int keyboardsCount = 6;

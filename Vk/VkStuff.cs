@@ -23,6 +23,7 @@ namespace Schedulebot.Vk
         public List<MediaAttachment> SubscribeInfoAttachments { get; }
 
         public MessageKeyboard[] MenuKeyboards { get; }
+        public MessageKeyboard[] InlineKeyboards { get; }
 
         public VkStuff(string key, string keyPhotos, long groupId, long mainAlbumId, long adminId,
             string groupUrl, Photo textCommandsInfo, Document subscribeInfo)
@@ -47,6 +48,18 @@ namespace Schedulebot.Vk
             this.TextCommandsAttachments = new List<MediaAttachment>() { this.TextCommands };
             this.SubscribeInfoAttachments = new List<MediaAttachment>() { this.SubscribeInfo };
 
+            this.InlineKeyboards = new MessageKeyboard[1];
+            this.InlineKeyboards[0] = new KeyboardBuilder(isOneTime: false)
+                .SetInline(true)
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.openUNN,
+                    Link = Constants.unnScheduleUri,
+                    Type = KeyboardButtonActionType.OpenLink,
+                    Payload = "{\"inline\":\"0\",\"act\":\"-1\"}"
+                })
+                .Build();
+            
             this.MenuKeyboards = new MessageKeyboard[12];
 
             this.MenuKeyboards[0] = new KeyboardBuilder(isOneTime: false)

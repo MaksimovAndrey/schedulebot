@@ -756,11 +756,9 @@ namespace Schedulebot.Departments
             {
                 await Task.Delay(20); // TODO const
             }
-            if (DateTime.Now - courses[userMapping.Course].groups[userMapping.GroupIndex].LastTimeUpdated > TimeSpan.FromMinutes(180))
-            {
-                return UpdateGroupSchedule(userMapping.Course, userMapping.GroupIndex);
-            }
-            return true;
+            return DateTime.Now - courses[userMapping.Course].groups[userMapping.GroupIndex].LastTimeUpdated > Constants.ScheduleValidity
+                ? UpdateGroupSchedule(userMapping.Course, userMapping.GroupIndex) == GetScheduleStatus.Success
+                : true;
         }
 
         private void ChangeSubgroupResponse(long userId, bool callbackSupported, bool messageFromKeyboard, bool isEvent)
@@ -823,11 +821,33 @@ namespace Schedulebot.Departments
 
             if (!CheckUpdates(userMapping).Result)
             {
-                EnqueueMessage(
-                    sendAsNewMessage: !isEvent,
-                    editingEnabled: isEvent,
-                    userId: userId,
-                    message: Constants.unnAPIError);
+                switch (courses[userMapping.Course].groups[userMapping.GroupIndex].ScheduleStatus)
+                {
+                    case ScheduleStatus.ApiError:
+                        EnqueueMessage(
+                            sendAsNewMessage: !isEvent,
+                            editingEnabled: isEvent,
+                            userId: userId,
+                            inlineKeyboardId: 0,
+                            message: Constants.Updating.unnApiError);
+                        return;
+                    case ScheduleStatus.ParseError:
+                        EnqueueMessage(
+                           sendAsNewMessage: !isEvent,
+                           editingEnabled: isEvent,
+                           userId: userId,
+                           inlineKeyboardId: 0,
+                           message: Constants.Updating.parseError);
+                        return;
+                    default:
+                        EnqueueMessage(
+                           sendAsNewMessage: !isEvent,
+                           editingEnabled: isEvent,
+                           userId: userId,
+                           inlineKeyboardId: 0,
+                           message: Constants.Updating.unknownError);
+                        return;
+                }
             }
 
             switch (type)
@@ -858,14 +878,34 @@ namespace Schedulebot.Departments
 
         private void ForWeekResponse(long userId, int course, int groupIndex, bool isEvent)
         {
+            if (courses[course].groups[groupIndex].ScheduleStatus != ScheduleStatus.Ok)
+            {
+                EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: false,
+                    userId: userId,
+                    inlineKeyboardId: 0,
+                    message: "Расписание недоступно.\nПри обновлении расписания для Вашей группы произошла ошибка.");
+                return;
+            }
+
             StringBuilder msg = new StringBuilder();
 
             msg.Append("Обновлено ");
             msg.Append(courses[course].groups[groupIndex].LastTimeUpdated.ToString("dd'.'MM'.'yyyy HH:mm"));
-            for (int i = 0; i < courses[course].groups[groupIndex].days.Count; i++)
+            
+            if (courses[course].groups[groupIndex].days.Count == 0)
             {
                 msg.Append("\n\n");
-                msg.Append(courses[course].groups[groupIndex].days[i].ToString());
+                msg.Append("У Вашей группы отсутствуют пары");
+            }
+            else
+            {
+                for (int i = 0; i < courses[course].groups[groupIndex].days.Count; i++)
+                {
+                    msg.Append("\n\n");
+                    msg.Append(courses[course].groups[groupIndex].days[i].ToString());
+                }
             }
 
             EnqueueMessage(
@@ -885,6 +925,17 @@ namespace Schedulebot.Departments
                 tomorrowIsSunday = true;
                 addBeforeMsg = Constants.tomorrowIsSundayMessage;
                 tomorrow = tomorrow.AddDays(1);
+            }
+
+            if (courses[course].groups[groupIndex].ScheduleStatus != ScheduleStatus.Ok)
+            {
+                EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: false,
+                    userId: userId,
+                    inlineKeyboardId: 0,
+                    message: "Расписание недоступно.\nПри обновлении расписания для Вашей группы произошла ошибка.");
+                return;
             }
 
             while (tomorrow < DateTime.Today.AddDays(12))
@@ -911,7 +962,8 @@ namespace Schedulebot.Departments
                 sendAsNewMessage: !isEvent,
                 editingEnabled: false,
                 userId: userId,
-                message: "Нет информации или Вы не учитесь");
+                inlineKeyboardId: 0,
+                message: "У Вашей группы отсутствуют пары");
             return;
         }
 
@@ -925,6 +977,17 @@ namespace Schedulebot.Departments
                     editingEnabled: false,
                     userId: userId,
                     message: Constants.todayIsSunday);
+                return;
+            }
+
+            if (courses[course].groups[groupIndex].ScheduleStatus != ScheduleStatus.Ok)
+            {
+                EnqueueMessage(
+                    sendAsNewMessage: !isEvent,
+                    editingEnabled: false,
+                    userId: userId,
+                    inlineKeyboardId: 0,
+                    message: "Расписание недоступно.\nПри обновлении расписания для Вашей группы произошла ошибка.");
                 return;
             }
 
@@ -946,7 +1009,8 @@ namespace Schedulebot.Departments
                 sendAsNewMessage: !isEvent,
                 editingEnabled: false,
                 userId: userId,
-                message: "Нет информации или Вы сегодня не учитесь");
+                inlineKeyboardId: 0,
+                message: "Вы сегодня не учитесь");
             return;
         }
 

@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Schedulebot.Commands;
+using Schedulebot.Departments.Enums;
 using Schedulebot.Parsing;
 using Schedulebot.Schedule;
 using Schedulebot.Users.Utils;
@@ -17,24 +18,32 @@ namespace Schedulebot.Departments
 {
     public partial class DepartmentItmm : Department
     {
-        private bool UpdateGroupSchedule(int course, int group)
+        private GetScheduleStatus UpdateGroupSchedule(int course, int group)
         {
             courses[course].groups[group].IsUpdating = true;
             DateTime newUpdateTime = DateTime.Now;
 
-            var newSchedule = GetNewSchedule(course, courses[course].groups[group].Name);
-            if (newSchedule is null)
-                return false;
-
-            courses[course].groups[group].days = newSchedule;
-            courses[course].groups[group].CheckForUploadedDays();
-            courses[course].groups[group].LastTimeUpdated = newUpdateTime;
+            var status = GetNewSchedule(course, courses[course].groups[group].Name, out var newSchedule);
+            switch (status)
+            {
+                case GetScheduleStatus.Success:
+                    courses[course].groups[group].days = newSchedule;
+                    courses[course].groups[group].CheckForUploadedDays();
+                    courses[course].groups[group].LastTimeUpdated = newUpdateTime;
+                    courses[course].groups[group].ScheduleStatus = ScheduleStatus.Ok;
+                    break;
+                case GetScheduleStatus.ApiError:
+                    courses[course].groups[group].ScheduleStatus = ScheduleStatus.ApiError;
+                    break;
+                case GetScheduleStatus.ParseError:
+                    courses[course].groups[group].ScheduleStatus = ScheduleStatus.ParseError;
+                    break;
+            }
             courses[course].groups[group].IsUpdating = false;
-
-            return true;
+            return status;
         }
 
-        private List<ScheduleDay> GetNewSchedule(int course, string groupName)
+        private GetScheduleStatus GetNewSchedule(int course, string groupName, out List<ScheduleDay> schedule)
         {
             string url = Constants.portalAPI + dictionaries[course][groupName]
                 + "?start=" + DateTime.Now.ToString("yyyy'.'MM'.'dd")
@@ -48,10 +57,19 @@ namespace Schedulebot.Departments
             }
             catch
             {
-                return null;
+                schedule = null;
+                return GetScheduleStatus.ApiError;
             }
-
-            return Parser.ParseScheduleFromJson(result);
+            try
+            {
+                schedule = Parser.ParseScheduleFromJson(result);
+            }
+            catch
+            {
+                schedule = null;
+                return GetScheduleStatus.ParseError;
+            }
+            return GetScheduleStatus.Success;
         }
 
         private void EnqueueEventAnswer(
@@ -91,6 +109,7 @@ namespace Schedulebot.Departments
             string message = null,
             List<MediaAttachment> attachments = null,
             int? keyboardId = null,
+            int? inlineKeyboardId = null,
             MessageKeyboard customKeyboard = null)
         {
             VkParameters vkParameters = new VkParameters
@@ -168,6 +187,10 @@ namespace Schedulebot.Departments
             else if (keyboardId != null)
             {
                 vkParameters.Add("keyboard", JsonConvert.SerializeObject(vkStuff.MenuKeyboards[keyboardId.Value]));
+            }
+            else if (inlineKeyboardId != null)
+            {
+                vkParameters.Add("keyboard", JsonConvert.SerializeObject(vkStuff.InlineKeyboards[inlineKeyboardId.Value]));
             }
 
             commandsQueue.Enqueue(new Command(type, vkParameters, userId));

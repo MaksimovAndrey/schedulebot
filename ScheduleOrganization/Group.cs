@@ -9,6 +9,7 @@ namespace Schedulebot
         public string Name { get; }
         public List<ScheduleDay> days;
         public List<ScheduleDay> uploadedDays;
+        public ScheduleStatus ScheduleStatus { get; set; }
         public DateTime LastTimeUpdated { get; set; } = DateTime.MinValue;
         public bool IsUpdating { get; set; } = false;
 
@@ -17,6 +18,7 @@ namespace Schedulebot
             Name = name;
             days = new List<ScheduleDay>();
             uploadedDays = new List<ScheduleDay>();
+            ScheduleStatus = ScheduleStatus.Ok;
         }
 
         public void CheckForUploadedDays()
