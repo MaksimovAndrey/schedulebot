@@ -47,7 +47,7 @@ namespace Schedulebot.Departments
         {
             string url = Constants.portalAPI + dictionaries[course][groupName]
                 + "?start=" + DateTime.Now.ToString("yyyy'.'MM'.'dd")
-                + "&finish=" + DateTime.Now.AddDays(8).ToString("yyyy'.'MM'.'dd")
+                + "&finish=" + DateTime.Now.AddDays(13).ToString("yyyy'.'MM'.'dd")
                 + Constants.portalAPILangArg;
 
             string result;

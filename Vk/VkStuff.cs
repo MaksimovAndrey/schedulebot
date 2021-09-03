@@ -95,8 +95,15 @@ namespace Schedulebot.Vk
                 .SetInline(false)
                 .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Label = Constants.Labels.weekSchedule,
+                    Label = Constants.Labels.currentWeekSchedule,
                     Payload = "{\"menu\":\"1\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Text
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.nextWeekSchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"4\"}",
                     Type = KeyboardButtonActionType.Text
                 }, KeyboardButtonColor.Default)
                 .AddLine()
@@ -291,8 +298,15 @@ namespace Schedulebot.Vk
                 .AddLine()
                 .AddButton(new MessageKeyboardButtonAction()
                 {
-                    Label = Constants.Labels.weekSchedule,
+                    Label = Constants.Labels.currentWeekSchedule,
                     Payload = "{\"menu\":\"1\",\"act\":\"1\"}",
+                    Type = KeyboardButtonActionType.Callback
+                }, KeyboardButtonColor.Default)
+                .AddLine()
+                .AddButton(new MessageKeyboardButtonAction()
+                {
+                    Label = Constants.Labels.nextWeekSchedule,
+                    Payload = "{\"menu\":\"1\",\"act\":\"4\"}",
                     Type = KeyboardButtonActionType.Callback
                 }, KeyboardButtonColor.Default)
                 .AddLine()

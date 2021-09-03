@@ -20,10 +20,11 @@ namespace Schedulebot
         public static readonly string[] textInfoCommand = { "ИНФОРМАЦИЯ", "ВАЖНАЯ ИНФОРМАЦИЯ", "INFO", "INFORMATION" };
         public static readonly string[] textUnsubscribeCommand = { "ОТПИСАТЬСЯ", "UNSUBSCRIBE" };
         public static readonly string[] textSubscribeCommand = { "ПОДПИСАТЬСЯ", "SUBSCRIBE" };
-        public static readonly string[] textCurrentWeekCommand = { "НЕДЕЛЯ", "ТЕКУЩАЯ НЕДЕЛЯ", "КАКАЯ НЕДЕЛЯ", "WEEK", "CURRENT WEEK" };
+        public static readonly string[] textWhatWeekCommand = { "НЕДЕЛЯ", "ТЕКУЩАЯ НЕДЕЛЯ", "КАКАЯ НЕДЕЛЯ", "WEEK", "CURRENT WEEK" };
         public static readonly string[] textTodayCommand = { "НА СЕГОДНЯ", "СЕГОДНЯ", "TODAY", "FOR TODAY" };
         public static readonly string[] textTomorrowCommand = { "НА ЗАВТРА", "ЗАВТРА", "TOMORROW", "FOR TOMORROW", "NEXT DAY" };
-        public static readonly string[] textWeekCommand = { "НА НЕДЕЛЮ", "РАСПИСАНИЕ", "WEEK", "FOR WEEK", "FOR A WEEK", "SCHEDULE", "GET SCHEDULE" };
+        public static readonly string[] textCurrentWeekCommand = { "НА НЕДЕЛЮ", "НА ТЕКУЩУЮ НЕДЕЛЮ", "НА ДАННУЮ НЕДЕЛЮ", "НА ЭТУ НЕДЕЛЮ", "CURRENT WEEK SCHEDULE", "THIS WEEK SCHEDULE", "THIS WEEK", "РАСПИСАНИЕ", "WEEK", "FOR WEEK", "FOR A WEEK", "SCHEDULE", "GET SCHEDULE" };
+        public static readonly string[] textNextWeekCommand = { "НА НЕДЕЛЮ", "НА СЛЕДУЮЩУЮ НЕДЕЛЮ", "СЛЕДУЮЩАЯ НЕДЕЛЯ", "РАСПИСАНИЕ", "NEXT WEEK", "FOR NEXT WEEK", "FOR A NEXT WEEK", "NEXT WEEK SCHEDULE", "GET NEXT WEEK", "GET NEXT WEEK SCHEDULE" };
         public static readonly string[] textLinkCommand = { "ССЫЛКА", "LINK" };
         public static readonly string[] textHelpCommand = { "ПОМОЩЬ", "HELP", "!HELP" };
         #endregion
@@ -72,7 +73,8 @@ namespace Schedulebot
             public const string about = "О боте";
 
             public const string openUNN = "Посмотреть на сайте";
-            public const string weekSchedule = "На неделю";
+            public const string currentWeekSchedule = "На текущую неделю";
+            public const string nextWeekSchedule = "На следующую неделю";
             public const string todaySchedule = "На сегодня";
             public const string tomorrowSchedule = "На завтра";
 

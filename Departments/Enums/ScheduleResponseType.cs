@@ -4,6 +4,7 @@
     {
         Today,
         Tomorrow,
-        Week
+        CurrentWeek,
+        NextWeek
     }
 }

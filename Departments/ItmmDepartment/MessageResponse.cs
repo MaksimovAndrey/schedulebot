@@ -216,7 +216,15 @@ namespace Schedulebot.Departments
                             return;
                         case 1:
                             ScheduleResponse(
-                                type: ScheduleResponseType.Week,
+                                type: ScheduleResponseType.CurrentWeek,
+                                userId: userId,
+                                callbackSupported: callbackSupported,
+                                messageFromKeyboard: true,
+                                isEvent: isEvent);
+                            return;
+                        case 4:
+                            ScheduleResponse(
+                                type: ScheduleResponseType.NextWeek,
                                 userId: userId,
                                 callbackSupported: callbackSupported,
                                 messageFromKeyboard: true,
@@ -559,7 +567,7 @@ namespace Schedulebot.Departments
                     attachments: vkStuff.SubscribeInfoAttachments,
                     message: null);
             }
-            else if (Constants.textCurrentWeekCommand.Contains(uppercaseMessage))
+            else if (Constants.textWhatWeekCommand.Contains(uppercaseMessage))
             {
                 EnqueueMessage(
                     sendAsNewMessage: sendAsNewMessage,
@@ -585,10 +593,19 @@ namespace Schedulebot.Departments
                     messageFromKeyboard: messageFromKeyboard,
                     isEvent: isEvent);
             }
-            else if (Constants.textWeekCommand.Contains(uppercaseMessage))
+            else if (Constants.textCurrentWeekCommand.Contains(uppercaseMessage))
             {
                 ScheduleResponse(
-                    type: ScheduleResponseType.Week,
+                    type: ScheduleResponseType.CurrentWeek,
+                    userId: message.PeerId.Value,
+                    callbackSupported: callbackSupported,
+                    messageFromKeyboard: messageFromKeyboard,
+                    isEvent: isEvent);
+            }
+            else if (Constants.textNextWeekCommand.Contains(uppercaseMessage))
+            {
+                ScheduleResponse(
+                    type: ScheduleResponseType.NextWeek,
                     userId: message.PeerId.Value,
                     callbackSupported: callbackSupported,
                     messageFromKeyboard: messageFromKeyboard,
@@ -866,17 +883,26 @@ namespace Schedulebot.Departments
                         groupIndex: userMapping.GroupIndex,
                         isEvent: isEvent);
                     return;
-                case ScheduleResponseType.Week:
+                case ScheduleResponseType.CurrentWeek:
                     ForWeekResponse(
                         userId: userId,
                         course: userMapping.Course,
                         groupIndex: userMapping.GroupIndex,
+                        whichWeek: WhichWeek.Current,
+                        isEvent: isEvent);
+                    return;
+                case ScheduleResponseType.NextWeek:
+                    ForWeekResponse(
+                        userId: userId,
+                        course: userMapping.Course,
+                        groupIndex: userMapping.GroupIndex,
+                        whichWeek: WhichWeek.Next,
                         isEvent: isEvent);
                     return;
             }
         }
 
-        private void ForWeekResponse(long userId, int course, int groupIndex, bool isEvent)
+        private void ForWeekResponse(long userId, int course, int groupIndex, WhichWeek whichWeek, bool isEvent)
         {
             if (courses[course].groups[groupIndex].ScheduleStatus != ScheduleStatus.Ok)
             {
@@ -893,7 +919,7 @@ namespace Schedulebot.Departments
 
             msg.Append("Обновлено ");
             msg.Append(courses[course].groups[groupIndex].LastTimeUpdated.ToString("dd'.'MM'.'yyyy HH:mm"));
-            
+
             if (courses[course].groups[groupIndex].days.Count == 0)
             {
                 msg.Append("\n\n");
@@ -901,10 +927,60 @@ namespace Schedulebot.Departments
             }
             else
             {
-                for (int i = 0; i < courses[course].groups[groupIndex].days.Count; i++)
+                switch (whichWeek)
                 {
-                    msg.Append("\n\n");
-                    msg.Append(courses[course].groups[groupIndex].days[i].ToString());
+                    case WhichWeek.Current:
+                    {
+                        bool empty = true;
+                        msg.Append("\nРасписание на текущую неделю");
+                        if (DateTime.Today.DayOfWeek == DayOfWeek.Sunday)
+                        {
+                            msg.Append("\n\n");
+                            msg.Append("Сегодня воскресенье. На этой неделе уже нет пар.");
+                            empty = false;
+                            break;
+                        }
+                        var nearestSunday = DateTime.Today.AddDays(7 - (int)DateTime.Today.DayOfWeek);
+                        for (int i = 0; i < courses[course].groups[groupIndex].days.Count; i++)
+                        {
+                            if (courses[course].groups[groupIndex].days[i].Date >= DateTime.Today)
+                            {
+                                if (!(courses[course].groups[groupIndex].days[i].Date < nearestSunday))
+                                    break;
+
+                                msg.Append("\n\n");
+                                msg.Append(courses[course].groups[groupIndex].days[i].ToString());
+                                empty = false;
+                            }
+                        }
+                        if (empty)
+                            msg.Append("На текущей неделе нет пар.");
+                        break;
+                    }
+                    case WhichWeek.Next:
+                    {
+                        bool empty = true;
+                        msg.Append("\nРасписание на следующую неделю");
+                        var nearestSunday = DateTime.Today.AddDays(
+                            DateTime.Today.DayOfWeek == DayOfWeek.Sunday ? 0 : (7 - (int)DateTime.Today.DayOfWeek));
+                        var nextSunday = nearestSunday.AddDays(7);
+
+                        for (int i = 0; i < courses[course].groups[groupIndex].days.Count; i++)
+                        {
+                            if (courses[course].groups[groupIndex].days[i].Date > nearestSunday)
+                            {
+                                if (courses[course].groups[groupIndex].days[i].Date >= nextSunday)
+                                    break;
+
+                                msg.Append("\n\n");
+                                msg.Append(courses[course].groups[groupIndex].days[i].ToString());
+                                empty = false;
+                            }
+                        }
+                        if (empty)
+                            msg.Append("На следующей неделе нет пар.");
+                        break;
+                    }
                 }
             }
 
